@@ -1,0 +1,29 @@
+services:
+  # 1. A Base de Dados (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: clube_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: clubedesportivo
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: password123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  # 2. O Ambiente React Native
+  react-native:
+    build: .
+    container_name: rn_dev_env
+    ports:
+      - "8081:8081"
+    volumes:
+      - .:/app 
+    network_mode: "host"
+    command: tail -f /dev/null
+
+volumes:
+  mysql_data:

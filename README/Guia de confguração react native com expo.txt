@@ -1,0 +1,54 @@
+Guia de Configuração: React Native (Expo) com Docker no Linux
+1. A Nossa Arquitetura
+Como estamos a desenvolver num sistema Linux e a testar num iPhone, a compilação nativa direta por cabo é impossível (a Apple bloqueia isso). Para resolver este problema de forma limpa e eficiente, adotámos a seguinte estratégia:
+
+O Docker: Funciona como uma "máquina virtual" leve. Ele contém o Node.js, o Java e o Android SDK isolados. Assim, o teu Linux não fica cheio de dependências globais que deixam o PC lento.
+
+O Expo: É o framework que nos permite contornar a limitação da Apple. O Docker corre um servidor (Metro Bundler) que envia o código JavaScript em tempo real pela internet (via túnel) diretamente para a app Expo Go no teu iPhone.
+
+Base de Dados (Futuro): O projeto está preparado para utilizar SQLite localmente. Quando chegares à fase de sincronização na cloud (ex: usando PowerSync), será o momento ideal para tratares das configurações de RLS (Row Level Security), que de momento se encontram desativadas, garantindo assim a segurança dos dados do clube.
+
+2. Ficheiros Base (Já configurados)
+Na raiz do projeto tens dois ficheiros essenciais que garantem que o ambiente funciona em qualquer computador:
+
+Dockerfile: Define a imagem da máquina (instala o Node 20, Java 17 e ferramentas Android).
+
+docker-compose.yml: Define as regras de rede (network_mode: "host") e portas do nosso contentor.
+
+3. O Teu Dia a Dia (Como programar)
+Sempre que fores trabalhar no projeto, abre o terminal na pasta do projeto e segue esta ordem:
+
+Passo 1: Ligar a "Máquina" Docker
+Se o PC foi reiniciado, o contentor pode estar desligado. Para o ligar em background:
+
+Bash
+docker compose start
+(Nota: O comando docker compose up -d --build só precisa de ser usado se alterares o ficheiro Dockerfile).
+
+Passo 2: Entrar na Máquina
+Para correres comandos do projeto (como instalar bibliotecas), tens de "entrar" no Docker:
+
+Bash
+docker compose exec react-native bash
+Passo 3: Arrancar o Servidor (Para o iPhone)
+Dentro do contentor (root@...:/app#), inicia o servidor do Expo em modo túnel (ideal para evitar problemas de firewall/IPs na rede local):
+
+Bash
+npx expo start --tunnel
+Abre a câmara do teu iPhone.
+
+Lê o QR Code que aparece no terminal.
+
+A app Expo Go vai abrir com a aplicação a correr em tempo real. Podes abrir o VS Code no teu Linux e começar a editar os ficheiros!
+
+4. Como Sair e Limpar
+Quando terminares de trabalhar, deves fechar as coisas de forma limpa:
+
+Parar o servidor: Clica no terminal onde está o QR Code e pressiona Ctrl + C.
+
+Sair do Docker: Escreve exit e dá Enter para voltares ao terminal do teu Linux.
+
+Corrigir Permissões: Se instalaste bibliotecas novas ou o Docker criou ficheiros de cache, eles pertencem ao utilizador root. Para o teu VS Code conseguir guardá-los sem dar erro de permissão, corre isto no teu terminal Linux (fora do Docker):
+
+Bash
+sudo chown -R $USER:$USER .
