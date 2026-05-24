@@ -35,6 +35,7 @@ import {
   BarChart3,
   FileText,
   LogOut,
+  Stethoscope,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
@@ -60,9 +61,7 @@ import { CalendarioScreen } from '../screens/diretor/CalendarioScreen';
 import { PlanteisScreen } from '../screens/diretor/PlanteisScreen';
 import { QuadrosScreen } from '../screens/diretor/QuadrosScreen';
 import { AnaliseScreen } from '../screens/diretor/AnaliseScreen';
-import { FilaEMDsScreen } from '../screens/medico/FilaEMDsScreen';
-import { DossiesScreen } from '../screens/medico/DossiesScreen';
-import { MonitorizacaoScreen } from '../screens/medico/MonitorizacaoScreen';
+import { ClinicaScreen } from '../screens/clinica/ClinicaScreen';
 
 // ── Tipos ──────────────────────────────────────────────
 
@@ -79,6 +78,7 @@ const DRAWER_ITEMS_BY_ROLE: Record<string, DrawerItem[]> = {
   [Role.ADMIN]: [
     { name: 'GestaoAcessos', label: 'Gestão de Acessos', component: GestaoAcessosScreen, icon: Shield },
     { name: 'Auditoria', label: 'Auditoria e Segurança', component: AuditoriaScreen, icon: ShieldCheck },
+    { name: 'ClinicaAdmin', label: 'Clínica', component: ClinicaScreen, icon: Stethoscope },
     { name: 'Configuracoes', label: 'Configurações Globais', component: ConfiguracoesScreen, icon: Settings },
   ],
   [Role.CEO]: [
@@ -105,9 +105,7 @@ const DRAWER_ITEMS_BY_ROLE: Record<string, DrawerItem[]> = {
     { name: 'Analise', label: 'Análise', component: AnaliseScreen, icon: BarChart3 },
   ],
   [Role.MEDICO]: [
-    { name: 'FilaEMDs', label: 'Fila de EMDs', component: FilaEMDsScreen, icon: ClipboardList },
-    { name: 'Dossies', label: 'Dossiês Clínicos', component: DossiesScreen, icon: FolderOpen },
-    { name: 'Monitorizacao', label: 'Monitorização', component: MonitorizacaoScreen, icon: Activity },
+    { name: 'Clinica', label: 'Clínica', component: ClinicaScreen, icon: Stethoscope },
   ],
 };
 

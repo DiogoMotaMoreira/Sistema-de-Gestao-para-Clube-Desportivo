@@ -1,9 +1,12 @@
 package com.sigd.exception;
 
+import com.sigd.core.exception.AtletaComRestricaoException;
 import com.sigd.core.exception.AtletaNotFoundException;
+import com.sigd.core.exception.DeliberacaoNaoAutorizadaException;
 import com.sigd.core.exception.EncarregadoNotFoundException;
 import com.sigd.core.exception.EntidadeJuridicaObrigatoriaException;
 import com.sigd.core.exception.NifDuplicadoException;
+import com.sigd.core.exception.OcorrenciaNotFoundException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,6 +53,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleEntidadeJuridicaObrigatoria(
             EntidadeJuridicaObrigatoriaException ex, WebRequest request) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request);
+    }
+
+    // === Exceções de domínio (Clínica / RF-16) ===
+
+    @ExceptionHandler(OcorrenciaNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleOcorrenciaNotFound(
+            OcorrenciaNotFoundException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(DeliberacaoNaoAutorizadaException.class)
+    public ResponseEntity<Map<String, Object>> handleDeliberacaoNaoAutorizada(
+            DeliberacaoNaoAutorizadaException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "Forbidden", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AtletaComRestricaoException.class)
+    public ResponseEntity<Map<String, Object>> handleAtletaComRestricao(
+            AtletaComRestricaoException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request);
     }
 
     // === Exceções de validação e segurança ===
