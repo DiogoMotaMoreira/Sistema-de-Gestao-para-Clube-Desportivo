@@ -53,7 +53,7 @@ import { AuditoriaCEOScreen } from '../screens/ceo/AuditoriaCEOScreen';
 import { DashboardFinanceiroScreen } from '../screens/cfo/DashboardFinanceiroScreen';
 import { RelatoriosScreen } from '../screens/cfo/RelatoriosScreen';
 import { AtendimentoScreen } from '../screens/secretaria/AtendimentoScreen';
-import { EntidadesScreen } from '../screens/secretaria/EntidadesScreen';
+import { SecretariaScreen } from '../screens/secretaria/SecretariaScreen';
 import { ValidacaoDocumentalScreen } from '../screens/secretaria/ValidacaoDocumentalScreen';
 import { ConfiguracoesSecScreen } from '../screens/secretaria/ConfiguracoesSecScreen';
 import { CalendarioScreen } from '../screens/diretor/CalendarioScreen';
@@ -94,7 +94,7 @@ const DRAWER_ITEMS_BY_ROLE: Record<string, DrawerItem[]> = {
   ],
   [Role.SECRETARIA]: [
     { name: 'Atendimento', label: 'Atendimento', component: AtendimentoScreen, icon: Headphones },
-    { name: 'Entidades', label: 'Entidades', component: EntidadesScreen, icon: Building2 },
+    { name: 'Entidades', label: 'Entidades', component: SecretariaScreen, icon: Building2 },
     { name: 'ValidacaoDocumental', label: 'Validação Documental', component: ValidacaoDocumentalScreen, icon: FileCheck },
     { name: 'ConfiguracoesSec', label: 'Configurações', component: ConfiguracoesSecScreen, icon: Settings },
   ],
