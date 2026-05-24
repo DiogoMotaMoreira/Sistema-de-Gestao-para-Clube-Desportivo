@@ -1,5 +1,10 @@
 package com.sigd.exception;
 
+import com.sigd.core.exception.AtletaNotFoundException;
+import com.sigd.core.exception.EncarregadoNotFoundException;
+import com.sigd.core.exception.EntidadeJuridicaObrigatoriaException;
+import com.sigd.core.exception.NifDuplicadoException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,6 +25,34 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     // Formato padronizado de erro: { status, error, message, timestamp, path }
+
+    // === Exceções de domínio (Tesouraria / Secretaria) ===
+
+    @ExceptionHandler(AtletaNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleAtletaNotFound(
+            AtletaNotFoundException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(EncarregadoNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleEncarregadoNotFound(
+            EncarregadoNotFoundException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(NifDuplicadoException.class)
+    public ResponseEntity<Map<String, Object>> handleNifDuplicado(
+            NifDuplicadoException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(EntidadeJuridicaObrigatoriaException.class)
+    public ResponseEntity<Map<String, Object>> handleEntidadeJuridicaObrigatoria(
+            EntidadeJuridicaObrigatoriaException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request);
+    }
+
+    // === Exceções de validação e segurança ===
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(

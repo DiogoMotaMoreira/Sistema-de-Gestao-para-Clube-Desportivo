@@ -41,4 +41,8 @@ public class Escalao {
     @Column(name = "teto_convocatoria")
     private Integer tetoConvocatoria;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "modalidade_id")
+    private Modalidade modalidade;
+
 }

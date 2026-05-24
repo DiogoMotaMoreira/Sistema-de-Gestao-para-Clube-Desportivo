@@ -41,15 +41,17 @@ public class Atleta {
     @Column(length = 100)
     private String posicao;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado_elegibilidade", nullable = false, length = 50)
-    private String estadoElegibilidade = "APTO";
+    private EstadoElegibilidade estadoElegibilidade = EstadoElegibilidade.APTO;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipa_id")
     private Equipa equipa;
 
+    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "encarregado_id")
+    @JoinColumn(name = "encarregado_id", nullable = false)
     private EncarregadoEducacao encarregado;
 
     @Column(name = "criado_em", nullable = false, updatable = false)

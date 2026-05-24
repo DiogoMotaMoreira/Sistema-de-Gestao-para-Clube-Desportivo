@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "equipa", indexes = {
@@ -39,6 +41,9 @@ public class Equipa {
 
     @Column(nullable = false)
     private Boolean ativa = true;
+
+    @OneToMany(mappedBy = "equipa", fetch = FetchType.LAZY)
+    private List<Atleta> atletas = new ArrayList<>();
 
     @Column(name = "criada_em", nullable = false, updatable = false)
     private LocalDateTime criadaEm = LocalDateTime.now();

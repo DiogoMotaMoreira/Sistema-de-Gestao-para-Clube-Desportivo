@@ -15,4 +15,6 @@ public interface EquipaRepository extends JpaRepository<Equipa, Long> {
 
     List<Equipa> findByAtiva(Boolean ativa);
 
+    List<Equipa> findByAtivaTrue();
+
 }
