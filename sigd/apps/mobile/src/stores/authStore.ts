@@ -6,12 +6,16 @@
  * - Dados do utilizador decodificados do JWT payload
  * - Role ativo (para multi-role)
  * - Hidratação ao arrancar a app
+ * - login(username, password) — chama o authService real
+ * - logout() — limpa tokens e estado
  */
 
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { jwtDecode } from 'jwt-decode';
 import { Role, resolveActiveRole } from '../constants/roles';
+import { authService, AuthError } from '../services/authService';
 
 // ── Tipos ──────────────────────────────────────────────
 
@@ -20,6 +24,17 @@ interface User {
   name: string;
   email: string;
   roles: Role[];
+}
+
+/** Payload esperado dentro do JWT (claims do backend Spring) */
+interface JwtPayload {
+  sub: string;                    // username
+  roles?: string[];               // ex: ["ROLE_MEDICO"]
+  role?: string;                  // fallback para um único role
+  userId?: number;
+  name?: string;
+  email?: string;
+  exp?: number;
 }
 
 interface AuthState {
@@ -33,6 +48,7 @@ interface AuthState {
   isAuthenticated: boolean;
 
   // Actions
+  login: (username: string, password: string) => Promise<void>;
   setAuth: (token: string, refreshToken: string, user: User) => void;
   setActiveRole: (role: Role) => void;
   logout: () => void;
@@ -68,6 +84,38 @@ async function deletePersistedToken(key: string): Promise<void> {
   }
 }
 
+// ── Helpers JWT ────────────────────────────────────────
+
+/**
+ * Extrai os roles do JWT payload.
+ * O backend pode enviar "roles" (array) ou "role" (string),
+ * ou o role pode vir na response diretamente. Cobre todos os cenários.
+ */
+function extractRolesFromJwt(token: string, responseRole?: string): Role[] {
+  try {
+    const decoded = jwtDecode<JwtPayload>(token);
+
+    // 1. Tenta array "roles" no JWT
+    if (decoded.roles && decoded.roles.length > 0) {
+      return decoded.roles as Role[];
+    }
+
+    // 2. Tenta campo singular "role" no JWT
+    if (decoded.role) {
+      return [decoded.role as Role];
+    }
+  } catch {
+    // JWT decode falhou — usar fallback
+  }
+
+  // 3. Fallback: usar o role devolvido na response da API
+  if (responseRole) {
+    return [responseRole as Role];
+  }
+
+  return [];
+}
+
 // ── Store ──────────────────────────────────────────────
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -77,6 +125,37 @@ export const useAuthStore = create<AuthState>((set) => ({
   activeRole: null,
   isHydrated: false,
   isAuthenticated: false,
+
+  login: async (username, password) => {
+    // Chama o authService real — erros propagam para o caller
+    const response = await authService.login({ username, password });
+
+    const roles = extractRolesFromJwt(response.accessToken, response.role);
+
+    const user: User = {
+      id: 0,
+      name: response.username,
+      email: '',
+      roles,
+    };
+
+    const activeRole = resolveActiveRole(roles);
+
+    // Persistir tokens e user
+    await Promise.all([
+      persistToken(TOKEN_KEY, response.accessToken),
+      persistToken(REFRESH_KEY, response.refreshToken),
+      persistToken(USER_KEY, JSON.stringify(user)),
+    ]);
+
+    set({
+      token: response.accessToken,
+      refreshToken: response.refreshToken,
+      user,
+      activeRole,
+      isAuthenticated: true,
+    });
+  },
 
   setAuth: (token, refreshToken, user) => {
     const activeRole = resolveActiveRole(user.roles);
@@ -142,3 +221,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }));
+
+// Re-exportar o tipo AuthError para uso no LoginScreen
+export { AuthError } from '../services/authService';

@@ -1,21 +1,42 @@
+/**
+ * LoginScreen — Ecrã de autenticação do SIGD
+ *
+ * Utiliza componentes do Design System (Input, Button) conforme DESIGN.md v2.2.
+ * Autentica via authStore.login() → authService → POST /api/v1/auth/login.
+ *
+ * Fluxo:
+ * 1. Utilizador insere username + password
+ * 2. Clica "Entrar" → chama login() da store
+ * 3. Sucesso → tokens guardados, AppNavigator navega automaticamente via RBAC
+ * 4. Erro 401 → toast "Utilizador ou password incorretos"
+ * 5. Erro 500 → toast "Erro no servidor"
+ */
+
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { LogIn } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
-import { useAuthStore } from '../../stores/authStore';
-import { Role } from '../../constants/roles';
+import { useAuthStore, AuthError } from '../../stores/authStore';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 
 export function LoginScreen(): React.JSX.Element {
-  const [email, setEmail] = React.useState('');
+  const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const setAuth = useAuthStore((s) => s.setAuth);
+  const login = useAuthStore((s) => s.login);
 
   const handleLogin = async (): Promise<void> => {
-    if (!email.trim() || !password.trim()) {
-      setError('Preenche o email e a password.');
+    if (!username.trim() || !password.trim()) {
+      setError('Preenche o username e a password.');
       return;
     }
 
@@ -23,18 +44,22 @@ export function LoginScreen(): React.JSX.Element {
     setError(null);
 
     try {
-      // TODO: Substituir pelo call real à API via Axios
-      // Simulação temporária para teste de navegação
-      const mockUser = {
-        id: 1,
-        name: 'Utilizador Teste',
-        email: email.trim(),
-        roles: [Role.TREINADOR] as Role[],
-      };
-
-      setAuth('mock-access-token', 'mock-refresh-token', mockUser);
-    } catch {
-      setError('Credenciais inválidas. Tenta novamente.');
+      await login(username.trim(), password);
+      // Sucesso → AppNavigator deteta isAuthenticated=true e navega automaticamente
+    } catch (err) {
+      if (err instanceof AuthError) {
+        if (err.statusCode === 401) {
+          setError('Utilizador ou password incorretos');
+        } else if (err.statusCode >= 500) {
+          setError('Erro no servidor. Tenta novamente mais tarde.');
+        } else if (err.statusCode === 0) {
+          setError('Não foi possível contactar o servidor');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Ocorreu um erro inesperado. Tenta novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -63,43 +88,36 @@ export function LoginScreen(): React.JSX.Element {
             </View>
           )}
 
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="nome@boavistafc.pt"
-            placeholderTextColor={Colors.GRAY_500_TEXTO2}
-            keyboardType="email-address"
+          <Input
+            label="Username"
+            placeholder="ex: medico"
+            value={username}
+            onChangeText={setUsername}
             autoCapitalize="none"
-            autoCorrect={false}
-            value={email}
-            onChangeText={setEmail}
-            accessibilityLabel="Campo de email"
           />
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label="Password"
             placeholder="••••••••"
-            placeholderTextColor={Colors.GRAY_500_TEXTO2}
-            secureTextEntry
             value={password}
             onChangeText={setPassword}
-            accessibilityLabel="Campo de password"
+            secureTextEntry
           />
 
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+          <Button
+            label={isLoading ? 'A entrar...' : 'Entrar'}
             onPress={() => void handleLogin()}
+            variant="primary"
+            loading={isLoading}
             disabled={isLoading}
-            activeOpacity={0.8}
-            accessibilityLabel="Botão de login"
-            accessibilityRole="button"
-          >
-            <LogIn size={18} color={Colors.PRETO_PRIMARIO} />
-            <Text style={styles.buttonText}>
-              {isLoading ? 'A entrar...' : 'Entrar'}
-            </Text>
-          </TouchableOpacity>
+            fullWidth
+            icon={
+              !isLoading ? (
+                <LogIn size={18} color={Colors.PRETO_PRIMARIO} />
+              ) : undefined
+            }
+            style={styles.loginButton}
+          />
         </View>
 
         <Text style={styles.footer}>Boavista FC · Época 2025/2026</Text>
@@ -175,40 +193,8 @@ const styles = StyleSheet.create({
     color: Colors.ERRO_TEXT,
     fontWeight: '500',
   },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: Colors.GRAY_500_TEXTO2,
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    height: 48,
-    backgroundColor: Colors.BRANCO,
-    borderWidth: 1,
-    borderColor: Colors.GRAY_200_BORDAS,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: Colors.GRAY_900_TEXTO1,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 48,
-    backgroundColor: Colors.DOURADO_CTA,
-    borderRadius: 8,
-    marginTop: 24,
-    gap: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.PRETO_PRIMARIO,
+  loginButton: {
+    marginTop: 8,
   },
   footer: {
     marginTop: 32,
