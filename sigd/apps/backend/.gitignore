@@ -1,0 +1,36 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.code-workspace
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.m2/
+
+# Gradle
+build/
+.gradle/
+
+# Spring Boot
+logs/
+*.log
+spring-boot-devtools.properties
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore

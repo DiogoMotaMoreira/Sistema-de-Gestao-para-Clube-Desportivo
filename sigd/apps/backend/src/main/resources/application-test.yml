@@ -1,0 +1,17 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  datasource:
+    url: jdbc:mysql://localhost:3307/test_sigd
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+logging:
+  level:
+    root: WARN
+    com.sigd: INFO
+
+sigd:
+  jwt:
+    secret: test-secret-minimum-32-chars-test

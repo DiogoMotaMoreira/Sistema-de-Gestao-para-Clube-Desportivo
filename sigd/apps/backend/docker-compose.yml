@@ -1,0 +1,43 @@
+
+services:
+  mysql:
+    image: mysql:8.0.36-debian
+    container_name: sigd-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_dev
+      MYSQL_DATABASE: sigd_dev
+      MYSQL_USER: sigd_user
+      MYSQL_PASSWORD: sigd_password_dev
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./src/main/resources/db/migration/V1__initial_schema.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - sigd-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password_dev"]
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: sigd-phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: root_password_dev
+    ports:
+      - "8081:80"
+    networks:
+      - sigd-network
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
+
+networks:
+  sigd-network:
+    driver: bridge

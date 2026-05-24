@@ -1,0 +1,18 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/sigd_dev
+    username: sigd_user
+    password: sigd_password_dev
+
+logging:
+  level:
+    com.sigd: DEBUG
+    org.springframework.security: DEBUG
+
+sigd:
+  jwt:
+    secret: dev-secret-key-minimum-32-chars-dev-only

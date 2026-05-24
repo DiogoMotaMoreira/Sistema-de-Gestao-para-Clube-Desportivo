@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: sigd
+
+  profiles:
+    active: dev
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/sigd_dev
+    username: sigd_user
+    password: sigd_password_dev
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: true
+    default-property-inclusion: non_null
+
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+logging:
+  level:
+    root: INFO
+    com.sigd: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/sigd.log
+
+# SIGD Custom Config
+sigd:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-key-change-in-prod-minimum-32-chars}
+    expiration: 3600000       # 1 hora em ms
+    refresh-expiration: 604800000  # 7 dias em ms
+  cors:
+    allowed-origins: http://localhost:3000, http://localhost:5173, http://localhost:8081
+    allowed-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+    allowed-headers: '*'
+    allow-credentials: true
+    max-age: 3600
