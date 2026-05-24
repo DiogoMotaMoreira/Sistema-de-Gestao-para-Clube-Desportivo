@@ -32,6 +32,10 @@ export const Colors = {
   INFO_BG: '#EFF6FF',
   INFO_TEXT: '#1D4ED8',
 
+  // ── Documental (Ocre/Amber) ─────────────────────────
+  DOCUMENTAL_BG: '#FEF3C7',
+  DOCUMENTAL_TEXT: '#92400E',
+
   // ── Extras ───────────────────────────────────────────
   ERRO_BORDA_FOCUS: '#DC2626',
 } as const;

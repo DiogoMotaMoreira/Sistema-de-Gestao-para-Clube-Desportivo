@@ -57,7 +57,7 @@ function DesktopTable<T>({
   style,
 }: DataTableProps<T>): React.JSX.Element {
   return (
-    <View style={[tableStyles.container, style]}>
+    <View style={[tableStyles.container, style]} accessibilityLabel="Tabela de dados" accessibilityRole="list">
       {/* Header */}
       <View style={tableStyles.headerRow}>
         {columns.map((col) => (

@@ -69,9 +69,9 @@ const SEMAFORO_CONFIG: Record<EstadoElegibilidade, SemaforoConfig> = {
     label: 'Inapto — Clínico',
   },
   INAPTO_DOCUMENTAL: {
-    bg: '#FEF3C7',
-    text: '#92400E',
-    border: '#92400E',
+    bg: Colors.DOCUMENTAL_BG,
+    text: Colors.DOCUMENTAL_TEXT,
+    border: Colors.DOCUMENTAL_TEXT,
     icon: Clock,
     label: 'Inapto — Documental',
   },

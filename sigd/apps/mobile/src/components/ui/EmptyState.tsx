@@ -36,7 +36,7 @@ export function EmptyState({
   style,
 }: EmptyStateProps): React.JSX.Element {
   return (
-    <View style={[styles.container, style]} accessibilityRole="text">
+    <View style={[styles.container, style]} accessibilityLabel={`Estado vazio: ${title}`} accessibilityRole="text">
       <View style={styles.iconWrapper}>
         <IconComponent size={iconSize} color={Colors.GRAY_200_BORDAS} />
       </View>
