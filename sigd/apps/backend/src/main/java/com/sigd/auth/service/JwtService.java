@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import com.sigd.config.JwtConfig;
+import com.sigd.core.model.Utilizador;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -16,6 +17,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * JwtService — Geração e validação de JWT tokens.
+ *
+ * Usa jjwt 0.12.x API.
+ * Claims: sub=username, role=user.role, iat, exp.
+ * Signing key configurada via sigd.jwt.secret no application.yml.
+ */
 @Service
 public class JwtService {
 
@@ -25,8 +33,14 @@ public class JwtService {
         this.jwtConfig = jwtConfig;
     }
 
+    // ── Extraction ──────────────────────────────────────
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
     public Date extractExpiration(String token) {
@@ -38,6 +52,31 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
+    // ── Generation ──────────────────────────────────────
+
+    /**
+     * Gera access token com role claim para o Utilizador.
+     * Duração: sigd.jwt.expiration (default: 1 hora).
+     */
+    public String generateAccessToken(Utilizador user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", user.getRole());
+        return buildToken(claims, user, jwtConfig.getExpiration());
+    }
+
+    /**
+     * Gera refresh token para o Utilizador.
+     * Duração: sigd.jwt.refresh-expiration (default: 7 dias).
+     */
+    public String generateRefreshToken(Utilizador user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", user.getRole());
+        return buildToken(claims, user, jwtConfig.getRefreshExpiration());
+    }
+
+    /**
+     * Gera token genérico (mantido para compatibilidade).
+     */
     public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);
     }
@@ -46,9 +85,21 @@ public class JwtService {
         return buildToken(extraClaims, userDetails, jwtConfig.getExpiration());
     }
 
-    public String generateRefreshToken(UserDetails userDetails) {
-        return buildToken(new HashMap<>(), userDetails, jwtConfig.getRefreshExpiration());
+    // ── Validation ──────────────────────────────────────
+
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
+
+    /**
+     * Retorna o tempo de expiração do access token em ms.
+     */
+    public long getAccessTokenExpiration() {
+        return jwtConfig.getExpiration();
+    }
+
+    // ── Private helpers ─────────────────────────────────
 
     private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
         return Jwts.builder()
@@ -58,11 +109,6 @@ public class JwtService {
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
-    }
-
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {
