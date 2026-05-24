@@ -12,7 +12,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./src/main/resources/db/migration/V1__initial_schema.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./src/main/resources/db/migration:/docker-entrypoint-initdb.d
     networks:
       - sigd-network
     healthcheck:
