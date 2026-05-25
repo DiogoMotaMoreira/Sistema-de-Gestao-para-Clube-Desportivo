@@ -51,7 +51,7 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>;
   setAuth: (token: string, refreshToken: string, user: User) => void;
   setActiveRole: (role: Role) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   hydrate: () => Promise<void>;
 }
 
@@ -178,10 +178,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ activeRole: role });
   },
 
-  logout: () => {
-    void deletePersistedToken(TOKEN_KEY);
-    void deletePersistedToken(REFRESH_KEY);
-    void deletePersistedToken(USER_KEY);
+  logout: async () => {
+    await Promise.all([
+      deletePersistedToken(TOKEN_KEY),
+      deletePersistedToken(REFRESH_KEY),
+      deletePersistedToken(USER_KEY),
+    ]);
 
     set({
       token: null,
@@ -201,6 +203,33 @@ export const useAuthStore = create<AuthState>((set) => ({
       ]);
 
       if (token && refreshToken && userJson) {
+        let isExpired = false;
+        try {
+          const decoded = jwtDecode<JwtPayload>(token);
+          if (decoded.exp && decoded.exp < Date.now() / 1000) {
+            isExpired = true;
+          }
+        } catch {
+          isExpired = true;
+        }
+
+        if (isExpired) {
+          await Promise.all([
+            deletePersistedToken(TOKEN_KEY),
+            deletePersistedToken(REFRESH_KEY),
+            deletePersistedToken(USER_KEY),
+          ]);
+          set({
+            token: null,
+            refreshToken: null,
+            user: null,
+            activeRole: null,
+            isAuthenticated: false,
+            isHydrated: true,
+          });
+          return;
+        }
+
         const user = JSON.parse(userJson) as User;
         const activeRole = resolveActiveRole(user.roles);
 

@@ -1,66 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
-import { ShieldCheck, Download, Search } from 'lucide-react-native';
+import { ShieldCheck, Download } from 'lucide-react-native';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { ModalDetalheAuditoria } from './components/AdminModals';
-import { adminService, AuditoriaEvent } from '@/services/adminService';
+import { ModalAuditoriaFinanceira } from './components/CfoModals';
+import { cfoService, EventoAuditoriaCFO } from '@/services/cfoService';
 import { Colors } from '@/constants/colors';
 
-export function AuditoriaScreen(): React.JSX.Element {
-  const [eventos, setEventos] = useState<AuditoriaEvent[]>([]);
-  const [eventoSelecionado, setEventoSelecionado] = useState<AuditoriaEvent | null>(null);
+export function AuditoriaFinanceiraCFOScreen(): React.JSX.Element {
+  const [eventos, setEventos] = useState<EventoAuditoriaCFO[]>([]);
+  const [eventoSelecionado, setEventoSelecionado] = useState<EventoAuditoriaCFO | null>(null);
 
   useEffect(() => {
-    adminService.getAuditoria().then(setEventos);
+    cfoService.getAuditoriaFinanceira().then(setEventos);
   }, []);
-
-  const getAcaoStyle = (acao: string) => {
-    if (['BLOQUEAR_ACESSO', 'REVOGAR_ROLE', 'FORÇAR_RESET', 'ELIMINAR'].includes(acao)) {
-      return { bg: '#FEE2E2', text: '#991B1B' };
-    }
-    if (acao.startsWith('CREATE_')) {
-      return { bg: '#ECFDF5', text: '#047857' };
-    }
-    if (acao.startsWith('UPDATE_') || acao.startsWith('EDITAR_')) {
-      return { bg: '#EFF6FF', text: '#1D4ED8' };
-    }
-    return { bg: '#F1F5F9', text: '#64748B' }; // LOGIN, LOGOUT, EXPORTAR
-  };
 
   return (
     <View style={styles.container}>
       <PageHeader
-        title="Auditoria e Segurança"
+        title="Auditoria Financeira"
         breadcrumbs={[
-          { label: 'Administração de Sistema' },
+          { label: 'Direção Financeira' },
           { label: 'Auditoria' },
         ]}
       />
 
+      {/* Banner Imutabilidade */}
       <View style={styles.banner}>
-         <ShieldCheck size={20} color="#1D4ED8" style={{ marginRight: 12 }} />
-         <Text style={styles.bannerText}>
-            Este registo é imutável (append-only). Nenhum utilizador, incluindo o Administrador, pode editar ou eliminar entradas de auditoria.
-         </Text>
+         <ShieldCheck size={20} color={Colors.INFO_TEXT} style={{ marginRight: 12 }} />
+         <Text style={styles.bannerText}>Este registo é imutável (append-only). Nenhum dado pode ser editado ou eliminado. Visibilidade restrita a eventos do domínio financeiro.</Text>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         
-        {/* Filtros */}
+        {/* Barra de Filtros */}
         <View style={styles.filtersContainer}>
            <View style={{ flexDirection: 'row', gap: 12, flex: 1, flexWrap: 'wrap' }}>
               <TextInput style={styles.inputDate} placeholder="De: dd/mm/aaaa" />
               <TextInput style={styles.inputDate} placeholder="Até: dd/mm/aaaa" />
-              <View style={styles.dropdown}><Text style={styles.dropdownText}>Todos os Módulos ▾</Text></View>
-              <View style={styles.dropdown}><Text style={styles.dropdownText}>Todos os Tipos ▾</Text></View>
-              <View style={styles.searchWrapper}>
-                 <Search size={16} color={Colors.GRAY_500_TEXTO2} style={{ marginLeft: 12 }} />
-                 <TextInput style={styles.searchInput} placeholder="Pesquisar por nome ou ID do ator..." />
-              </View>
+              <View style={styles.dropdown}><Text style={styles.dropdownText}>Todos os Tipos</Text></View>
+              <TextInput style={styles.inputSearch} placeholder="Pesquisar por nome do ator ou entidade..." />
            </View>
            <TouchableOpacity style={styles.btnOutline}>
               <Download size={16} color={Colors.GRAY_900_TEXTO1} style={{ marginRight: 6 }} />
-              <Text style={styles.btnOutlineText}>Exportar Logs (CSV)</Text>
+              <Text style={styles.btnOutlineText}>Exportar CSV</Text>
            </TouchableOpacity>
         </View>
 
@@ -68,33 +50,50 @@ export function AuditoriaScreen(): React.JSX.Element {
         <View style={styles.table}>
            <View style={styles.tableHeader}>
               <Text style={[styles.th, { flex: 1.5 }]}>DATA / HORA</Text>
-              <Text style={[styles.th, { flex: 2 }]}>ATOR</Text>
-              <Text style={[styles.th, { flex: 1.5 }]}>AÇÃO</Text>
-              <Text style={[styles.th, { flex: 1.5 }]}>MÓDULO</Text>
-              <Text style={[styles.th, { flex: 1.5 }]}>ENDEREÇO IP</Text>
+              <Text style={[styles.th, { flex: 1.5 }]}>EVENTO</Text>
+              <Text style={[styles.th, { flex: 1.5 }]}>ATOR</Text>
+              <Text style={[styles.th, { flex: 2 }]}>ENTIDADE AFETADA</Text>
+              <Text style={[styles.th, { flex: 1.5 }]}>CENTRO RESP.</Text>
+              <Text style={[styles.th, { flex: 1.5 }]}>VALOR</Text>
               <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>DETALHE</Text>
            </View>
            
            {eventos.map(e => {
-              const acaoStyle = getAcaoStyle(e.acao);
+              // Cores Evento
+              let badgeAcaoBg = '#F1F5F9', badgeAcaoColor = '#64748B';
+              if (e.acao === 'LIQUIDAÇÃO_PAGAMENTO') { badgeAcaoBg = '#ECFDF5'; badgeAcaoColor = '#047857'; }
+              else if (e.acao === 'GERAÇÃO_PROVISÃO') { badgeAcaoBg = '#EFF6FF'; badgeAcaoColor = '#1D4ED8'; }
+              else if (e.acao === 'ALTERAÇÃO_ESTATUTO_SÓCIO') { badgeAcaoBg = '#FFFBEB'; badgeAcaoColor = '#B45309'; }
+
+              // Cores Centro
+              let badgeCentroBg = '#F1F5F9', badgeCentroColor = '#64748B';
+              if (e.centroResponsabilidade === 'SAD') { badgeCentroBg = '#FFFBEB'; badgeCentroColor = '#B45309'; }
+              else if (e.centroResponsabilidade === 'Ambos') { badgeCentroBg = '#EFF6FF'; badgeCentroColor = '#1D4ED8'; }
+
               return (
                  <View key={e.id} style={styles.tableRow}>
                     <Text style={[styles.td, { flex: 1.5 }]}>{e.dataHora}</Text>
                     
-                    <View style={{ flex: 2 }}>
-                       <Text style={[styles.td, { fontWeight: '700' }]}>{e.atorNome}</Text>
-                       <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>{e.atorRole}</Text>
-                    </View>
-                    
                     <View style={{ flex: 1.5, alignItems: 'flex-start' }}>
-                       <View style={[styles.badgePill, { backgroundColor: acaoStyle.bg }]}>
-                          <Text style={[styles.badgeText, { color: acaoStyle.text }]}>{e.acao}</Text>
+                       <View style={[styles.badgePill, { backgroundColor: badgeAcaoBg }]}>
+                          <Text style={[styles.badgeText, { color: badgeAcaoColor }]}>{e.acao}</Text>
                        </View>
                     </View>
                     
-                    <Text style={[styles.td, { flex: 1.5 }]}>{e.modulo}</Text>
+                    <View style={{ flex: 1.5 }}>
+                       <Text style={[styles.td, { fontWeight: '600' }]}>{e.ator}</Text>
+                       <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>{e.role}</Text>
+                    </View>
                     
-                    <Text style={[styles.td, { flex: 1.5, fontFamily: 'monospace', color: Colors.GRAY_500_TEXTO2 }]}>{e.ip}</Text>
+                    <Text style={[styles.td, { flex: 2 }]}>{e.entidadeAfetada}</Text>
+                    
+                    <View style={{ flex: 1.5, alignItems: 'flex-start' }}>
+                       <View style={[styles.badgePill, { backgroundColor: badgeCentroBg }]}>
+                          <Text style={[styles.badgeText, { color: badgeCentroColor }]}>{e.centroResponsabilidade}</Text>
+                       </View>
+                    </View>
+                    
+                    <Text style={[styles.td, { flex: 1.5, fontWeight: '700' }]}>{e.valor > 0 ? e.valor.toFixed(2) + ' €' : '—'}</Text>
                     
                     <View style={{ flex: 1, alignItems: 'flex-end' }}>
                        <TouchableOpacity style={styles.btnDetalhe} onPress={() => setEventoSelecionado(e)}>
@@ -105,7 +104,7 @@ export function AuditoriaScreen(): React.JSX.Element {
               );
            })}
            <View style={styles.tableFooter}>
-              <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>A mostrar 1–3 de 158 eventos</Text>
+              <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>A mostrar 1–4 de 242 eventos financeiros</Text>
               <View style={{ flexDirection: 'row', gap: 16 }}>
                  <Text style={{ fontSize: 12, color: Colors.INFO_TEXT, fontWeight: '500' }}>← Anterior</Text>
                  <Text style={{ fontSize: 12, color: Colors.INFO_TEXT, fontWeight: '500' }}>Próxima →</Text>
@@ -115,7 +114,7 @@ export function AuditoriaScreen(): React.JSX.Element {
 
       </ScrollView>
 
-      <ModalDetalheAuditoria visible={!!eventoSelecionado} onClose={() => setEventoSelecionado(null)} evento={eventoSelecionado} />
+      <ModalAuditoriaFinanceira visible={!!eventoSelecionado} onClose={() => setEventoSelecionado(null)} evento={eventoSelecionado} />
 
     </View>
   );
@@ -131,8 +130,7 @@ const styles = StyleSheet.create({
   inputDate: { borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, width: 120 },
   dropdown: { borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, justifyContent: 'center' },
   dropdownText: { fontSize: 13, color: Colors.GRAY_900_TEXTO1 },
-  searchWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 8, flex: 1, minWidth: 200 },
-  searchInput: { paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, flex: 1, outlineStyle: 'none' as any },
+  inputSearch: { borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, flex: 1, minWidth: 250 },
   btnOutline: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'flex-start' },
   btnOutlineText: { fontSize: 13, fontWeight: '500', color: Colors.GRAY_900_TEXTO1 },
   table: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, overflow: 'hidden', backgroundColor: Colors.BRANCO },

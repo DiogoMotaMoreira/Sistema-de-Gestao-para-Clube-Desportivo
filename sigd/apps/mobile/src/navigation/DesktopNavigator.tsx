@@ -51,17 +51,21 @@ import { AnaliseFinanceiraScreen } from '../screens/ceo/AnaliseFinanceiraScreen'
 import { PerformanceDesportivaScreen } from '../screens/ceo/PerformanceDesportivaScreen';
 import { BaseAssociativaScreen } from '../screens/ceo/BaseAssociativaScreen';
 import { AuditoriaCEOScreen } from '../screens/ceo/AuditoriaCEOScreen';
-import { DashboardFinanceiroScreen } from '../screens/cfo/DashboardFinanceiroScreen';
-import { RelatoriosScreen } from '../screens/cfo/RelatoriosScreen';
+import { DashboardExecutivoCFOScreen } from '../screens/cfo/DashboardExecutivoCFOScreen';
+import { RelatoriosFinanceirosCFOScreen } from '../screens/cfo/RelatoriosFinanceirosCFOScreen';
+import { BaseSocialCFOScreen } from '../screens/cfo/BaseSocialCFOScreen';
+import { AuditoriaFinanceiraCFOScreen } from '../screens/cfo/AuditoriaFinanceiraCFOScreen';
 import { AtendimentoScreen } from '../screens/secretaria/AtendimentoScreen';
 import { SecretariaScreen } from '../screens/secretaria/SecretariaScreen';
 import { ValidacaoDocumentalScreen } from '../screens/secretaria/ValidacaoDocumentalScreen';
 import { ConfiguracoesSecScreen } from '../screens/secretaria/ConfiguracoesSecScreen';
-import { CalendarioScreen } from '../screens/diretor/CalendarioScreen';
-import { PlanteisScreen } from '../screens/diretor/PlanteisScreen';
-import { QuadrosScreen } from '../screens/diretor/QuadrosScreen';
-import { AnaliseScreen } from '../screens/diretor/AnaliseScreen';
-import { ClinicaScreen } from '../screens/clinica/ClinicaScreen';
+import { CalendarioGlobalScreen } from '../screens/diretorDesportivo/CalendarioGlobalScreen';
+import { GestaoPlanteisScreen } from '../screens/diretorDesportivo/GestaoPlanteisScreen';
+import { QuadrosCompetitivosScreen } from '../screens/diretorDesportivo/QuadrosCompetitivosScreen';
+import { AnaliseRendimentoScreen } from '../screens/diretorDesportivo/AnaliseRendimentoScreen';
+import { FilaEMDScreen } from '../screens/clinica/fila/FilaEMDScreen';
+import { DossiesClinicosScreen } from '../screens/clinica/dossies/DossiesClinicosScreen';
+import { MonitorizacaoScreen } from '../screens/clinica/monitorizacao/MonitorizacaoScreen';
 
 // ── Tipos ──────────────────────────────────────────────
 
@@ -78,7 +82,6 @@ const DRAWER_ITEMS_BY_ROLE: Record<string, DrawerItem[]> = {
   [Role.ADMIN]: [
     { name: 'GestaoAcessos', label: 'Gestão de Acessos', component: GestaoAcessosScreen, icon: Shield },
     { name: 'Auditoria', label: 'Auditoria e Segurança', component: AuditoriaScreen, icon: ShieldCheck },
-    { name: 'ClinicaAdmin', label: 'Clínica', component: ClinicaScreen, icon: Stethoscope },
     { name: 'Configuracoes', label: 'Configurações Globais', component: ConfiguracoesScreen, icon: Settings },
   ],
   [Role.CEO]: [
@@ -89,8 +92,10 @@ const DRAWER_ITEMS_BY_ROLE: Record<string, DrawerItem[]> = {
     { name: 'AuditoriaCEO', label: 'Auditoria', component: AuditoriaCEOScreen, icon: ShieldCheck },
   ],
   [Role.CFO]: [
-    { name: 'DashboardFinanceiro', label: 'Dashboard Financeiro', component: DashboardFinanceiroScreen, icon: BarChart3 },
-    { name: 'Relatorios', label: 'Relatórios', component: RelatoriosScreen, icon: FileText },
+    { name: 'DashboardExecutivoCFO', label: 'Dashboard Executivo', component: DashboardExecutivoCFOScreen, icon: LayoutDashboard },
+    { name: 'RelatoriosFinanceirosCFO', label: 'Relatórios Financeiros', component: RelatoriosFinanceirosCFOScreen, icon: TrendingUp },
+    { name: 'BaseSocialCFO', label: 'Base Social & Desportiva', component: BaseSocialCFOScreen, icon: Users },
+    { name: 'AuditoriaFinanceiraCFO', label: 'Auditoria Financeira', component: AuditoriaFinanceiraCFOScreen, icon: ShieldCheck },
   ],
   [Role.SECRETARIA]: [
     { name: 'Atendimento', label: 'Atendimento', component: AtendimentoScreen, icon: Headphones },
@@ -99,13 +104,15 @@ const DRAWER_ITEMS_BY_ROLE: Record<string, DrawerItem[]> = {
     { name: 'ConfiguracoesSec', label: 'Configurações', component: ConfiguracoesSecScreen, icon: Settings },
   ],
   [Role.DIRETOR_TECNICO]: [
-    { name: 'Calendario', label: 'Calendário', component: CalendarioScreen, icon: Calendar },
-    { name: 'Planteis', label: 'Plantéis', component: PlanteisScreen, icon: Users },
-    { name: 'Quadros', label: 'Quadros Competitivos', component: QuadrosScreen, icon: Trophy },
-    { name: 'Analise', label: 'Análise', component: AnaliseScreen, icon: BarChart3 },
+    { name: 'Calendario', label: 'Calendário Global', component: CalendarioGlobalScreen, icon: Calendar },
+    { name: 'Planteis', label: 'Gestão de Plantéis', component: GestaoPlanteisScreen, icon: Users },
+    { name: 'Quadros', label: 'Quadros Competitivos', component: QuadrosCompetitivosScreen, icon: Trophy },
+    { name: 'Analise', label: 'Análise e Rendimento', component: AnaliseRendimentoScreen, icon: BarChart3 },
   ],
   [Role.MEDICO]: [
-    { name: 'Clinica', label: 'Clínica', component: ClinicaScreen, icon: Stethoscope },
+    { name: 'FilaEMDs', label: 'Fila de EMDs', component: FilaEMDScreen, icon: ClipboardList },
+    { name: 'DossiesClinicos', label: 'Dossiês Clínicos', component: DossiesClinicosScreen, icon: FolderOpen },
+    { name: 'Monitorizacao', label: 'Monitorização Preventiva', component: MonitorizacaoScreen, icon: Activity },
   ],
 };
 
