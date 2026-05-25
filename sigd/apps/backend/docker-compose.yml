@@ -16,10 +16,11 @@ services:
     networks:
       - sigd-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password_dev"]
+      test: ["CMD", "mysql", "-h", "127.0.0.1", "-u", "root", "-proot_password_dev", "-e", "SELECT 1"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 10
+      start_period: 20s
 
   phpmyadmin:
     image: phpmyadmin:latest

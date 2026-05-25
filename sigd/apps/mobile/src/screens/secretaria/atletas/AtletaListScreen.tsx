@@ -169,27 +169,23 @@ export function AtletaListScreen({
 
             {/* Pagination */}
             <View style={styles.pagination}>
-              <TouchableOpacity
+              <Button
+                label="Anterior"
                 onPress={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={data.first}
-                style={[styles.pageButton, data.first && styles.pageButtonDisabled]}
-                accessibilityLabel="Página anterior"
-                accessibilityRole="button"
-              >
-                <ChevronLeft size={18} color={data.first ? Colors.GRAY_200_BORDAS : Colors.GRAY_900_TEXTO1} />
-              </TouchableOpacity>
+                variant="secondary"
+                icon={<ChevronLeft size={18} color={data.first ? Colors.GRAY_200_BORDAS : Colors.GRAY_900_TEXTO1} />}
+              />
               <Text style={styles.pageInfo}>
                 Página {data.number + 1} de {Math.max(1, data.totalPages)}
               </Text>
-              <TouchableOpacity
+              <Button
+                label="Próxima"
                 onPress={() => setPage((p) => p + 1)}
                 disabled={data.last}
-                style={[styles.pageButton, data.last && styles.pageButtonDisabled]}
-                accessibilityLabel="Próxima página"
-                accessibilityRole="button"
-              >
-                <ChevronRight size={18} color={data.last ? Colors.GRAY_200_BORDAS : Colors.GRAY_900_TEXTO1} />
-              </TouchableOpacity>
+                variant="secondary"
+                icon={<ChevronRight size={18} color={data.last ? Colors.GRAY_200_BORDAS : Colors.GRAY_900_TEXTO1} />}
+              />
             </View>
           </>
         ) : (
@@ -236,12 +232,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     marginTop: 16, gap: 16,
   },
-  pageButton: {
-    width: 36, height: 36, borderRadius: 8, borderWidth: 1,
-    borderColor: Colors.GRAY_200_BORDAS, backgroundColor: Colors.BRANCO,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  pageButtonDisabled: { opacity: 0.4 },
   pageInfo: { fontSize: 13, fontWeight: '500', color: Colors.GRAY_500_TEXTO2 },
 });
 

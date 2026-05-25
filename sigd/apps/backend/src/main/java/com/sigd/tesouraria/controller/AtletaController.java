@@ -35,6 +35,7 @@ public class AtletaController {
      * Lista atletas com pesquisa por nome e filtro opcional por equipa.
      */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_SECRETARIA', 'ROLE_TREINADOR', 'ROLE_DIRETOR_TECNICO')")
     public ResponseEntity<Page<AtletaDTO.Response>> listar(
             @RequestParam(required = false) String pesquisa,
             @RequestParam(required = false) Long equipaId,
@@ -48,6 +49,7 @@ public class AtletaController {
      * Obtém um atleta pelo ID.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_SECRETARIA', 'ROLE_TREINADOR', 'ROLE_DIRETOR_TECNICO')")
     public ResponseEntity<AtletaDTO.Response> obter(@PathVariable Long id) {
         return ResponseEntity.ok(atletaService.obter(id));
     }

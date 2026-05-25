@@ -30,15 +30,26 @@ export function EncarregadoForm({
   const [telemovel, setTelemovel] = useState(initialData?.telemovel ?? '');
   const [morada, setMorada] = useState(initialData?.morada ?? '');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validate = (): boolean => {
+  const getErrors = (): Record<string, string> => {
     const errs: Record<string, string> = {};
-    if (!nome.trim()) errs.nome = 'O nome é obrigatório';
-    if (email && !email.includes('@')) errs.email = 'Email inválido';
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    if (!nome.trim() || nome.trim().length < 3 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(nome)) {
+      errs.nome = 'Apenas letras e espaços, mínimo 3 caracteres';
+    }
+    if (!nif.trim() || !/^\d{9}$/.test(nif)) {
+      errs.nif = 'Apenas 9 dígitos numéricos';
+    }
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errs.email = 'Email inválido';
+    }
+    if (!telemovel.trim() || !/^9\d{8}$/.test(telemovel)) {
+      errs.telemovel = 'Deve começar por 9 e ter 9 dígitos';
+    }
+    return errs;
   };
+
+  const errors = getErrors();
+  const hasErrors = Object.keys(errors).length > 0;
 
   const showAlert = (title: string, message: string): void => {
     if (Platform.OS === 'web') {
@@ -49,13 +60,13 @@ export function EncarregadoForm({
   };
 
   const handleSubmit = async (): Promise<void> => {
-    if (!validate()) return;
+    if (hasErrors) return;
 
     const payload: EncarregadoRequest = {
       nome: nome.trim(),
-      nif: nif.trim() || undefined,
-      email: email.trim() || undefined,
-      telemovel: telemovel.trim() || undefined,
+      nif: nif.trim(),
+      email: email.trim(),
+      telemovel: telemovel.trim(),
       morada: morada.trim() || undefined,
     };
 
@@ -90,25 +101,30 @@ export function EncarregadoForm({
         placeholder="Número de Identificação Fiscal"
         value={nif}
         onChangeText={setNif}
+        error={nif.length > 0 ? errors.nif : undefined}
         keyboardType="numeric"
         maxLength={9}
+        required
       />
       <Input
         label="Email"
         placeholder="email@exemplo.com"
         value={email}
         onChangeText={setEmail}
-        error={errors.email}
+        error={email.length > 0 ? errors.email : undefined}
         keyboardType="email-address"
         autoCapitalize="none"
+        required
       />
       <Input
         label="Telemóvel"
         placeholder="9XX XXX XXX"
         value={telemovel}
         onChangeText={setTelemovel}
+        error={telemovel.length > 0 ? errors.telemovel : undefined}
         keyboardType="phone-pad"
         maxLength={15}
+        required
       />
       <Input
         label="Morada"
@@ -130,6 +146,7 @@ export function EncarregadoForm({
           onPress={() => void handleSubmit()}
           variant="primary"
           loading={loading}
+          disabled={hasErrors}
         />
       </View>
     </View>

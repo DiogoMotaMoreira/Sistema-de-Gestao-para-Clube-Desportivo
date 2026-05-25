@@ -9,12 +9,26 @@ import { View, StyleSheet, Alert, Platform } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { secretariaService, type EquipaRequest } from '@/services/secretariaService';
 
 interface EquipaFormProps {
   onSuccess: () => void;
   onCancel: () => void;
 }
+
+const ESCALOES_OPTIONS = [
+  { label: 'Sub-10', value: '1' },
+  { label: 'Sub-12', value: '2' },
+  { label: 'Sub-15', value: '3' },
+  { label: 'Sub-19', value: '4' },
+  { label: 'Seniores', value: '5' },
+];
+
+const MODALIDADES_OPTIONS = [
+  { label: 'Futebol', value: '1' },
+  { label: 'Futsal', value: '2' },
+];
 
 export function EquipaForm({
   onSuccess,
@@ -24,16 +38,23 @@ export function EquipaForm({
   const [escalaoId, setEscalaoId] = useState('');
   const [modalidadeId, setModalidadeId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validate = (): boolean => {
+  const getErrors = (): Record<string, string> => {
     const errs: Record<string, string> = {};
-    if (!nome.trim()) errs.nome = 'O nome é obrigatório';
-    if (!escalaoId.trim()) errs.escalaoId = 'O escalão é obrigatório';
-    if (!modalidadeId.trim()) errs.modalidadeId = 'A modalidade é obrigatória';
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    if (!nome.trim() || nome.trim().length < 3) {
+      errs.nome = 'Mínimo 3 caracteres, não vazio';
+    }
+    if (!escalaoId.trim()) {
+      errs.escalaoId = 'O escalão é obrigatório';
+    }
+    if (!modalidadeId.trim()) {
+      errs.modalidadeId = 'A modalidade é obrigatória';
+    }
+    return errs;
   };
+
+  const errors = getErrors();
+  const hasErrors = Object.keys(errors).length > 0;
 
   const showAlert = (title: string, message: string): void => {
     if (Platform.OS === 'web') {
@@ -44,7 +65,7 @@ export function EquipaForm({
   };
 
   const handleSubmit = async (): Promise<void> => {
-    if (!validate()) return;
+    if (hasErrors) return;
 
     const payload: EquipaRequest = {
       nome: nome.trim(),
@@ -74,22 +95,22 @@ export function EquipaForm({
         error={errors.nome}
         required
       />
-      <Input
-        label="ID Escalão"
-        placeholder="ID do escalão"
-        value={escalaoId}
-        onChangeText={setEscalaoId}
+      <Select
+        label="Escalão"
+        placeholder="Selecione o escalão"
+        options={ESCALOES_OPTIONS}
+        selectedValue={escalaoId}
+        onValueChange={setEscalaoId}
         error={errors.escalaoId}
-        keyboardType="numeric"
         required
       />
-      <Input
-        label="ID Modalidade"
-        placeholder="ID da modalidade"
-        value={modalidadeId}
-        onChangeText={setModalidadeId}
+      <Select
+        label="Modalidade"
+        placeholder="Selecione a modalidade"
+        options={MODALIDADES_OPTIONS}
+        selectedValue={modalidadeId}
+        onValueChange={setModalidadeId}
         error={errors.modalidadeId}
-        keyboardType="numeric"
         required
       />
 
@@ -100,6 +121,7 @@ export function EquipaForm({
           onPress={() => void handleSubmit()}
           variant="primary"
           loading={loading}
+          disabled={hasErrors}
         />
       </View>
     </View>

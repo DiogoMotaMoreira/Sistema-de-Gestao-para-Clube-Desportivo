@@ -46,13 +46,16 @@ export function AvaliacaoSessaoScreen({ route, navigation }: any): React.JSX.Ele
   };
 
   const submitAvaliacao = async () => {
-    const arr = Object.keys(notas).map(k => ({ atletaId: Number(k), nota: notas[Number(k)] }));
-    await treinadorService.submeterAvaliacao(eventoId, arr);
-    
-    // Simulate Toast and go back
-    Alert.alert('Sucesso', 'Sessão submetida com sucesso', [
-      { text: 'OK', onPress: () => navigation.navigate('Hoje') }
-    ]);
+    try {
+      const arr = Object.keys(notas).map(k => ({ atletaId: Number(k), nota: notas[Number(k)] }));
+      await treinadorService.submeterAvaliacao(eventoId, arr);
+      
+      Alert.alert('Sucesso', 'Sessão submetida com sucesso');
+      navigation.navigate('Hoje');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Erro', 'Não foi possível submeter a avaliação.');
+    }
   };
 
   return (

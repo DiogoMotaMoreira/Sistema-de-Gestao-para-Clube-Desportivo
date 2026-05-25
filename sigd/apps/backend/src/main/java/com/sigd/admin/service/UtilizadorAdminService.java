@@ -1,0 +1,100 @@
+package com.sigd.admin.service;
+
+import com.sigd.admin.dto.UtilizadorAdminDTO;
+import com.sigd.admin.exception.UtilizadorJaExisteException;
+import com.sigd.admin.exception.UtilizadorNotFoundException;
+import com.sigd.core.model.Utilizador;
+import com.sigd.core.repository.UtilizadorRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+
+@Service
+public class UtilizadorAdminService {
+
+    private final UtilizadorRepository utilizadorRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public UtilizadorAdminService(UtilizadorRepository utilizadorRepository, PasswordEncoder passwordEncoder) {
+        this.utilizadorRepository = utilizadorRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UtilizadorAdminDTO.Response> listar(String pesquisa, Pageable pageable) {
+        Page<Utilizador> page;
+        if (pesquisa != null && !pesquisa.isBlank()) {
+            page = utilizadorRepository.findByPesquisa(pesquisa, pageable);
+        } else {
+            page = utilizadorRepository.findAll(pageable);
+        }
+        return page.map(this::toResponse);
+    }
+
+    @Transactional
+    public UtilizadorAdminDTO.Response criar(UtilizadorAdminDTO.Request request) {
+        if (utilizadorRepository.existsByUsername(request.username())) {
+            throw new UtilizadorJaExisteException("Já existe um utilizador com o username: " + request.username());
+        }
+        if (utilizadorRepository.existsByEmail(request.email())) {
+            throw new UtilizadorJaExisteException("Já existe um utilizador com o email: " + request.email());
+        }
+
+        String rawPassword = (request.passwordHash() != null && !request.passwordHash().isBlank())
+                ? request.passwordHash()
+                : "Sigd@2025";
+
+        Utilizador novo = new Utilizador();
+        novo.setUsername(request.username());
+        novo.setEmail(request.email());
+        novo.setRole(request.role());
+        novo.setPasswordHash(passwordEncoder.encode(rawPassword));
+        novo.setAtivo(true);
+
+        novo = utilizadorRepository.save(novo);
+        return toResponse(novo);
+    }
+
+    @Transactional
+    public UtilizadorAdminDTO.Response bloquear(Long id) {
+        Utilizador utilizador = utilizadorRepository.findById(id)
+                .orElseThrow(() -> new UtilizadorNotFoundException("Utilizador não encontrado com id: " + id));
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName().equals(utilizador.getUsername())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é permitido bloquear a própria conta.");
+        }
+
+        utilizador.setAtivo(false);
+        utilizador = utilizadorRepository.save(utilizador);
+        return toResponse(utilizador);
+    }
+
+    @Transactional
+    public UtilizadorAdminDTO.Response reativar(Long id) {
+        Utilizador utilizador = utilizadorRepository.findById(id)
+                .orElseThrow(() -> new UtilizadorNotFoundException("Utilizador não encontrado com id: " + id));
+
+        utilizador.setAtivo(true);
+        utilizador = utilizadorRepository.save(utilizador);
+        return toResponse(utilizador);
+    }
+
+    private UtilizadorAdminDTO.Response toResponse(Utilizador u) {
+        return new UtilizadorAdminDTO.Response(
+                u.getId(),
+                u.getUsername(),
+                u.getEmail(),
+                u.getRole(),
+                u.getAtivo(),
+                u.getCriadoEm(),
+                u.getAtualizadoEm()
+        );
+    }
+}

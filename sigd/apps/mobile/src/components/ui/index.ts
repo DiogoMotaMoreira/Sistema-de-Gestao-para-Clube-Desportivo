@@ -13,3 +13,5 @@ export { Modal } from './Modal';
 export { EmptyState } from './EmptyState';
 export { SearchInput } from './SearchInput';
 export { PlaceholderScreen } from './PlaceholderScreen';
+export { Select, type SelectOption } from './Select';
+export { Checkbox } from './Checkbox';

@@ -45,6 +45,7 @@ public class EquipaController {
      * Lista todas as equipas ativas.
      */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_SECRETARIA', 'ROLE_TREINADOR', 'ROLE_DIRETOR_TECNICO')")
     public ResponseEntity<List<EquipaDTO.Response>> listar() {
         List<EquipaDTO.Response> equipas = equipaRepo.findByAtivaTrue().stream()
                 .map(this::toResponse)

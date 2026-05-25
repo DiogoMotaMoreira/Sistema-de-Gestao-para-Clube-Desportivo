@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { Endpoints } from '@/constants/endpoints';
 import { useAuthStore } from '@/stores/authStore';
 
 // ── Tipos ──────────────────────────────────────────────
@@ -30,10 +29,17 @@ export type SubEstadoJogo = 'FUTURO_SEM_CONVOCATORIA' | 'FUTURO_RASCUNHO' | 'FUT
 
 export interface EventoTreinador {
   id: number;
-  tipo: TipoEvento;
+  tipo: TipoEvento | string;
   dataHora: string;
   local: string;
   equipaNome: string;
+  
+  // Novos campos para HojeScreen
+  data?: string;
+  hora?: string;
+  equipaId?: number;
+  estado?: string;
+  isSessao?: boolean;
   
   // Específico de Treino
   subEstadoTreino?: SubEstadoTreino;
@@ -83,106 +89,179 @@ api.interceptors.request.use((config) => {
 export const treinadorService = {
   /**
    * Obtém as equipas alocadas ao treinador.
-   * Utiliza o endpoint real do backend (quando existir) ou mock.
    */
   async getEquipas(): Promise<EquipaTreinador[]> {
-    // Mock robusto temporário
-    return [
-      { id: 1, nome: 'Sub-15 A', escalao: 'Sub-15' },
-      { id: 2, nome: 'Sub-17 B', escalao: 'Sub-17' },
-    ];
+    const { data } = await api.get<any[]>('/tesouraria/equipas');
+    return data.map((e: any) => ({
+      id: e.id,
+      nome: e.nome,
+      escalao: e.escalaoDesignacao || '-',
+    }));
   },
 
   /**
    * Obtém o plantel de uma equipa com dados consolidados.
    */
   async getPlantel(equipaId: number): Promise<AtletaPlantel[]> {
-    // Mock
-    return [
-      { id: 1, nome: 'João Silva', posicao: 'Avançado', idade: 15, semaforo: 'APTO', assiduidade: 95, mediaAvaliacao: 4.2, minutosEpoca: 1284, convocatoriasEpoca: 18 },
-      { id: 2, nome: 'Tomás Costa', posicao: 'Médio', idade: 15, semaforo: 'CONDICIONADO', assiduidade: 80, mediaAvaliacao: 3.5, minutosEpoca: 800, convocatoriasEpoca: 12 },
-      { id: 3, nome: 'Ricardo Oliveira', posicao: 'Defesa', idade: 14, semaforo: 'INAPTO_LESAO', assiduidade: 50, mediaAvaliacao: null, minutosEpoca: 300, convocatoriasEpoca: 5 },
-      { id: 4, nome: 'Manuel Santos', posicao: 'Guarda-Redes', idade: 15, semaforo: 'INAPTO_EMD', assiduidade: 100, mediaAvaliacao: 4.0, minutosEpoca: 900, convocatoriasEpoca: 10 },
-    ];
+    const { data } = await api.get<any>('/tesouraria/atletas', {
+      params: { equipaId, size: 1000 },
+    });
+    const atletas = data.content || [];
+    return atletas.map((a: any) => {
+      let idade = 0;
+      if (a.dataNascimento) {
+        const hoje = new Date();
+        const nasc = new Date(a.dataNascimento);
+        idade = hoje.getFullYear() - nasc.getFullYear();
+        const m = hoje.getMonth() - nasc.getMonth();
+        if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) {
+          idade--;
+        }
+      }
+      return {
+        id: a.id,
+        nome: a.nomeCompleto,
+        posicao: a.posicao || '-',
+        idade,
+        semaforo: 'APTO',
+        assiduidade: null,
+        mediaAvaliacao: null,
+        minutosEpoca: null,
+        convocatoriasEpoca: null,
+      };
+    });
   },
 
   /**
    * Obtém os eventos do dia (treinos, jogos urgentes).
+   * Filtra os eventos e as sessões da equipa para a data de hoje.
    */
   async getEventosHoje(equipaId: number): Promise<EventoTreinador[]> {
-    return [
-      {
-        id: 101,
-        tipo: 'TREINO',
-        dataHora: '2026-06-15T17:00:00',
-        local: 'Campo Sintético 2',
-        equipaNome: 'Sub-15 A',
-        subEstadoTreino: 'CHAMADA_PENDENTE',
-        total: 22
-      },
-      {
-        id: 102,
-        tipo: 'JOGO',
-        dataHora: '2026-06-17T15:00:00',
-        local: 'Estádio Municipal',
-        equipaNome: 'Sub-15 A',
-        subEstadoJogo: 'FUTURO_SEM_CONVOCATORIA',
-        adversario: 'FC Rival',
-        quadroCompetitivo: 'Liga Regional',
-        casaFora: 'Casa'
-      }
-    ];
+    const hoje = new Date().toISOString().split('T')[0];
+    
+    // Fazer as chamadas em paralelo
+    const [eventosRes, sessoesRes] = await Promise.all([
+      api.get<any[]>(`/treinador/eventos?equipaId=${equipaId}`),
+      api.get<any[]>(`/treinador/sessoes?equipaId=${equipaId}`)
+    ]);
+    
+    const eventosHoje = eventosRes.data
+      .filter((e) => e.data === hoje)
+      .map((e) => ({
+        id: e.id,
+        tipo: 'JOGO' as TipoEvento,
+        dataHora: `${e.data}T${e.horaInicio}`,
+        data: e.data,
+        hora: e.horaInicio.substring(0, 5),
+        local: e.local,
+        equipaId: e.equipaId,
+        equipaNome: e.equipaNome,
+        adversario: e.adversario,
+        subEstadoJogo: (e.temConvocatoria ? 'FUTURO_PUBLICADA' : 'FUTURO_SEM_CONVOCATORIA') as SubEstadoJogo,
+      }));
+      
+    const sessoesHoje = sessoesRes.data
+      .filter((s) => s.data === hoje)
+      .map((sessao) => ({
+        id: sessao.id,
+        tipo: sessao.tipo,
+        data: sessao.data,
+        hora: sessao.horaInicio.substring(0, 5),
+        local: 'Campo de Treinos',
+        equipaId: sessao.equipaId,
+        equipaNome: sessao.equipaNome,
+        estado: sessao.estado,
+        isSessao: true,
+        // Compatibilidade com EventoTreinador existente
+        dataHora: `${sessao.data}T${sessao.horaInicio}`,
+        subEstadoTreino: (sessao.estado === 'EM_CURSO' ? 'CHAMADA_CURSO' : sessao.estado === 'CONCLUIDA' ? 'AVALIACAO_SUBMETIDA' : 'CHAMADA_PENDENTE') as SubEstadoTreino,
+        total: sessao.totalAtletas
+      }));
+
+    return [...eventosHoje, ...sessoesHoje].sort((a, b) => a.dataHora.localeCompare(b.dataHora));
   },
 
   /**
    * Obtém todos os jogos.
    */
   async getJogos(equipaId: number): Promise<EventoTreinador[]> {
-    return [
-      {
-        id: 102,
-        tipo: 'JOGO',
-        dataHora: '2026-06-17T15:00:00',
-        local: 'Estádio Municipal',
-        equipaNome: 'Sub-15 A',
-        subEstadoJogo: 'FUTURO_SEM_CONVOCATORIA',
-        adversario: 'FC Rival',
-        quadroCompetitivo: 'Liga Regional',
-        casaFora: 'Casa'
-      },
-      {
-        id: 103,
-        tipo: 'JOGO',
-        dataHora: '2026-06-10T10:00:00',
-        local: 'Campo Sintético 1',
-        equipaNome: 'Sub-15 A',
-        subEstadoJogo: 'PASSADO_FICHA_PENDENTE',
-        adversario: 'GD Vizinho',
-        quadroCompetitivo: 'Liga Regional',
-        casaFora: 'Fora',
-        expiraEmHoras: 4
-      }
-    ];
+    const { data } = await api.get<any[]>(`/treinador/eventos?equipaId=${equipaId}`);
+    
+    return data
+      .filter((e) => e.tipo === 'JOGO_OFICIAL' || e.tipo === 'JOGO_PARTICULAR')
+      .map((e) => {
+        const isPast = new Date(`${e.data}T${e.horaInicio}`) < new Date();
+        
+        return {
+          id: e.id,
+          tipo: 'JOGO' as TipoEvento,
+          dataHora: `${e.data}T${e.horaInicio}`,
+          data: e.data,
+          hora: e.horaInicio.substring(0, 5),
+          local: e.local,
+          equipaId: e.equipaId,
+          equipaNome: e.equipaNome,
+          adversario: e.adversario,
+          subEstadoJogo: (isPast ? 'PASSADO_FICHA_PENDENTE' : (e.temConvocatoria ? 'FUTURO_PUBLICADA' : 'FUTURO_SEM_CONVOCATORIA')) as SubEstadoJogo,
+        };
+      });
   },
 
-  // ── Ações Transacionais (Mocks) ──────────────────────
+  // ── Ações Transacionais ───────────────────────────────
 
-  async submeterChamada(eventoId: number, registos: RegistoChamada[]): Promise<boolean> {
-    console.log(`Chamada submetida para evento ${eventoId}`, registos);
+  async criarSessao(equipaId: number, data: string, horaInicio: string, horaFim: string, tipo: string): Promise<any> {
+    const { data: response } = await api.post('/treinador/sessoes', {
+      equipaId, data, horaInicio, horaFim, tipo
+    });
+    return response;
+  },
+
+  async getSessao(id: number): Promise<any> {
+    const { data } = await api.get(`/treinador/sessoes/${id}`);
+    return data;
+  },
+
+  async getSessoesDaEquipa(equipaId: number): Promise<any[]> {
+    const { data } = await api.get(`/treinador/sessoes?equipaId=${equipaId}`);
+    return data;
+  },
+
+  async submeterChamada(sessaoId: number, registos: RegistoChamada[]): Promise<boolean> {
+    await api.post(`/treinador/sessoes/${sessaoId}/chamada`, {
+      registos: registos.map(r => ({ atletaId: r.atletaId, estado: r.estado }))
+    });
     return true;
   },
 
-  async submeterAvaliacao(eventoId: number, avaliacoes: RegistoAvaliacao[]): Promise<boolean> {
-    console.log(`Avaliação submetida para evento ${eventoId}`, avaliacoes);
+  async submeterAvaliacao(sessaoId: number, avaliacoes: RegistoAvaliacao[]): Promise<boolean> {
+    await api.post(`/treinador/sessoes/${sessaoId}/avaliacao`, {
+      avaliacoes: avaliacoes.map(a => ({ atletaId: a.atletaId, nota: a.nota }))
+    });
     return true;
   },
 
-  async guardarConvocatoria(eventoId: number, atletasIds: number[], publicar: boolean, local: string, hora: string): Promise<boolean> {
-    console.log(`Convocatória (publicar: ${publicar}) para evento ${eventoId}`, atletasIds, local, hora);
+  async criarEvento(equipaId: number, tipo: string, data: string, horaInicio: string, adversario: string, local: string): Promise<any> {
+    const { data: response } = await api.post('/treinador/eventos', {
+      equipaId, tipo, data, horaInicio, adversario, local
+    });
+    return response;
+  },
+
+  async guardarConvocatoria(eventoId: number, atletaIds: number[], publicar: boolean, localConcentracao: string, horaConcentracao: string): Promise<boolean> {
+    // publicar is not used directly in backend since all submitted are PUBLICADA
+    await api.post('/treinador/convocatorias', {
+      eventoId, atletaIds, horaConcentracao, localConcentracao
+    });
     return true;
+  },
+
+  async getConvocatoria(id: number): Promise<any> {
+    const { data } = await api.get(`/treinador/convocatorias/${id}`);
+    return data;
   },
 
   async submeterFichaJogo(eventoId: number, titulares: number[], suplentes: number[], eventosMatch: any[]): Promise<boolean> {
+    // Ainda não há endpoint backend implementado para ficha de jogo
     console.log(`Ficha de Jogo submetida para evento ${eventoId}`, titulares, suplentes, eventosMatch);
     return true;
   }

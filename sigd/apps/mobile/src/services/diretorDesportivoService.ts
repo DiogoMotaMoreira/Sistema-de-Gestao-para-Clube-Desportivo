@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Endpoints } from '@/constants/endpoints';
+import { useAuthStore } from '@/stores/authStore';
 
 // ── Tipagens ────────────────────────────────────────────
 
@@ -82,6 +83,11 @@ export interface Incumprimento {
 
 // ── Cliente HTTP ────────────────────────────────────────
 
+function getAuthHeaders(): Record<string, string> {
+  const token = useAuthStore.getState().token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 const api = axios.create({
   baseURL: 'http://localhost:8080/api/v1',
   headers: { 'Content-Type': 'application/json' },
@@ -89,7 +95,8 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // Simulador de token e requests mockados
+  const headers = getAuthHeaders();
+  Object.assign(config.headers, headers);
   return config;
 });
 
@@ -134,13 +141,54 @@ const mockIncumprimentos: Incumprimento[] = [
 export const diretorDesportivoService = {
   // GESTÃO DE PLANTÉIS (ABA 2)
   getEquipas: async (): Promise<EquipaDT[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(mockEquipas), 400));
+    const { data } = await api.get<any[]>('/tesouraria/equipas');
+    return data.map((e: any) => ({
+      id: e.id,
+      nome: e.nome,
+      modalidade: e.modalidadeNome || '-',
+      escalao: e.escalaoDesignacao || '-',
+      treinadorPrincipal: null,
+      numAtletas: e.totalAtletas || 0,
+      inaptos: 0,
+      bloqueados: 0,
+      idadeMin: null,
+      idadeMax: null,
+      tetoConvocatoria: 18,
+      quotaAnual: 0,
+      mensalidadeBase: 0,
+      mensalidadeSocio: 0,
+    }));
   },
   getEquipaDetalhe: async (id: number): Promise<EquipaDT | undefined> => {
     return new Promise(resolve => setTimeout(() => resolve(mockEquipas.find(e => e.id === id)), 200));
   },
   getPlantel: async (equipaId: number): Promise<AtletaDT[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(mockAtletas), 300));
+    const { data } = await api.get<any>('/tesouraria/atletas', {
+      params: { equipaId, size: 1000 },
+    });
+    const atletas = data.content || [];
+    return atletas.map((a: any) => {
+      let idade = 0;
+      if (a.dataNascimento) {
+        const hoje = new Date();
+        const nasc = new Date(a.dataNascimento);
+        idade = hoje.getFullYear() - nasc.getFullYear();
+        const m = hoje.getMonth() - nasc.getMonth();
+        if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) {
+          idade--;
+        }
+      }
+      return {
+        id: a.id,
+        nome: a.nomeCompleto,
+        numero: null,
+        idade,
+        escalao: '-',
+        posicao: a.posicao || '-',
+        semaforo: 'APTO',
+        estadoAdmin: 'VALIDO',
+      };
+    });
   },
   getStaff: async (equipaId: number): Promise<StaffDT[]> => {
     return new Promise(resolve => setTimeout(() => resolve(mockStaff), 300));

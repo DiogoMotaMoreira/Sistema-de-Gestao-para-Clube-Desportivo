@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { User, Copy, CreditCard, CheckCircle, FileDown, LogOut } from 'lucide-react-native';
 import { portalService, Dependente, ObrigacaoFinanceira, ResumoFinanceiro } from '@/services/portalService';
+import { useAuthStore } from '@/stores/authStore';
 import { PortalHeader } from './components/PortalHeader';
 import { BadgeElegibilidade, BadgeFinanceiro } from './components/PortalBadges';
 
@@ -11,6 +12,12 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
   const [resumo, setResumo] = useState<ResumoFinanceiro | null>(null);
   const [filtro, setFiltro] = useState<'Todas' | 'Pendentes' | 'Pagas'>('Todas');
   const [showLogout, setShowLogout] = useState(false);
+  const logout = useAuthStore(state => state.logout);
+
+  const handleLogout = () => {
+    setShowLogout(false);
+    logout();
+  };
 
   useEffect(() => {
     portalService.getResumoFinanceiro().then(setResumo);
@@ -161,7 +168,10 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
                   <TouchableOpacity style={styles.btnUploadOutline} onPress={() => setShowLogout(false)}>
                      <Text style={{ color: '#0F172A' }}>Cancelar</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.btnUploadOutline, { backgroundColor: '#FEE2E2', borderColor: '#FEE2E2' }]}>
+                  <TouchableOpacity 
+                     style={[styles.btnUploadOutline, { backgroundColor: '#FEE2E2', borderColor: '#FEE2E2' }]}
+                     onPress={handleLogout}
+                  >
                      <Text style={{ color: '#991B1B', fontWeight: '600' }}>Terminar Sessão</Text>
                   </TouchableOpacity>
                </View>

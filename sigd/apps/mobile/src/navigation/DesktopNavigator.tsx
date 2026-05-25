@@ -301,6 +301,7 @@ export function DesktopNavigator(): React.JSX.Element {
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         drawerType: 'permanent',
+        headerLeft: () => null,
         drawerStyle: {
           width: 280,
           backgroundColor: Colors.PRETO_PRIMARIO,

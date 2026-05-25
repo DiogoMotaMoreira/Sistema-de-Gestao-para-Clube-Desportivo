@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Endpoints } from '@/constants/endpoints';
+import { useAuthStore } from '@/stores/authStore';
 
 // ── Tipagens ────────────────────────────────────────────
 
@@ -77,6 +78,11 @@ export interface ResumoFinanceiro {
 
 // ── Cliente HTTP ────────────────────────────────────────
 
+function getAuthHeaders(): Record<string, string> {
+  const token = useAuthStore.getState().token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 const api = axios.create({
   baseURL: 'http://localhost:8080/api/v1',
   headers: { 'Content-Type': 'application/json' },
@@ -84,6 +90,8 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  const headers = getAuthHeaders();
+  Object.assign(config.headers, headers);
   return config;
 });
 
@@ -172,7 +180,15 @@ export const portalService = {
   },
 
   getObrigacoes: async (dependenteId: number): Promise<ObrigacaoFinanceira[]> => {
-    // Simular chamada real se backend estiver pronto, senão mock:
-    return new Promise(resolve => setTimeout(() => resolve(mockObrigacoes), 300));
+    const { data } = await api.get<any[]>(`/tesouraria/ee/${dependenteId}/obrigacoes`);
+    return data.map((ob: any) => ({
+      id: ob.id,
+      nome: ob.tipo || 'Obrigação',
+      entidade: ob.entidadeJuridica || 'SAD',
+      valor: ob.valor,
+      dataVencimento: ob.dataVencimento,
+      estado: ob.estado as 'PAGO' | 'PENDENTE' | 'VENCIDO',
+      dataPagamento: ob.dataPagamento || undefined,
+    }));
   }
 };
