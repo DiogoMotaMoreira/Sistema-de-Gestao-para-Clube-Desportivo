@@ -61,11 +61,13 @@ import { ValidacaoDocumentalScreen } from '../screens/secretaria/ValidacaoDocume
 import { ConfiguracoesSecScreen } from '../screens/secretaria/ConfiguracoesSecScreen';
 import { CalendarioGlobalScreen } from '../screens/diretorDesportivo/CalendarioGlobalScreen';
 import { GestaoPlanteisScreen } from '../screens/diretorDesportivo/GestaoPlanteisScreen';
+import { PlantelEquipaDTScreen } from '../screens/diretorDesportivo/PlantelEquipaDTScreen';
 import { QuadrosCompetitivosScreen } from '../screens/diretorDesportivo/QuadrosCompetitivosScreen';
 import { AnaliseRendimentoScreen } from '../screens/diretorDesportivo/AnaliseRendimentoScreen';
 import { FilaEMDScreen } from '../screens/clinica/fila/FilaEMDScreen';
 import { DossiesClinicosScreen } from '../screens/clinica/dossies/DossiesClinicosScreen';
 import { MonitorizacaoScreen } from '../screens/clinica/monitorizacao/MonitorizacaoScreen';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // ── Tipos ──────────────────────────────────────────────
 
@@ -76,7 +78,16 @@ interface DrawerItem {
   icon: LucideIcon;
 }
 
-// ── Configuração de itens por role ─────────────────────
+const PlanteisStack = createNativeStackNavigator();
+
+function PlanteisStackNavigator(): React.JSX.Element {
+  return (
+    <PlanteisStack.Navigator screenOptions={{ headerShown: false }}>
+      <PlanteisStack.Screen name="GestaoPlanteis" component={GestaoPlanteisScreen} />
+      <PlanteisStack.Screen name="PlantelEquipaDT" component={PlantelEquipaDTScreen} />
+    </PlanteisStack.Navigator>
+  );
+}
 
 const DRAWER_ITEMS_BY_ROLE: Record<string, DrawerItem[]> = {
   [Role.ADMIN]: [
@@ -105,7 +116,7 @@ const DRAWER_ITEMS_BY_ROLE: Record<string, DrawerItem[]> = {
   ],
   [Role.DIRETOR_TECNICO]: [
     { name: 'Calendario', label: 'Calendário Global', component: CalendarioGlobalScreen, icon: Calendar },
-    { name: 'Planteis', label: 'Gestão de Plantéis', component: GestaoPlanteisScreen, icon: Users },
+    { name: 'Planteis', label: 'Gestão de Plantéis', component: PlanteisStackNavigator, icon: Users },
     { name: 'Quadros', label: 'Quadros Competitivos', component: QuadrosCompetitivosScreen, icon: Trophy },
     { name: 'Analise', label: 'Análise e Rendimento', component: AnaliseRendimentoScreen, icon: BarChart3 },
   ],

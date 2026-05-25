@@ -57,7 +57,10 @@ export function GestaoPlanteisScreen({ navigation }: any): React.JSX.Element {
                          )}
                       </View>
 
-                      <TouchableOpacity style={styles.btnOutline}>
+                      <TouchableOpacity
+                         style={styles.btnOutline}
+                         onPress={() => navigation.navigate('PlantelEquipaDT', { equipaId: e.id, equipaNome: e.nome })}
+                      >
                          <Text style={styles.btnOutlineText}>Gerir Plantel</Text>
                          <ChevronRight size={16} color="#0F172A" />
                       </TouchableOpacity>
@@ -73,7 +76,10 @@ export function GestaoPlanteisScreen({ navigation }: any): React.JSX.Element {
                       <Text style={styles.equipaNome}>{e.nome}</Text>
                       <Text style={styles.treinador}>{e.treinadorPrincipal || 'Sem Treinador Principal'}</Text>
                       <Text style={styles.numAtletas}>{e.numAtletas} atletas</Text>
-                      <TouchableOpacity style={styles.btnOutline}>
+                      <TouchableOpacity
+                         style={styles.btnOutline}
+                         onPress={() => navigation.navigate('PlantelEquipaDT', { equipaId: e.id, equipaNome: e.nome })}
+                      >
                          <Text style={styles.btnOutlineText}>Gerir Plantel</Text>
                          <ChevronRight size={16} color="#0F172A" />
                       </TouchableOpacity>

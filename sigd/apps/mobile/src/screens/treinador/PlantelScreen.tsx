@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Search, ChevronRight, Users } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
-import { treinadorService, AtletaPlantel } from '@/services/treinadorService';
+import { treinadorService, AtletaPlantel, SemaforoClinico } from '@/services/treinadorService';
 import { SemaforoBadge } from './components/SemaforoBadge';
 
 export function PlantelScreen({ navigation }: any): React.JSX.Element {
@@ -31,7 +31,29 @@ export function PlantelScreen({ navigation }: any): React.JSX.Element {
   }, [navigation, isSearching, search]);
 
   useEffect(() => {
-    treinadorService.getPlantel(1).then(setPlantel);
+    const equipaId = 1;
+    Promise.all([
+      treinadorService.getPlantel(equipaId),
+      treinadorService.getSemaforoPlantel(equipaId)
+    ]).then(([plantelData, semaforoData]) => {
+      const semaforoMap = new Map(semaforoData.map(s => [s.atletaId, s.semaforo]));
+      const plantelComSemaforo = plantelData.map(atleta => {
+        const semaforoReal = semaforoMap.get(atleta.id);
+        
+        let semaforoMapeado: SemaforoClinico = 'APTO';
+        if (semaforoReal === 'AMARELO') semaforoMapeado = 'CONDICIONADO';
+        else if (semaforoReal === 'VERMELHO') semaforoMapeado = 'INAPTO_EMD';
+        else if (semaforoReal === 'BLOQUEADO') semaforoMapeado = 'INAPTO_LESAO';
+        
+        return {
+          ...atleta,
+          semaforo: semaforoMapeado
+        };
+      });
+      setPlantel(plantelComSemaforo);
+    }).catch(err => {
+      console.error('Erro ao carregar plantel com semáforo:', err);
+    });
   }, []);
 
   const atletasFiltrados = plantel.filter(a => {

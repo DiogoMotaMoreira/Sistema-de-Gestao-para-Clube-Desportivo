@@ -65,7 +65,7 @@
 **RFs Cobertos:** RF-17 (parcial), RF-19 (parcial)  
 **Lacunas:**
 - ❌ Sem endpoint de alta médica explícito (RF-19 — encerramento formal)
-- ❌ Sem semáforo clínico de tradução de prontidão (RF-16 — Verde/Amarelo/Vermelho)
+- ✅ Semáforo clínico de tradução de prontidão (RF-16 — Verde/Amarelo/Vermelho/Bloqueado) implementado no backend e frontend.
 - ❌ Sem bloqueio sistémico de utilização desportiva por EMD caducado (RF-15)
 - ❌ Sem interdição sistémica por baixa médica (RF-18)
 - ❌ Sem endpoint de monitorização/alertas de caducidade documental (RF-14)
@@ -368,7 +368,7 @@
 |---|---|---|---|---|
 | RF-14 | Alertas Caducidade Documental | ❌ | ❌ | ❌ |
 | RF-15 | Bloqueio por EMD Caducado | ❌ | ❌ | ❌ |
-| RF-16 | Semáforo Clínico | ❌ | 🎨 `SemaforoBadge` | 🔶 Só UI |
+| RF-16 | Semáforo Clínico | ✅ | ✅ | ✅ |
 | RF-17 | Abertura de Ocorrências Clínicas | ✅ | ✅ | ✅ |
 | RF-18 | Interdição por Baixa Médica | ❌ | ❌ | ❌ |
 | RF-19 | Alta Médica | 🔶 (deliberação parcial) | 🔶 | 🔶 Parcial |
@@ -422,9 +422,9 @@
 
 | Estado | Qtd | % |
 |---|---|---|
-| ✅ Totalmente implementados | **5** | 11,9% |
+| ✅ Totalmente implementados | **6** | 14,3% |
 | 🔶 Parcialmente implementados | **17** | 40,5% |
-| ❌ Não implementados | **20** | 47,6% |
+| ❌ Não implementados | **19** | 45,2% |
 | **Total** | **42** | 100% |
 
 ---

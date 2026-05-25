@@ -76,6 +76,20 @@ export interface ResumoFinanceiro {
   refSocio: string;
 }
 
+export interface PerfilEE {
+  eeId: number;
+  nome: string;
+  email: string;
+  telemovel: string | null;
+  dependentes: Dependente[];
+}
+
+export interface SituacaoFinanceira {
+  totalDivida: number;
+  totalPago: number;
+  obrigacoes: ObrigacaoFinanceira[];
+}
+
 // ── Cliente HTTP ────────────────────────────────────────
 
 function getAuthHeaders(): Record<string, string> {
@@ -129,7 +143,12 @@ const mockObrigacoes: ObrigacaoFinanceira[] = [
 
 export const portalService = {
   getDependentes: async (): Promise<Dependente[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(mockDependentes), 300));
+    try {
+      const perfil = await portalService.getPerfilEE();
+      return perfil.dependentes;
+    } catch (e) {
+      return mockDependentes;
+    }
   },
   
   getNotificacoes: async (): Promise<NotificacaoPortal[]> => {
@@ -141,10 +160,7 @@ export const portalService = {
   },
 
   getAlertas: async (dependenteId: number): Promise<AlertaPortal[]> => {
-    return new Promise(resolve => setTimeout(() => resolve([
-       { id: 1, tipo: 'JUSTIFICACAO_PENDENTE', titulo: 'Tomás Ribeiro faltou ao Treino', subtitulo: 'Tens 3h 45m para justificar', urgencia: 'ALTA' },
-       { id: 2, tipo: 'DOCUMENTO_REJEITADO', titulo: 'Outro Documento Civil', subtitulo: 'Motivo: Documento ilegível — fotografia desfocada', urgencia: 'CRITICA' },
-    ]), 400));
+    return new Promise(resolve => setTimeout(() => resolve([]), 400));
   },
 
   getEventos: async (dependenteId: number, passados: boolean): Promise<EventoPortal[]> => {
@@ -179,16 +195,40 @@ export const portalService = {
     }), 200));
   },
 
+  getPerfilEE: async (): Promise<PerfilEE> => {
+    const { data } = await api.get<PerfilEE>('/portal/me');
+    return data;
+  },
+
+  getSituacaoFinanceira: async (): Promise<SituacaoFinanceira> => {
+    const { data } = await api.get<any>('/portal/situacao-financeira');
+    return {
+      totalDivida: data.totalDivida,
+      totalPago: data.totalPago,
+      obrigacoes: (data.obrigacoes || []).map((ob: any) => ({
+        id: ob.id,
+        nome: ob.tipo || 'Obrigação',
+        entidade: ob.entidadeJuridica || 'SAD',
+        valor: ob.valor,
+        dataVencimento: ob.dataVencimento,
+        estado: ob.estado === 'EM_ATRASO' ? 'VENCIDO' : ob.estado,
+        dataPagamento: ob.dataPagamento || undefined,
+      }))
+    };
+  },
+
   getObrigacoes: async (dependenteId: number): Promise<ObrigacaoFinanceira[]> => {
-    const { data } = await api.get<any[]>(`/tesouraria/ee/${dependenteId}/obrigacoes`);
-    return data.map((ob: any) => ({
-      id: ob.id,
-      nome: ob.tipo || 'Obrigação',
-      entidade: ob.entidadeJuridica || 'SAD',
-      valor: ob.valor,
-      dataVencimento: ob.dataVencimento,
-      estado: ob.estado as 'PAGO' | 'PENDENTE' | 'VENCIDO',
-      dataPagamento: ob.dataPagamento || undefined,
-    }));
+    const { data } = await api.get<any[]>('/portal/obrigacoes');
+    return data
+      .filter((ob: any) => ob.atletaId === dependenteId)
+      .map((ob: any) => ({
+        id: ob.id,
+        nome: ob.tipo || 'Obrigação',
+        entidade: ob.entidadeJuridica || 'SAD',
+        valor: ob.valor,
+        dataVencimento: ob.dataVencimento,
+        estado: ob.estado === 'EM_ATRASO' ? 'VENCIDO' : (ob.estado as 'PAGO' | 'PENDENTE' | 'VENCIDO'),
+        dataPagamento: ob.dataPagamento || undefined,
+      }));
   }
 };

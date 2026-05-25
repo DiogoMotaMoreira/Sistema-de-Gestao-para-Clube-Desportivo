@@ -15,6 +15,8 @@ public interface EncarregadoEducacaoRepository extends JpaRepository<Encarregado
 
     Optional<EncarregadoEducacao> findByNif(String nif);
 
+    Optional<EncarregadoEducacao> findByEmail(String email);
+
     Page<EncarregadoEducacao> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 
     /**

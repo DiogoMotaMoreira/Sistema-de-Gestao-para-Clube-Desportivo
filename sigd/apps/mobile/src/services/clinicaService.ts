@@ -89,6 +89,11 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
+export interface AltaMedicaRequest {
+  parecer: string;
+  dataEncerramento: string; // ISO format: YYYY-MM-DD
+}
+
 // ── Axios Instance ────────────────────────────────────
 
 function getAuthHeaders(): Record<string, string> {
@@ -155,4 +160,16 @@ export const clinicaService = {
     );
     return data;
   },
+
+  /**
+   * Emite alta médica para uma ocorrência clínica (RF-19).
+   */
+  async emitirAlta(ocorrenciaId: number, alta: AltaMedicaRequest): Promise<OcorrenciaResponse> {
+    const { data } = await api.post<OcorrenciaResponse>(
+      `/ocorrencias/${ocorrenciaId}/alta`,
+      alta,
+    );
+    return data;
+  },
 };
+

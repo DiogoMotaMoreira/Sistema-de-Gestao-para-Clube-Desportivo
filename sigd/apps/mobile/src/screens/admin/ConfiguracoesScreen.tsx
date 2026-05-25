@@ -155,9 +155,31 @@ export function ConfiguracoesScreen(): React.JSX.Element {
                        </View>
                     ))}
                     <View style={styles.tableFooter}>
-                       <Text style={{ fontSize: 12, color: Colors.INFO_TEXT, fontWeight: '500' }}>← Anterior</Text>
-                       <Text style={{ fontSize: 12, color: Colors.INFO_TEXT, fontWeight: '500' }}>Próxima →</Text>
-                    </View>
+                        <TouchableOpacity
+                           style={{
+                             paddingHorizontal: 16,
+                             paddingVertical: 8,
+                             borderRadius: 8,
+                             backgroundColor: '#E5E7EB',
+                             opacity: 0.5,
+                           }}
+                           disabled={true}
+                        >
+                           <Text style={{ color: '#9CA3AF', fontWeight: '600' }}>← Anterior</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                           style={{
+                             paddingHorizontal: 16,
+                             paddingVertical: 8,
+                             borderRadius: 8,
+                             backgroundColor: '#E5E7EB',
+                             opacity: 0.5,
+                           }}
+                           disabled={true}
+                        >
+                           <Text style={{ color: '#9CA3AF', fontWeight: '600' }}>Próxima →</Text>
+                        </TouchableOpacity>
+                     </View>
                  </View>
               ) : (
                  <View style={{ alignItems: 'center', padding: 32, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}>
@@ -214,8 +236,30 @@ export function ConfiguracoesScreen(): React.JSX.Element {
                     </View>
                  ))}
                  <View style={styles.tableFooter}>
-                    <Text style={{ fontSize: 12, color: Colors.INFO_TEXT, fontWeight: '500' }}>← Anterior</Text>
-                    <Text style={{ fontSize: 12, color: Colors.INFO_TEXT, fontWeight: '500' }}>Próxima →</Text>
+                    <TouchableOpacity
+                       style={{
+                         paddingHorizontal: 16,
+                         paddingVertical: 8,
+                         borderRadius: 8,
+                         backgroundColor: '#E5E7EB',
+                         opacity: 0.5,
+                       }}
+                       disabled={true}
+                    >
+                       <Text style={{ color: '#9CA3AF', fontWeight: '600' }}>← Anterior</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                       style={{
+                         paddingHorizontal: 16,
+                         paddingVertical: 8,
+                         borderRadius: 8,
+                         backgroundColor: '#E5E7EB',
+                         opacity: 0.5,
+                       }}
+                       disabled={true}
+                    >
+                       <Text style={{ color: '#9CA3AF', fontWeight: '600' }}>Próxima →</Text>
+                    </TouchableOpacity>
                  </View>
               </View>
 

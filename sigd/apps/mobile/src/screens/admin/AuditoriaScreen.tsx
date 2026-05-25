@@ -3,16 +3,23 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import { ShieldCheck, Download, Search } from 'lucide-react-native';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ModalDetalheAuditoria } from './components/AdminModals';
-import { adminService, AuditoriaEvent } from '@/services/adminService';
+import { adminService, AuditLogEntry } from '@/services/adminService';
 import { Colors } from '@/constants/colors';
 
 export function AuditoriaScreen(): React.JSX.Element {
-  const [eventos, setEventos] = useState<AuditoriaEvent[]>([]);
-  const [eventoSelecionado, setEventoSelecionado] = useState<AuditoriaEvent | null>(null);
+  const [eventos, setEventos] = useState<AuditLogEntry[]>([]);
+  const [eventoSelecionado, setEventoSelecionado] = useState<AuditLogEntry | null>(null);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   useEffect(() => {
-    adminService.getAuditoria().then(setEventos);
-  }, []);
+    adminService.getAuditoria(page, 10).then(res => {
+      setEventos(res.content);
+      setTotalPages(res.totalPages);
+      setTotalElements(res.totalElements);
+    });
+  }, [page]);
 
   const getAcaoStyle = (acao: string) => {
     if (['BLOQUEAR_ACESSO', 'REVOGAR_ROLE', 'FORÇAR_RESET', 'ELIMINAR'].includes(acao)) {
@@ -79,11 +86,10 @@ export function AuditoriaScreen(): React.JSX.Element {
               const acaoStyle = getAcaoStyle(e.acao);
               return (
                  <View key={e.id} style={styles.tableRow}>
-                    <Text style={[styles.td, { flex: 1.5 }]}>{e.dataHora}</Text>
+                    <Text style={[styles.td, { flex: 1.5 }]}>{e.timestamp}</Text>
                     
                     <View style={{ flex: 2 }}>
-                       <Text style={[styles.td, { fontWeight: '700' }]}>{e.atorNome}</Text>
-                       <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>{e.atorRole}</Text>
+                       <Text style={[styles.td, { fontWeight: '700' }]}>{e.ator}</Text>
                     </View>
                     
                     <View style={{ flex: 1.5, alignItems: 'flex-start' }}>
@@ -92,9 +98,9 @@ export function AuditoriaScreen(): React.JSX.Element {
                        </View>
                     </View>
                     
-                    <Text style={[styles.td, { flex: 1.5 }]}>{e.modulo}</Text>
+                    <Text style={[styles.td, { flex: 1.5 }]}>{e.entidade}</Text>
                     
-                    <Text style={[styles.td, { flex: 1.5, fontFamily: 'monospace', color: Colors.GRAY_500_TEXTO2 }]}>{e.ip}</Text>
+                    <Text style={[styles.td, { flex: 1.5, fontFamily: 'monospace', color: Colors.GRAY_500_TEXTO2 }]}>{e.ipAddress}</Text>
                     
                     <View style={{ flex: 1, alignItems: 'flex-end' }}>
                        <TouchableOpacity style={styles.btnDetalhe} onPress={() => setEventoSelecionado(e)}>
@@ -104,13 +110,43 @@ export function AuditoriaScreen(): React.JSX.Element {
                  </View>
               );
            })}
-           <View style={styles.tableFooter}>
-              <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>A mostrar 1–3 de 158 eventos</Text>
-              <View style={{ flexDirection: 'row', gap: 16 }}>
-                 <Text style={{ fontSize: 12, color: Colors.INFO_TEXT, fontWeight: '500' }}>← Anterior</Text>
-                 <Text style={{ fontSize: 12, color: Colors.INFO_TEXT, fontWeight: '500' }}>Próxima →</Text>
-              </View>
-           </View>
+            <View style={styles.tableFooter}>
+               <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>
+                  A mostrar {page * 10 + 1}–{Math.min((page + 1) * 10, totalElements)} de {totalElements} eventos
+               </Text>
+               <View style={{ flexDirection: 'row', gap: 16 }}>
+                  <TouchableOpacity
+                     onPress={() => setPage(p => Math.max(0, p - 1))}
+                     disabled={page === 0}
+                     style={{
+                       paddingHorizontal: 16,
+                       paddingVertical: 8,
+                       borderRadius: 8,
+                       backgroundColor: page === 0 ? '#E5E7EB' : '#1B2B5E',
+                       opacity: page === 0 ? 0.5 : 1,
+                     }}
+                  >
+                     <Text style={{ color: page === 0 ? '#9CA3AF' : '#FFFFFF', fontWeight: '600' }}>
+                        ← Anterior
+                     </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                     onPress={() => setPage(p => p + 1)}
+                     disabled={page >= totalPages - 1}
+                     style={{
+                       paddingHorizontal: 16,
+                       paddingVertical: 8,
+                       borderRadius: 8,
+                       backgroundColor: page >= totalPages - 1 ? '#E5E7EB' : '#1B2B5E',
+                       opacity: page >= totalPages - 1 ? 0.5 : 1,
+                     }}
+                  >
+                     <Text style={{ color: page >= totalPages - 1 ? '#9CA3AF' : '#FFFFFF', fontWeight: '600' }}>
+                        Próxima →
+                     </Text>
+                  </TouchableOpacity>
+               </View>
+            </View>
         </View>
 
       </ScrollView>

@@ -6,9 +6,31 @@ import { useAuthStore } from '@/stores/authStore';
 import { PortalHeader } from './components/PortalHeader';
 import { BadgeElegibilidade, BadgeFinanceiro } from './components/PortalBadges';
 
+function formatarDataSegura(dataStr: string | undefined | null): string {
+  if (!dataStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
+    const [ano, mes, dia] = dataStr.split('-');
+    return `${dia}/${mes}/${ano}`;
+  }
+  if (dataStr.includes('T')) {
+    const dataApenas = dataStr.split('T')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dataApenas)) {
+      const [ano, mes, dia] = dataApenas.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }
+  }
+  try {
+    const d = new Date(dataStr);
+    return isNaN(d.getTime()) ? dataStr : d.toLocaleDateString('pt-PT');
+  } catch (e) {
+    return dataStr;
+  }
+}
+
 export function ContaScreen({ navigation }: any): React.JSX.Element {
   const [dependente, setDependente] = useState<Dependente | null>(null);
   const [obrigacoes, setObrigacoes] = useState<ObrigacaoFinanceira[]>([]);
+  const [perfil, setPerfil] = useState<any>(null);
   const [resumo, setResumo] = useState<ResumoFinanceiro | null>(null);
   const [filtro, setFiltro] = useState<'Todas' | 'Pendentes' | 'Pagas'>('Todas');
   const [showLogout, setShowLogout] = useState(false);
@@ -20,7 +42,20 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
   };
 
   useEffect(() => {
-    portalService.getResumoFinanceiro().then(setResumo);
+    portalService.getPerfilEE().then(perfilData => {
+      setPerfil(perfilData);
+      if (perfilData && perfilData.dependentes && perfilData.dependentes.length > 0) {
+        portalService.getObrigacoes(perfilData.dependentes[0].id).then(setObrigacoes);
+      }
+    });
+    portalService.getSituacaoFinanceira().then(sit => {
+      setResumo({
+        valorEmDivida: sit.totalDivida,
+        valorPagoEsteMes: sit.totalPago,
+        iban: 'PT50 0000 1111 2222 3333 4444 5',
+        refSocio: '012345678'
+      });
+    });
   }, []);
 
   useEffect(() => {
@@ -116,10 +151,10 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
                        <Text style={{ fontSize: 12, color: '#991B1B', marginBottom: 8 }}>Vencido há alguns dias</Text>
                     )}
                     {o.estado === 'PENDENTE' && (
-                       <Text style={{ fontSize: 12, color: '#B45309', marginBottom: 8 }}>Vence a {new Date(o.dataVencimento).toLocaleDateString()}</Text>
+                       <Text style={{ fontSize: 12, color: '#B45309', marginBottom: 8 }}>Vence a {formatarDataSegura(o.dataVencimento)}</Text>
                     )}
                     {o.estado === 'PAGO' && (
-                       <Text style={{ fontSize: 12, color: '#047857', marginBottom: 8 }}>Pago a {o.dataPagamento ? new Date(o.dataPagamento).toLocaleDateString() : ''}</Text>
+                       <Text style={{ fontSize: 12, color: '#047857', marginBottom: 8 }}>Pago a {formatarDataSegura(o.dataPagamento)}</Text>
                     )}
 
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -141,9 +176,9 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
         <View style={styles.perfilCard}>
            <View style={{ alignItems: 'center', marginBottom: 16 }}>
               <View style={styles.avatarGrande}><User size={24} color="#64748B" /></View>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: '#0F172A' }}>Encarregado Educação</Text>
-              <Text style={{ fontSize: 13, color: '#64748B' }}>ee@boavista.pt</Text>
-              <Text style={{ fontSize: 13, color: '#64748B' }}>+351 910 000 000</Text>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#0F172A' }}>{perfil?.nome || 'Encarregado Educação'}</Text>
+              <Text style={{ fontSize: 13, color: '#64748B' }}>{perfil?.email || 'ee@sigd.pt'}</Text>
+              <Text style={{ fontSize: 13, color: '#64748B' }}>{perfil?.telemovel || '+351 910 000 000'}</Text>
            </View>
            <Text style={{ fontSize: 11, color: '#64748B', fontStyle: 'italic', textAlign: 'center' }}>Para alterar os teus dados, contacta a secretaria do clube.</Text>
         </View>

@@ -1,26 +1,41 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
-import { Search, ChevronRight, Activity, Users, Plus, ShieldCheck, AlertTriangle, XCircle, Clock, Lock, FilePlus, Paperclip } from 'lucide-react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Modal, Alert, ActivityIndicator } from 'react-native';
+import { Search, ChevronRight, Activity, Users, Plus, ShieldCheck, AlertTriangle, XCircle, Clock, Lock, FilePlus, Paperclip, CheckCircle, X } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
 import { Badge, Button } from '@/components/ui';
+import { clinicaService, AltaMedicaRequest, OcorrenciaResponse } from '@/services/clinicaService';
+import { secretariaService, AtletaResponse } from '@/services/secretariaService';
 
-// Tipos Mockados
+// ── Tipos ──────────────────────────────────────────────
+
 type Semaforo = 'APTO' | 'CONDICIONADO' | 'INAPTO_LESAO' | 'INAPTO_EMD';
 
-interface AtletaMock {
-  id: string;
+interface AtletaDossie {
+  id: number;
   nome: string;
   escalao: string;
   idade: number;
   semaforo: Semaforo;
-  ocorrenciasAtivas: number;
 }
 
-const MOCK_ATLETAS: AtletaMock[] = [
-  { id: '1', nome: 'João Silva', escalao: 'Sub-17', idade: 16, semaforo: 'APTO', ocorrenciasAtivas: 0 },
-  { id: '2', nome: 'Beatriz Santos', escalao: 'Sub-15', idade: 14, semaforo: 'INAPTO_LESAO', ocorrenciasAtivas: 1 },
-  { id: '3', nome: 'Carlos Ferreira', escalao: 'Sub-19', idade: 18, semaforo: 'CONDICIONADO', ocorrenciasAtivas: 1 },
-];
+function mapElegibilidadeToSemaforo(estado: string): Semaforo {
+  switch (estado) {
+    case 'INAPTO': return 'INAPTO_LESAO';
+    case 'CONDICIONADO': return 'CONDICIONADO';
+    default: return 'APTO';
+  }
+}
+
+function calcularIdade(dataNascimento: string): number {
+  const nascimento = new Date(dataNascimento);
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const m = hoje.getMonth() - nascimento.getMonth();
+  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+  return idade;
+}
 
 function getSemaforoData(estado: Semaforo) {
   switch (estado) {
@@ -33,19 +48,78 @@ function getSemaforoData(estado: Semaforo) {
 
 export function DossiesClinicosScreen(): React.JSX.Element {
   const [viewState, setViewState] = useState<'GRID' | 'DOSSIE'>('GRID');
-  const [selectedAtleta, setSelectedAtleta] = useState<AtletaMock | null>(null);
+  const [selectedAtleta, setSelectedAtleta] = useState<AtletaDossie | null>(null);
 
   const [activeTab, setActiveTab] = useState<'ativas' | 'historico' | 'emds'>('ativas');
   const [filterType, setFilterType] = useState<'TODOS' | 'INAPTOS'>('TODOS');
   const [search, setSearch] = useState('');
 
-  const atletasFiltrados = MOCK_ATLETAS.filter(a => {
+  // Alta Médica modal state
+  const [altaModalVisible, setAltaModalVisible] = useState(false);
+  const [altaOcorrenciaId, setAltaOcorrenciaId] = useState<number | null>(null);
+  const [altaParecer, setAltaParecer] = useState('');
+  const [altaDataEncerramento, setAltaDataEncerramento] = useState('');
+  const [altaLoading, setAltaLoading] = useState(false);
+  const [altaDateError, setAltaDateError] = useState('');
+
+  // Real atletas from API
+  const [atletas, setAtletas] = useState<AtletaDossie[]>([]);
+  const [atletasLoading, setAtletasLoading] = useState(false);
+
+  const fetchAtletas = useCallback(async () => {
+    setAtletasLoading(true);
+    try {
+      const page = await secretariaService.getAtletas(undefined, undefined, 0, 200);
+      const mapped: AtletaDossie[] = page.content.map((a: AtletaResponse) => ({
+        id: a.id,
+        nome: a.nomeCompleto,
+        escalao: a.equipaNome || '-',
+        idade: calcularIdade(a.dataNascimento),
+        semaforo: mapElegibilidadeToSemaforo(a.estadoElegibilidade),
+      }));
+      setAtletas(mapped);
+    } catch {
+      setAtletas([]);
+    } finally {
+      setAtletasLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAtletas();
+  }, [fetchAtletas]);
+
+  // Real ocorrências from API
+  const [ocorrencias, setOcorrencias] = useState<OcorrenciaResponse[]>([]);
+  const [ocorrenciasLoading, setOcorrenciasLoading] = useState(false);
+
+  const fetchOcorrencias = useCallback(async (atletaId: number) => {
+    setOcorrenciasLoading(true);
+    try {
+      const data = await clinicaService.getOcorrenciasPorAtleta(atletaId);
+      setOcorrencias(data);
+    } catch {
+      setOcorrencias([]);
+    } finally {
+      setOcorrenciasLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (viewState === 'DOSSIE' && selectedAtleta) {
+      fetchOcorrencias(selectedAtleta.id);
+    } else {
+      setOcorrencias([]);
+    }
+  }, [viewState, selectedAtleta, fetchOcorrencias]);
+
+  const atletasFiltrados = atletas.filter(a => {
     if (filterType === 'INAPTOS' && a.semaforo === 'APTO') return false;
     if (search && !a.nome.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const handleOpenDossie = (atleta: AtletaMock) => {
+  const handleOpenDossie = (atleta: AtletaDossie) => {
     setSelectedAtleta(atleta);
     setViewState('DOSSIE');
     setActiveTab('ativas');
@@ -56,8 +130,81 @@ export function DossiesClinicosScreen(): React.JSX.Element {
     setSelectedAtleta(null);
   };
 
+  const openAltaModal = (ocorrenciaId: number) => {
+    setAltaOcorrenciaId(ocorrenciaId);
+    setAltaParecer('');
+    setAltaDataEncerramento('');
+    setAltaDateError('');
+    setAltaModalVisible(true);
+  };
+
+  const closeAltaModal = () => {
+    setAltaModalVisible(false);
+    setAltaOcorrenciaId(null);
+    setAltaParecer('');
+    setAltaDataEncerramento('');
+    setAltaDateError('');
+  };
+
+  const handleAltaDateChange = (text: string) => {
+    setAltaDataEncerramento(text);
+    // Validate YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      const date = new Date(text);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (date > today) {
+        setAltaDateError('A data de encerramento não pode ser futura.');
+      } else {
+        setAltaDateError('');
+      }
+    } else if (text.length >= 10) {
+      setAltaDateError('Formato inválido. Use AAAA-MM-DD.');
+    } else {
+      setAltaDateError('');
+    }
+  };
+
+  const isAltaFormValid = altaParecer.trim().length >= 10
+    && /^\d{4}-\d{2}-\d{2}$/.test(altaDataEncerramento)
+    && !altaDateError
+    && !altaLoading;
+
+  const handleSubmitAlta = async () => {
+    if (!isAltaFormValid || !altaOcorrenciaId) return;
+    setAltaLoading(true);
+    try {
+      await clinicaService.emitirAlta(altaOcorrenciaId, {
+        parecer: altaParecer.trim(),
+        dataEncerramento: altaDataEncerramento,
+      });
+      closeAltaModal();
+      // Refresh ocorrências and atletas to reflect the alta
+      if (selectedAtleta) {
+        fetchOcorrencias(selectedAtleta.id);
+      }
+      fetchAtletas();
+      Alert.alert(
+        'Alta Emitida',
+        'A alta médica foi registada com sucesso. O semáforo do atleta foi atualizado.',
+      );
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || 'Erro ao emitir alta médica.';
+      Alert.alert('Erro', msg);
+    } finally {
+      setAltaLoading(false);
+    }
+  };
+
   if (viewState === 'DOSSIE' && selectedAtleta) {
-    const s = getSemaforoData(selectedAtleta.semaforo);
+    // Derive semáforo dynamically from real ocorrências
+    const ativas = ocorrencias.filter(o => o.estado === 'ATIVA');
+    const computedSemaforo: Semaforo = ativas.some(o => o.grauRestricao === 'VERMELHO')
+      ? 'INAPTO_LESAO'
+      : ativas.some(o => o.grauRestricao === 'AMARELO')
+        ? 'CONDICIONADO'
+        : 'APTO';
+    const s = getSemaforoData(ocorrenciasLoading ? selectedAtleta.semaforo : computedSemaforo);
     const Icon = s.icon;
     return (
       <View style={styles.container}>
@@ -105,44 +252,67 @@ export function DossiesClinicosScreen(): React.JSX.Element {
 
         {/* Content */}
         <ScrollView style={styles.dossieContent}>
-          {activeTab === 'ativas' && selectedAtleta.ocorrenciasAtivas > 0 ? (
-            <View style={styles.lesaoCard}>
-              <View style={styles.lesaoHeader}>
-                <View style={styles.lesaoHeaderTitle}>
-                  <Text style={styles.lesaoName}>Entorse no Joelho Direito</Text>
-                  <View style={styles.lesaoBadge}>
-                    <Activity size={12} color="#1D4ED8" />
-                    <Text style={styles.lesaoBadgeText}>Em Tratamento</Text>
-                  </View>
-                </View>
-                <View style={styles.lesaoMeta}>
-                  <Text style={styles.lesaoMetaText}>Próxima Reavaliação: 30/05/2026</Text>
-                  <View style={styles.lesaoButtons}>
-                    <TouchableOpacity style={styles.btnEvolucao}>
-                      <FilePlus size={14} color={Colors.GRAY_900_TEXTO1} />
-                      <Text style={styles.btnEvolucaoText}>Nova Evolução</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.btnAlta}>
-                      <ShieldCheck size={14} color="#047857" />
-                      <Text style={styles.btnAltaText}>Emitir Alta</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.timeline}>
-                <View style={styles.timelineNode}>
-                  <View style={styles.timelineDot} />
-                  <View style={styles.timelineContent}>
-                    <View style={styles.timelineHeader}>
-                      <Text style={styles.timelineDate}>20 Mai 2026 · 14:30</Text>
-                      <View style={[styles.grauBadge, { backgroundColor: '#FEE2E2' }]}><Text style={{color: '#991B1B', fontSize: 11}}>Interrupção Total</Text></View>
-                    </View>
-                    <Text style={styles.timelineNota}>Atleta com dor intensa e edema visível. Início de gelo e repouso.</Text>
-                    <Text style={styles.timelineFooter}>Registado por: Dr. Medico · 20/05/2026 14:30</Text>
-                  </View>
-                </View>
-              </View>
+          {activeTab === 'ativas' && ocorrenciasLoading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={Colors.GRAY_500_TEXTO2} />
+              <Text style={styles.emptyTitle}>A carregar ocorrências...</Text>
             </View>
+          ) : activeTab === 'ativas' && ocorrencias.filter(o => o.estado === 'ATIVA').length > 0 ? (
+            <>
+              {ocorrencias.filter(o => o.estado === 'ATIVA').map(oc => {
+                const grauColor = oc.grauRestricao === 'VERMELHO' ? '#991B1B'
+                  : oc.grauRestricao === 'AMARELO' ? '#B45309' : '#047857';
+                const grauBg = oc.grauRestricao === 'VERMELHO' ? '#FEE2E2'
+                  : oc.grauRestricao === 'AMARELO' ? '#FFFBEB' : '#ECFDF5';
+                const grauLabel = oc.grauRestricao === 'VERMELHO' ? 'Interrupção Total'
+                  : oc.grauRestricao === 'AMARELO' ? 'Restrição Condicionada' : 'Sem Restrição';
+                return (
+                  <View key={oc.id} style={[styles.lesaoCard, { borderLeftColor: grauColor, marginBottom: 16 }]}>
+                    <View style={styles.lesaoHeader}>
+                      <View style={styles.lesaoHeaderTitle}>
+                        <Text style={styles.lesaoName}>{oc.diagnostico}</Text>
+                        <View style={styles.lesaoBadge}>
+                          <Activity size={12} color="#1D4ED8" />
+                          <Text style={styles.lesaoBadgeText}>Em Tratamento</Text>
+                        </View>
+                      </View>
+                      <View style={styles.lesaoMeta}>
+                        <Text style={styles.lesaoMetaText}>
+                          {oc.dataReavaliacao ? `Próxima Reavaliação: ${oc.dataReavaliacao}` : 'Sem reavaliação agendada'}
+                        </Text>
+                        <View style={styles.lesaoButtons}>
+                          <TouchableOpacity style={styles.btnEvolucao}>
+                            <FilePlus size={14} color={Colors.GRAY_900_TEXTO1} />
+                            <Text style={styles.btnEvolucaoText}>Nova Evolução</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.btnAlta} onPress={() => openAltaModal(oc.id)}>
+                            <ShieldCheck size={14} color="#047857" />
+                            <Text style={styles.btnAltaText}>Emitir Alta</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.timeline}>
+                      <View style={styles.timelineNode}>
+                        <View style={[styles.timelineDot, { backgroundColor: grauColor }]} />
+                        <View style={styles.timelineContent}>
+                          <View style={styles.timelineHeader}>
+                            <Text style={styles.timelineDate}>{oc.dataOcorrencia}</Text>
+                            <View style={[styles.grauBadge, { backgroundColor: grauBg }]}>
+                              <Text style={{ color: grauColor, fontSize: 11 }}>{grauLabel}</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.timelineNota}>{oc.diagnostico}</Text>
+                          <Text style={styles.timelineFooter}>
+                            Registado por: {oc.medicoCriadorNome || 'N/D'} · {oc.criadoEm?.substring(0, 10) || ''}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </>
           ) : activeTab === 'ativas' ? (
             <View style={styles.emptyState}>
               <Activity size={48} color={Colors.GRAY_200_BORDAS} opacity={0.5} />
@@ -161,6 +331,113 @@ export function DossiesClinicosScreen(): React.JSX.Element {
             </View>
           )}
         </ScrollView>
+
+        {/* Modal Alta Médica (RF-19) */}
+        <Modal
+          visible={altaModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeAltaModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Emitir Alta Médica</Text>
+                  <Text style={styles.modalSubtitle}>
+                    {selectedAtleta ? `${selectedAtleta.nome} · ${selectedAtleta.escalao}` : ''}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={closeAltaModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <X size={20} color={Colors.GRAY_500_TEXTO2} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Preview de impacto no semáforo */}
+              <View style={styles.altaImpactBanner}>
+                <CheckCircle size={20} color="#047857" />
+                <Text style={styles.altaImpactText}>
+                  O semáforo transitará para APTO — atleta elegível para treino e convocatórias.
+                </Text>
+              </View>
+
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                {/* Campo: Data de Encerramento */}
+                <Text style={styles.fieldLabel}>Data Efetiva de Encerramento *</Text>
+                <TextInput
+                  style={[styles.fieldInput, altaDateError ? styles.fieldInputError : null]}
+                  placeholder="AAAA-MM-DD"
+                  placeholderTextColor={Colors.GRAY_500_TEXTO2}
+                  value={altaDataEncerramento}
+                  onChangeText={handleAltaDateChange}
+                  maxLength={10}
+                />
+                {altaDateError ? (
+                  <Text style={styles.fieldError}>{altaDateError}</Text>
+                ) : (
+                  <Text style={styles.fieldHelper}>* Deve ser igual ou anterior à data de hoje.</Text>
+                )}
+
+                {/* Campo: Parecer Final */}
+                <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Parecer Final — Diretrizes para o Corpo Técnico *</Text>
+                <TextInput
+                  style={[styles.fieldTextarea]}
+                  placeholder="Descreva as condicionantes para o regresso à atividade desportiva e as instruções para o treinador..."
+                  placeholderTextColor={Colors.GRAY_500_TEXTO2}
+                  value={altaParecer}
+                  onChangeText={setAltaParecer}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={2000}
+                  textAlignVertical="top"
+                />
+                <View style={styles.charCountRow}>
+                  <Text style={[
+                    styles.charCount,
+                    altaParecer.trim().length < 10 && altaParecer.length > 0 ? { color: '#991B1B' } : {},
+                  ]}>
+                    {altaParecer.length} / 2000
+                  </Text>
+                </View>
+                {altaParecer.length > 0 && altaParecer.trim().length < 10 && (
+                  <Text style={styles.fieldError}>O parecer deve ter pelo menos 10 caracteres.</Text>
+                )}
+                <Text style={styles.fieldHelperBlue}>
+                  Este parecer será visível ao corpo técnico no semáforo (versão mascarada — sem diagnóstico clínico).
+                </Text>
+              </ScrollView>
+
+              {/* Rodapé do Modal */}
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.btnCancelOutline} onPress={closeAltaModal}>
+                  <Text style={styles.btnCancelOutlineText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.btnConfirmarAlta,
+                    !isAltaFormValid && styles.btnConfirmarAltaDisabled,
+                  ]}
+                  onPress={handleSubmitAlta}
+                  disabled={!isAltaFormValid}
+                >
+                  {altaLoading ? (
+                    <ActivityIndicator size="small" color="#047857" />
+                  ) : (
+                    <>
+                      <CheckCircle size={16} color={isAltaFormValid ? '#047857' : '#9CA3AF'} />
+                      <Text style={[
+                        styles.btnConfirmarAltaText,
+                        !isAltaFormValid && { color: '#9CA3AF' },
+                      ]}>Confirmar Alta</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
       </View>
     );
   }
@@ -207,10 +484,10 @@ export function DossiesClinicosScreen(): React.JSX.Element {
                 <Text style={[styles.cardSemaforoText, { color: s.text }]}>{s.label}</Text>
               </View>
               
-              {a.ocorrenciasAtivas > 0 && (
+              {a.semaforo !== 'APTO' && (
                 <View style={styles.cardOcorrencias}>
                   <Activity size={12} color="#1D4ED8" />
-                  <Text style={styles.cardOcorrenciasText}>{a.ocorrenciasAtivas} Ocorrência Ativa</Text>
+                  <Text style={styles.cardOcorrenciasText}>Ocorrência Ativa</Text>
                 </View>
               )}
 
@@ -221,7 +498,13 @@ export function DossiesClinicosScreen(): React.JSX.Element {
             </View>
           );
         })}
-        {atletasFiltrados.length === 0 && (
+        {atletasLoading && atletas.length === 0 && (
+          <View style={styles.emptyGrid}>
+            <ActivityIndicator size="large" color={Colors.GRAY_500_TEXTO2} />
+            <Text style={styles.emptyGridTitle}>A carregar atletas...</Text>
+          </View>
+        )}
+        {!atletasLoading && atletasFiltrados.length === 0 && (
           <View style={styles.emptyGrid}>
             <Users size={64} color={Colors.GRAY_200_BORDAS} opacity={0.5} />
             <Text style={styles.emptyGridTitle}>Nenhum atleta encontrado.</Text>
@@ -645,5 +928,155 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: 'italic',
     color: Colors.GRAY_500_TEXTO2,
+  },
+  /* Modal Alta Médica */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: '90%',
+    maxWidth: 520,
+    maxHeight: '85%',
+    backgroundColor: Colors.BRANCO,
+    borderRadius: 16,
+    ...Platform.select({ web: { boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }, default: { elevation: 8 } }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.GRAY_200_BORDAS,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.GRAY_900_TEXTO1,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: Colors.GRAY_500_TEXTO2,
+    marginTop: 4,
+  },
+  altaImpactBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 24,
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    borderRadius: 8,
+  },
+  altaImpactText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#047857',
+    lineHeight: 20,
+  },
+  modalBody: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    color: Colors.GRAY_500_TEXTO2,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  fieldInput: {
+    height: 44,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: Colors.GRAY_900_TEXTO1,
+    backgroundColor: Colors.BRANCO,
+  },
+  fieldInputError: {
+    borderColor: '#DC2626',
+  },
+  fieldTextarea: {
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+    fontSize: 14,
+    color: Colors.GRAY_900_TEXTO1,
+    backgroundColor: Colors.BRANCO,
+  },
+  fieldError: {
+    fontSize: 11,
+    color: '#991B1B',
+    marginTop: 4,
+  },
+  fieldHelper: {
+    fontSize: 11,
+    color: Colors.GRAY_500_TEXTO2,
+    marginTop: 4,
+  },
+  fieldHelperBlue: {
+    fontSize: 11,
+    color: '#1D4ED8',
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  charCountRow: {
+    alignItems: 'flex-end',
+    marginTop: 4,
+  },
+  charCount: {
+    fontSize: 11,
+    color: Colors.GRAY_500_TEXTO2,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    padding: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.GRAY_200_BORDAS,
+  },
+  btnCancelOutline: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+  },
+  btnCancelOutlineText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.GRAY_900_TEXTO1,
+  },
+  btnConfirmarAlta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#ECFDF5',
+  },
+  btnConfirmarAltaDisabled: {
+    backgroundColor: '#F1F5F9',
+  },
+  btnConfirmarAltaText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#047857',
   },
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CheckCircle, Clock, AlertCircle, Lock, Archive, LucideIcon } from 'lucide-react-native';
 
-export type EstadoFinanceiro = 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'VENCIDO_CRITICO';
+export type EstadoFinanceiro = 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'VENCIDO_CRITICO' | 'EM_ATRASO';
 export type EstadoDocumental = 'APROVADO' | 'EM_ANALISE' | 'REJEITADO' | 'EM_FALTA';
 export type Elegibilidade = 'APTO' | 'BLOQUEADO' | 'VINCULO_ENCERRADO';
 
@@ -13,7 +13,7 @@ export function BadgeFinanceiro({ estado, showLabel = true }: { estado: EstadoFi
   
   if (estado === 'PENDENTE') {
     bg = '#FFFBEB'; text = '#B45309'; border = '#B45309'; Icon = Clock; label = 'Pendente';
-  } else if (estado === 'VENCIDO' || estado === 'VENCIDO_CRITICO') {
+  } else if (estado === 'VENCIDO' || estado === 'VENCIDO_CRITICO' || estado === 'EM_ATRASO') {
     bg = '#FEE2E2'; text = '#991B1B'; border = '#991B1B'; Icon = AlertCircle; label = 'Vencido';
   }
 

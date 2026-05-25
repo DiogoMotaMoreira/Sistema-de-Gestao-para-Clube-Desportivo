@@ -34,8 +34,9 @@ public class EpocaDesportiva {
     private LocalDate dataFim;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String estado;
+    private EstadoEpoca estado;
 
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();

@@ -163,6 +163,9 @@ export const diretorDesportivoService = {
     return new Promise(resolve => setTimeout(() => resolve(mockEquipas.find(e => e.id === id)), 200));
   },
   getPlantel: async (equipaId: number): Promise<AtletaDT[]> => {
+    return diretorDesportivoService.getAtletasPorEquipa(equipaId);
+  },
+  getAtletasPorEquipa: async (equipaId: number): Promise<AtletaDT[]> => {
     const { data } = await api.get<any>('/tesouraria/atletas', {
       params: { equipaId, size: 1000 },
     });
@@ -190,6 +193,14 @@ export const diretorDesportivoService = {
       };
     });
   },
+  getOcorrenciasAtleta: async (atletaId: number): Promise<any[]> => {
+    const { data } = await api.get<any[]>(`/clinica/ocorrencias/atleta/${atletaId}`);
+    return data;
+  },
+  getSemaforoEquipa: async (equipaId: number): Promise<any[]> => {
+    const { data } = await api.get<any[]>(`/treinador/plantel/${equipaId}/semaforo`);
+    return data;
+  },
   getStaff: async (equipaId: number): Promise<StaffDT[]> => {
     return new Promise(resolve => setTimeout(() => resolve(mockStaff), 300));
   },
@@ -198,9 +209,15 @@ export const diretorDesportivoService = {
   getQuadros: async (): Promise<QuadroCompetitivo[]> => {
     return new Promise(resolve => setTimeout(() => resolve(mockQuadros), 300));
   },
+  getQuadrosCompetitivos: async (): Promise<QuadroCompetitivo[]> => {
+    return diretorDesportivoService.getQuadros();
+  },
 
   // CALENDÁRIO (ABA 1)
   getEventos: async (mes: number, ano: number): Promise<EventoCalendario[]> => {
+    return new Promise(resolve => setTimeout(() => resolve(mockEventos), 300));
+  },
+  getEventosCalendario: async (): Promise<EventoCalendario[]> => {
     return new Promise(resolve => setTimeout(() => resolve(mockEventos), 300));
   },
 
@@ -211,6 +228,9 @@ export const diretorDesportivoService = {
       golosMarcados: 45, golosSofridos: 22,
       fichasSubmetidas: 20, fichasTotal: 22
     }), 400));
+  },
+  getEstatisticasEpoca: async (): Promise<KPIStats> => {
+    return diretorDesportivoService.getKPIsColetivos();
   },
   getIncumprimentos: async (): Promise<Incumprimento[]> => {
     return new Promise(resolve => setTimeout(() => resolve(mockIncumprimentos), 300));

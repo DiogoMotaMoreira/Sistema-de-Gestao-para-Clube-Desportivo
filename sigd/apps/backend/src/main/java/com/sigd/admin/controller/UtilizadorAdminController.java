@@ -46,10 +46,4 @@ public class UtilizadorAdminController {
     public UtilizadorAdminDTO.Response reativar(@PathVariable Long id) {
         return service.reativar(id);
     }
-
-    @GetMapping("/audit-log")
-    public Page<Map<String, Object>> auditLog(@PageableDefault(size = 20) Pageable pageable) {
-        // Mock audit log for now as requested
-        return Page.empty(pageable);
-    }
 }

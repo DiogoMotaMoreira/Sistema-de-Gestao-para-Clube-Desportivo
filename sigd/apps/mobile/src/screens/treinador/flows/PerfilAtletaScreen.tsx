@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Colors } from '@/constants/colors';
-import { treinadorService, AtletaPlantel } from '@/services/treinadorService';
+import { treinadorService, AtletaPlantel, SemaforoClinico } from '@/services/treinadorService';
 import { SemaforoBadge } from '../components/SemaforoBadge';
 import { CheckCircle, Minus } from 'lucide-react-native';
 
@@ -11,10 +11,27 @@ export function PerfilAtletaScreen({ route, navigation }: any): React.JSX.Elemen
 
   useEffect(() => {
     navigation.setOptions({ title: 'Perfil do Atleta' });
-    // Mock fetch
-    treinadorService.getPlantel(1).then(plantel => {
+    const equipaId = 1;
+    Promise.all([
+      treinadorService.getPlantel(equipaId),
+      treinadorService.getSemaforoPlantel(equipaId)
+    ]).then(([plantel, semaforoData]) => {
       const a = plantel.find(p => p.id === atletaId);
-      if (a) setAtleta(a);
+      if (a) {
+        const semaforoReal = semaforoData.find(s => s.atletaId === atletaId)?.semaforo;
+        
+        let semaforoMapeado: SemaforoClinico = 'APTO';
+        if (semaforoReal === 'AMARELO') semaforoMapeado = 'CONDICIONADO';
+        else if (semaforoReal === 'VERMELHO') semaforoMapeado = 'INAPTO_EMD';
+        else if (semaforoReal === 'BLOQUEADO') semaforoMapeado = 'INAPTO_LESAO';
+        
+        setAtleta({
+          ...a,
+          semaforo: semaforoMapeado
+        });
+      }
+    }).catch(err => {
+      console.error('Erro ao carregar perfil do atleta com semáforo:', err);
     });
   }, [atletaId, navigation]);
 

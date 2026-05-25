@@ -1,5 +1,6 @@
 package com.sigd.clinica.service;
 
+import com.sigd.clinica.dto.AltaMedicaDTO;
 import com.sigd.clinica.dto.DeliberacaoDTO;
 import com.sigd.clinica.dto.FilaEMDDTO;
 import com.sigd.clinica.dto.OcorrenciaDTO;
@@ -82,6 +83,17 @@ public class OcorrenciaService {
         ocorrencia.setMedicoCriador(medico);
 
         ocorrencia = ocorrenciaRepo.save(ocorrencia);
+
+        // Atualizar o estado_elegibilidade do atleta
+        if (request.grauRestricao() == GrauRestricaoDesportiva.VERMELHO) {
+            atleta.setEstadoElegibilidade(EstadoElegibilidade.INAPTO);
+        } else if (request.grauRestricao() == GrauRestricaoDesportiva.AMARELO) {
+            atleta.setEstadoElegibilidade(EstadoElegibilidade.CONDICIONADO);
+        } else if (request.grauRestricao() == GrauRestricaoDesportiva.VERDE) {
+            atleta.setEstadoElegibilidade(EstadoElegibilidade.APTO);
+        }
+        atletaRepo.save(atleta);
+
         return toResponse(ocorrencia);
     }
 
@@ -143,6 +155,105 @@ public class OcorrenciaService {
         }
 
         ocorrencia = ocorrenciaRepo.save(ocorrencia);
+
+        // Atualizar o estado_elegibilidade do atleta
+        Atleta atleta = ocorrencia.getAtleta();
+        if (ocorrencia.getEstado() == EstadoOcorrencia.RESOLVIDA) {
+            // Verificar se o atleta tem outras ocorrências ativas
+            final Long ocId = ocorrencia.getId();
+            List<Ocorrencia> outrasAtivas = ocorrenciaRepo.findByAtletaId(atleta.getId()).stream()
+                    .filter(o -> !o.getId().equals(ocId) && o.getEstado() == EstadoOcorrencia.ATIVA)
+                    .toList();
+
+            if (outrasAtivas.isEmpty()) {
+                atleta.setEstadoElegibilidade(EstadoElegibilidade.APTO);
+            } else {
+                boolean temVermelho = outrasAtivas.stream().anyMatch(o -> o.getGrauRestricao() == GrauRestricaoDesportiva.VERMELHO);
+                boolean temAmarelo = outrasAtivas.stream().anyMatch(o -> o.getGrauRestricao() == GrauRestricaoDesportiva.AMARELO);
+                if (temVermelho) {
+                    atleta.setEstadoElegibilidade(EstadoElegibilidade.INAPTO);
+                } else if (temAmarelo) {
+                    atleta.setEstadoElegibilidade(EstadoElegibilidade.CONDICIONADO);
+                } else {
+                    atleta.setEstadoElegibilidade(EstadoElegibilidade.APTO);
+                }
+            }
+        } else {
+            if (deliberacao.grauFinal() == GrauRestricaoDesportiva.VERMELHO) {
+                atleta.setEstadoElegibilidade(EstadoElegibilidade.INAPTO);
+            } else if (deliberacao.grauFinal() == GrauRestricaoDesportiva.AMARELO) {
+                atleta.setEstadoElegibilidade(EstadoElegibilidade.CONDICIONADO);
+            }
+        }
+        atletaRepo.save(atleta);
+
+        return toResponse(ocorrencia);
+    }
+
+    /**
+     * Emite Alta Médica (RF-19) — encerramento formal de uma ocorrência clínica.
+     *
+     * Regras de negócio:
+     * - Ocorrência deve estar ATIVA
+     * - dataEncerramento não pode ser futura
+     * - Altera estado para RESOLVIDA e grau para VERDE
+     * - Recalcula a elegibilidade do atleta
+     *
+     * @throws OcorrenciaNotFoundException se a ocorrência não existir
+     * @throws IllegalStateException se a ocorrência não estiver ATIVA
+     * @throws IllegalArgumentException se a data de encerramento for futura
+     */
+    public OcorrenciaDTO.Response emitirAlta(Long ocorrenciaId, AltaMedicaDTO altaDTO, Long medicoId) {
+        Ocorrencia ocorrencia = ocorrenciaRepo.findById(ocorrenciaId)
+                .orElseThrow(() -> new OcorrenciaNotFoundException(ocorrenciaId));
+
+        // Validar que a ocorrência está ATIVA
+        if (ocorrencia.getEstado() != EstadoOcorrencia.ATIVA) {
+            throw new IllegalStateException(
+                    "Apenas ocorrências com estado ATIVA podem receber alta. Estado atual: "
+                            + ocorrencia.getEstado());
+        }
+
+        // Validar que a data de encerramento não é futura
+        if (altaDTO.dataEncerramento().isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("A data de encerramento não pode ser futura.");
+        }
+
+        Utilizador medico = utilizadorRepo.findById(medicoId).orElse(null);
+
+        // Encerrar a ocorrência
+        ocorrencia.setEstado(EstadoOcorrencia.RESOLVIDA);
+        ocorrencia.setGrauRestricao(GrauRestricaoDesportiva.VERDE);
+        ocorrencia.setObsDeliberacao(altaDTO.parecer());
+        ocorrencia.setDataDeliberacao(altaDTO.dataEncerramento());
+        ocorrencia.setMedicoDeliberacao(medico);
+
+        ocorrencia = ocorrenciaRepo.save(ocorrencia);
+
+        // Recalcular a elegibilidade do atleta
+        Atleta atleta = ocorrencia.getAtleta();
+        final Long ocId = ocorrencia.getId();
+        List<Ocorrencia> outrasAtivas = ocorrenciaRepo.findByAtletaId(atleta.getId()).stream()
+                .filter(o -> !o.getId().equals(ocId) && o.getEstado() == EstadoOcorrencia.ATIVA)
+                .toList();
+
+        if (outrasAtivas.isEmpty()) {
+            atleta.setEstadoElegibilidade(EstadoElegibilidade.APTO);
+        } else {
+            boolean temVermelho = outrasAtivas.stream()
+                    .anyMatch(o -> o.getGrauRestricao() == GrauRestricaoDesportiva.VERMELHO);
+            boolean temAmarelo = outrasAtivas.stream()
+                    .anyMatch(o -> o.getGrauRestricao() == GrauRestricaoDesportiva.AMARELO);
+            if (temVermelho) {
+                atleta.setEstadoElegibilidade(EstadoElegibilidade.INAPTO);
+            } else if (temAmarelo) {
+                atleta.setEstadoElegibilidade(EstadoElegibilidade.CONDICIONADO);
+            } else {
+                atleta.setEstadoElegibilidade(EstadoElegibilidade.APTO);
+            }
+        }
+        atletaRepo.save(atleta);
+
         return toResponse(ocorrencia);
     }
 

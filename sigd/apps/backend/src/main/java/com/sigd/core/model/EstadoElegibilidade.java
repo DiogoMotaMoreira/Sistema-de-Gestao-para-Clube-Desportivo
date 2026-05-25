@@ -12,6 +12,7 @@ package com.sigd.core.model;
 public enum EstadoElegibilidade {
     APTO,
     INAPTO,
+    CONDICIONADO,
     PENDENTE_EMD,
     BLOQUEADO_FINANCEIRO
 }

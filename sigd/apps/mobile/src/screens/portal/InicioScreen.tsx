@@ -26,41 +26,51 @@ export function InicioScreen({ navigation }: any): React.JSX.Element {
       <ScrollView style={styles.content} contentContainerStyle={{ padding: 16, gap: 16 }}>
         
         {/* Renderizar Alertas */}
-        {alertas.map(alerta => {
-          if (alerta.tipo === 'JUSTIFICACAO_PENDENTE') {
-            return (
-              <View key={alerta.id} style={[styles.cardAlert, { borderLeftColor: '#EA580C' }]}>
-                 <View style={[styles.badgePill, { backgroundColor: '#FFF7ED' }]}>
-                    <AlertTriangle size={12} color="#EA580C" />
-                    <Text style={[styles.badgePillText, { color: '#EA580C' }]}>JUSTIFICAÇÃO PENDENTE</Text>
-                 </View>
-                 <Text style={styles.cardTitle}>{alerta.titulo}</Text>
-                 <Text style={[styles.cardSub, { color: '#B45309' }]}>{alerta.subtitulo}</Text>
-                 <TouchableOpacity style={[styles.btnFull, { backgroundColor: '#EA580C' }]} onPress={() => navigation.navigate('Agenda')}>
-                    <FileEdit size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.btnFullText}>Justificar Agora</Text>
-                 </TouchableOpacity>
+        {alertas.length === 0 ? (
+           <View style={[styles.cardAlert, { borderLeftColor: '#047857' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                 <ShieldCheck size={18} color="#047857" />
+                 <Text style={[styles.cardTitle, { color: '#047857', marginBottom: 0 }]}>Tudo em ordem! ✓</Text>
               </View>
-            );
-          }
-          if (alerta.tipo === 'DOCUMENTO_REJEITADO') {
-            return (
-              <View key={alerta.id} style={[styles.cardAlert, { borderLeftColor: '#991B1B', borderColor: '#FEE2E2' }]}>
-                 <View style={[styles.badgePill, { backgroundColor: '#FEE2E2' }]}>
-                    <XCircle size={12} color="#991B1B" />
-                    <Text style={[styles.badgePillText, { color: '#991B1B' }]}>DOCUMENTO REJEITADO</Text>
+              <Text style={styles.cardSub}>Não tens nenhuma ação pendente para o {dependente?.nome || 'atleta'}.</Text>
+           </View>
+        ) : (
+           alertas.map(alerta => {
+             if (alerta.tipo === 'JUSTIFICACAO_PENDENTE') {
+               return (
+                 <View key={alerta.id} style={[styles.cardAlert, { borderLeftColor: '#EA580C' }]}>
+                    <View style={[styles.badgePill, { backgroundColor: '#FFF7ED' }]}>
+                       <AlertTriangle size={12} color="#EA580C" />
+                       <Text style={[styles.badgePillText, { color: '#EA580C' }]}>JUSTIFICAÇÃO PENDENTE</Text>
+                    </View>
+                    <Text style={styles.cardTitle}>{alerta.titulo}</Text>
+                    <Text style={[styles.cardSub, { color: '#B45309' }]}>{alerta.subtitulo}</Text>
+                    <TouchableOpacity style={[styles.btnFull, { backgroundColor: '#EA580C' }]} onPress={() => navigation.navigate('Agenda')}>
+                       <FileEdit size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                       <Text style={styles.btnFullText}>Justificar Agora</Text>
+                    </TouchableOpacity>
                  </View>
-                 <Text style={styles.cardTitle}>{alerta.titulo}</Text>
-                 <Text style={[styles.cardSub, { color: '#991B1B', fontStyle: 'italic' }]}>{alerta.subtitulo}</Text>
-                 <TouchableOpacity style={[styles.btnFullOutline, { borderColor: '#991B1B' }]} onPress={() => navigation.navigate('Docs')}>
-                    <Upload size={18} color="#991B1B" style={{ marginRight: 8 }} />
-                    <Text style={[styles.btnFullText, { color: '#991B1B' }]}>Submeter Novo Documento</Text>
-                 </TouchableOpacity>
-              </View>
-            );
-          }
-          return null;
-        })}
+               );
+             }
+             if (alerta.tipo === 'DOCUMENTO_REJEITADO') {
+               return (
+                 <View key={alerta.id} style={[styles.cardAlert, { borderLeftColor: '#991B1B', borderColor: '#FEE2E2' }]}>
+                    <View style={[styles.badgePill, { backgroundColor: '#FEE2E2' }]}>
+                       <XCircle size={12} color="#991B1B" />
+                       <Text style={[styles.badgePillText, { color: '#991B1B' }]}>DOCUMENTO REJEITADO</Text>
+                    </View>
+                    <Text style={styles.cardTitle}>{alerta.titulo}</Text>
+                    <Text style={[styles.cardSub, { color: '#991B1B', fontStyle: 'italic' }]}>{alerta.subtitulo}</Text>
+                    <TouchableOpacity style={[styles.btnFullOutline, { borderColor: '#991B1B' }]} onPress={() => navigation.navigate('Docs')}>
+                       <Upload size={18} color="#991B1B" style={{ marginRight: 8 }} />
+                       <Text style={[styles.btnFullText, { color: '#991B1B' }]}>Submeter Novo Documento</Text>
+                    </TouchableOpacity>
+                 </View>
+               );
+             }
+             return null;
+           })
+        )}
 
         {/* Card de Próximo Evento */}
         {proximoEvento ? (

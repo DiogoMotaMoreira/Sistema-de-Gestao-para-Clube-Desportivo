@@ -266,22 +266,38 @@ export function GestaoAcessosScreen(): React.JSX.Element {
               ))
            )}
 
-           <View style={[styles.tableFooter, { justifyContent: 'flex-start', gap: 16 }]}>
-              <Button
-                label="Anterior"
-                onPress={() => setPage(Math.max(0, page - 1))}
-                variant="secondary"
-                disabled={page === 0}
-                icon={<ChevronLeft size={18} color={page === 0 ? Colors.GRAY_200_BORDAS : Colors.GRAY_900_TEXTO1} />}
-              />
-              <Button
-                label="Próxima"
-                onPress={() => setPage(page + 1)}
-                variant="secondary"
-                disabled={pageData?.last ?? true}
-                icon={<ChevronRight size={18} color={(pageData?.last ?? true) ? Colors.GRAY_200_BORDAS : Colors.GRAY_900_TEXTO1} />}
-              />
-           </View>
+            <View style={[styles.tableFooter, { justifyContent: 'flex-start', gap: 16 }]}>
+               <TouchableOpacity
+                 onPress={() => setPage(Math.max(0, page - 1))}
+                 disabled={page === 0}
+                 style={{
+                   paddingHorizontal: 16,
+                   paddingVertical: 8,
+                   borderRadius: 8,
+                   backgroundColor: page === 0 ? '#E5E7EB' : '#1B2B5E',
+                   opacity: page === 0 ? 0.5 : 1,
+                 }}
+               >
+                 <Text style={{ color: page === 0 ? '#9CA3AF' : '#FFFFFF', fontWeight: '600' }}>
+                   ← Anterior
+                 </Text>
+               </TouchableOpacity>
+               <TouchableOpacity
+                 onPress={() => setPage(page + 1)}
+                 disabled={pageData?.last ?? true}
+                 style={{
+                   paddingHorizontal: 16,
+                   paddingVertical: 8,
+                   borderRadius: 8,
+                   backgroundColor: (pageData?.last ?? true) ? '#E5E7EB' : '#1B2B5E',
+                   opacity: (pageData?.last ?? true) ? 0.5 : 1,
+                 }}
+               >
+                 <Text style={{ color: (pageData?.last ?? true) ? '#9CA3AF' : '#FFFFFF', fontWeight: '600' }}>
+                   Próxima →
+                 </Text>
+               </TouchableOpacity>
+            </View>
         </View>
 
         {/* Botoes de teste para os outros modais */}

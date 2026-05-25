@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { X, ShieldAlert, AlertTriangle } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
-import { AdminUser, AuditoriaEvent, NotificacaoFalhada, LocalTreino } from '@/services/adminService';
+import { AdminUser, AuditoriaEvent, AuditLogEntry, NotificacaoFalhada, LocalTreino } from '@/services/adminService';
 
 // ── Globais ──────────────────────────────────────────
 
@@ -136,7 +136,7 @@ export function ModalForcarReset({ visible, onClose, user }: { visible: boolean,
 
 // ── 4. Detalhe de Auditoria ─────────────────────────────
 
-export function ModalDetalheAuditoria({ visible, onClose, evento }: { visible: boolean, onClose: () => void, evento: AuditoriaEvent | null }) {
+export function ModalDetalheAuditoria({ visible, onClose, evento }: { visible: boolean, onClose: () => void, evento: AuditLogEntry | null }) {
   if (!evento) return null;
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -149,11 +149,11 @@ export function ModalDetalheAuditoria({ visible, onClose, evento }: { visible: b
           </View>
           
           <View style={styles.infoLine}>
-             <Text style={{ fontSize: 12, color: Colors.GRAY_900_TEXTO1 }}>ID do Evento: <Text style={{ fontFamily: 'monospace' }}>{evento.id}</Text>  ·  {evento.dataHora}  ·  Ator: {evento.atorNome}  ·  IP: <Text style={{ fontFamily: 'monospace' }}>{evento.ip}</Text></Text>
+             <Text style={{ fontSize: 12, color: Colors.GRAY_900_TEXTO1 }}>ID do Evento: <Text style={{ fontFamily: 'monospace' }}>{evento.id}</Text>  ·  {evento.timestamp}  ·  Ator: {evento.ator}  ·  IP: <Text style={{ fontFamily: 'monospace' }}>{evento.ipAddress}</Text></Text>
           </View>
 
           <ScrollView style={{ backgroundColor: '#1E293B', padding: 16, borderRadius: 8, maxHeight: 300 }}>
-             <Text style={{ color: '#F8FAFC', fontSize: 13, fontFamily: 'monospace' }}>{evento.detalheJson}</Text>
+             <Text style={{ color: '#F8FAFC', fontSize: 13, fontFamily: 'monospace' }}>{evento.detalhes}</Text>
           </ScrollView>
 
           <View style={styles.footerRow}>

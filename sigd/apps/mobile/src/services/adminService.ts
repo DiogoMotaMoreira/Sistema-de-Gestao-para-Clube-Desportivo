@@ -65,6 +65,45 @@ export interface AuditoriaEvent {
   detalheJson: string;
 }
 
+export interface AuditLogEntry {
+  id: number;
+  ator: string;
+  acao: string;
+  entidade: string;
+  entidadeId: string;
+  detalhes: string;
+  timestamp: string;
+  ipAddress: string;
+}
+
+interface BackendAuditLog {
+  id: number;
+  timestamp: string;
+  usuarioId?: number;
+  usuarioRole?: string;
+  acao: string;
+  entidade: string;
+  entidadeId?: number;
+  payloadAntes?: string;
+  payloadDepois?: string;
+}
+
+function mapToAuditLogEntry(b: BackendAuditLog): AuditLogEntry {
+  const roleName = b.usuarioRole ? b.usuarioRole.replace('ROLE_', '') : 'SISTEMA';
+  const ator = b.usuarioId ? `${roleName} (ID: ${b.usuarioId})` : roleName;
+  const timestamp = b.timestamp ? new Date(b.timestamp).toLocaleString() : '';
+  return {
+    id: b.id,
+    ator,
+    acao: b.acao,
+    entidade: b.entidade,
+    entidadeId: b.entidadeId ? b.entidadeId.toString() : '',
+    detalhes: b.payloadDepois || '',
+    timestamp,
+    ipAddress: '127.0.0.1',
+  };
+}
+
 export interface NotificacaoFalhada {
   id: string;
   tipo: string;
@@ -138,9 +177,20 @@ export const adminService = {
     return data;
   },
 
-  getAuditoria: async (): Promise<AuditoriaEvent[]> => {
-    await delay(300);
-    return [];
+  getAuditoria: async (
+    page = 0,
+    size = 20,
+    modulo?: string,
+    tipo?: string
+  ): Promise<PageResponse<AuditLogEntry>> => {
+    const params: Record<string, any> = { page, size };
+    if (modulo) params.modulo = modulo;
+    if (tipo) params.tipo = tipo;
+    const { data } = await api.get<PageResponse<BackendAuditLog>>('/audit-log', { params });
+    return {
+      ...data,
+      content: data.content.map(mapToAuditLogEntry),
+    };
   },
 
   getNotificacoesFalhadas: async (): Promise<NotificacaoFalhada[]> => {

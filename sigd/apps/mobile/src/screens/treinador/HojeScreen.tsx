@@ -5,6 +5,14 @@ import { Colors } from '@/constants/colors';
 import { useAuthStore } from '@/stores/authStore';
 import { treinadorService, EventoTreinador, EquipaTreinador } from '@/services/treinadorService';
 
+const formatarData = (dataStr?: string) => {
+  if (!dataStr) return '';
+  const parts = dataStr.split('-');
+  if (parts.length !== 3) return dataStr;
+  const [ano, mes, dia] = parts;
+  return `${dia}/${mes}/${ano}`;
+};
+
 export function HojeScreen({ navigation }: any): React.JSX.Element {
   const user = useAuthStore(s => s.user);
   const [equipas, setEquipas] = useState<EquipaTreinador[]>([]);
@@ -46,16 +54,16 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
   };
 
   const renderEventCard = (evento: EventoTreinador) => {
-    if (evento.tipo === 'TREINO') {
+    if (evento.isSessao) {
       const isAvaliacao = evento.subEstadoTreino === 'AVALIACAO_PENDENTE';
       return (
         <View key={evento.id} style={[styles.card, { borderLeftColor: '#047857' }]}>
           <View style={styles.cardHeaderRow}>
             <View style={[styles.badgePill, { backgroundColor: '#ECFDF5' }]}>
               <Dumbbell size={12} color="#047857" />
-              <Text style={[styles.badgeText, { color: '#047857' }]}>TREINO HOJE</Text>
+              <Text style={[styles.badgeText, { color: '#047857' }]}>{(evento.tipo || 'SESSÃO').toUpperCase()} HOJE</Text>
             </View>
-            <Text style={styles.cardTime}>17:00</Text>
+            <Text style={styles.cardTime}>{evento.hora || '17:00'}</Text>
           </View>
           <Text style={styles.cardSubTitle}>{evento.local} · {evento.equipaNome}</Text>
           <TouchableOpacity 
@@ -82,7 +90,7 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
               </View>
             </View>
             <Text style={styles.cardTitle}>{evento.adversario}</Text>
-            <Text style={styles.cardSubTitle}>{new Date(evento.dataHora).toLocaleDateString()} · {new Date(evento.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+            <Text style={styles.cardSubTitle}>{formatarData(evento.data)} · {evento.hora}</Text>
             <TouchableOpacity style={styles.btnErro} onPress={() => navigation.navigate('FichaJogoFlow', { eventoId: evento.id })}>
               <ClipboardList size={18} color={Colors.BRANCO} />
               <Text style={styles.btnErroText}>Preencher Ficha de Jogo</Text>
@@ -99,7 +107,7 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
               <Trophy size={12} color="#1D4ED8" />
               <Text style={[styles.badgeText, { color: '#1D4ED8' }]}>JOGO</Text>
             </View>
-            <Text style={[styles.cardTime, { color: '#1D4ED8' }]}>{new Date(evento.dataHora).toLocaleDateString()}</Text>
+            <Text style={[styles.cardTime, { color: '#1D4ED8' }]}>{formatarData(evento.data)}</Text>
           </View>
           <Text style={styles.cardTitle}>{evento.adversario}</Text>
           <Text style={styles.cardSubTitle}>{evento.quadroCompetitivo} · {evento.local} · {evento.casaFora}</Text>

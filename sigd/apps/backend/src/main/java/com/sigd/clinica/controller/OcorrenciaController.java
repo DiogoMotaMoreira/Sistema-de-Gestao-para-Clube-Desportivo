@@ -1,5 +1,6 @@
 package com.sigd.clinica.controller;
 
+import com.sigd.clinica.dto.AltaMedicaDTO;
 import com.sigd.clinica.dto.DeliberacaoDTO;
 import com.sigd.clinica.dto.FilaEMDDTO;
 import com.sigd.clinica.dto.OcorrenciaDTO;
@@ -54,7 +55,7 @@ public class OcorrenciaController {
      * Requer ROLE_MEDICO.
      */
     @GetMapping("/fila-emd")
-    @PreAuthorize("hasRole('ROLE_MEDICO')")
+    @PreAuthorize("hasAnyRole('ROLE_MEDICO', 'ROLE_DIRETOR_TECNICO')")
     public ResponseEntity<Page<FilaEMDDTO>> listarFilaEMD(Pageable pageable) {
         return ResponseEntity.ok(ocorrenciaService.listarFilaEMD(pageable));
     }
@@ -65,7 +66,7 @@ public class OcorrenciaController {
      * Lista todas as ocorrências de um atleta. Requer ROLE_MEDICO.
      */
     @GetMapping("/ocorrencias/atleta/{id}")
-    @PreAuthorize("hasRole('ROLE_MEDICO')")
+    @PreAuthorize("hasAnyRole('ROLE_MEDICO', 'ROLE_DIRETOR_TECNICO')")
     public ResponseEntity<List<OcorrenciaDTO.Response>> listarPorAtleta(@PathVariable Long id) {
         return ResponseEntity.ok(ocorrenciaService.listarPorAtleta(id));
     }
@@ -93,6 +94,21 @@ public class OcorrenciaController {
             @Valid @RequestBody DeliberacaoDTO deliberacao,
             @AuthenticationPrincipal Utilizador admin) {
         OcorrenciaDTO.Response response = ocorrenciaService.deliberar(id, deliberacao, admin.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * POST /api/v1/clinica/ocorrencias/{id}/alta
+     *
+     * Emite alta médica para uma ocorrência clínica (RF-19). Requer ROLE_MEDICO.
+     */
+    @PostMapping("/ocorrencias/{id}/alta")
+    @PreAuthorize("hasRole('ROLE_MEDICO')")
+    public ResponseEntity<OcorrenciaDTO.Response> emitirAlta(
+            @PathVariable Long id,
+            @Valid @RequestBody AltaMedicaDTO altaDTO,
+            @AuthenticationPrincipal Utilizador medico) {
+        OcorrenciaDTO.Response response = ocorrenciaService.emitirAlta(id, altaDTO, medico.getId());
         return ResponseEntity.ok(response);
     }
 

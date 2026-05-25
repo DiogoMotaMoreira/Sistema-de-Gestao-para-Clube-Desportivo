@@ -5,6 +5,13 @@ import { useAuthStore } from '@/stores/authStore';
 
 export type SemaforoClinico = 'APTO' | 'CONDICIONADO' | 'INAPTO_LESAO' | 'INAPTO_EMD';
 
+export interface SemaforoAtletaDTO {
+  atletaId: number;
+  atletaNome: string;
+  semaforo: 'VERDE' | 'AMARELO' | 'VERMELHO' | 'BLOQUEADO';
+  motivo: string;
+}
+
 export interface EquipaTreinador {
   id: number;
   nome: string;
@@ -133,11 +140,21 @@ export const treinadorService = {
   },
 
   /**
+   * Obtém os semáforos de prontidão clínica do plantel de uma equipa (RF-16).
+   */
+  async getSemaforoPlantel(equipaId: number): Promise<SemaforoAtletaDTO[]> {
+    const { data } = await api.get<SemaforoAtletaDTO[]>(`/treinador/plantel/${equipaId}/semaforo`);
+    return data;
+  },
+
+  /**
    * Obtém os eventos do dia (treinos, jogos urgentes).
    * Filtra os eventos e as sessões da equipa para a data de hoje.
    */
   async getEventosHoje(equipaId: number): Promise<EventoTreinador[]> {
-    const hoje = new Date().toISOString().split('T')[0];
+    const agora = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const hoje = `${agora.getFullYear()}-${pad(agora.getMonth() + 1)}-${pad(agora.getDate())}`;
     
     // Fazer as chamadas em paralelo
     const [eventosRes, sessoesRes] = await Promise.all([
@@ -190,7 +207,10 @@ export const treinadorService = {
     return data
       .filter((e) => e.tipo === 'JOGO_OFICIAL' || e.tipo === 'JOGO_PARTICULAR')
       .map((e) => {
-        const isPast = new Date(`${e.data}T${e.horaInicio}`) < new Date();
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const localNowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        const isPast = `${e.data}T${e.horaInicio}` < localNowStr;
         
         return {
           id: e.id,
