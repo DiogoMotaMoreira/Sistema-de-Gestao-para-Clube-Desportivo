@@ -4,9 +4,10 @@
  * 3 tabs: Encarregados, Atletas, Equipas.
  * Cada tab mantém estado de navegação interna (list → detail).
  * Usa o design system SIGD com dourado CTA para tab ativa.
+ * Faixa de KPIs reais no topo: Total Atletas, Total EEs, Dívida Activa.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +17,8 @@ import {
 import { Users, UserCheck, Shield } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
+import { secretariaService } from '@/services/secretariaService';
+import { cfoService } from '@/services/cfoService';
 import { EncarregadoListScreen } from './encarregados/EncarregadoListScreen';
 import { EncarregadoDetailScreen } from './encarregados/EncarregadoDetailScreen';
 import { AtletaListScreen } from './atletas/AtletaListScreen';
@@ -40,6 +43,26 @@ export function SecretariaScreen(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabKey>('encarregados');
   const [selectedEncarregadoId, setSelectedEncarregadoId] = useState<number | null>(null);
   const [selectedAtletaId, setSelectedAtletaId] = useState<number | null>(null);
+
+  // KPI state
+  const [kpiAtletas, setKpiAtletas] = useState<number | null>(null);
+  const [kpiEEs, setKpiEEs] = useState<number | null>(null);
+  const [kpiDivida, setKpiDivida] = useState<number | null>(null);
+
+  useEffect(() => {
+    secretariaService.getAtletas(undefined, undefined, 0, 1)
+      .then(d => setKpiAtletas(d.totalElements))
+      .catch(() => {});
+    secretariaService.getEncarregados(undefined, 0, 1)
+      .then(d => setKpiEEs(d.totalElements))
+      .catch(() => {});
+    cfoService.getResumoFinanceiro()
+      .then(r => setKpiDivida(r.global.divida))
+      .catch(() => {});
+  }, []);
+
+  const fmtEur = (v: number): string =>
+    new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
 
   const handleTabChange = (tab: TabKey): void => {
     setActiveTab(tab);
@@ -90,6 +113,26 @@ export function SecretariaScreen(): React.JSX.Element {
 
   return (
     <View style={styles.container}>
+      {/* KPI Strip — dados reais */}
+      <View style={styles.kpiStrip}>
+        <View style={styles.kpiItem}>
+          <Text style={styles.kpiValue}>{kpiAtletas !== null ? kpiAtletas : '—'}</Text>
+          <Text style={styles.kpiLabel}>Atletas</Text>
+        </View>
+        <View style={styles.kpiDivider} />
+        <View style={styles.kpiItem}>
+          <Text style={styles.kpiValue}>{kpiEEs !== null ? kpiEEs : '—'}</Text>
+          <Text style={styles.kpiLabel}>Encarregados</Text>
+        </View>
+        <View style={styles.kpiDivider} />
+        <View style={styles.kpiItem}>
+          <Text style={[styles.kpiValue, kpiDivida !== null && kpiDivida > 0 ? { color: Colors.ERRO_TEXT } : {}]}>
+            {kpiDivida !== null ? fmtEur(kpiDivida) : '—'}
+          </Text>
+          <Text style={styles.kpiLabel}>Dívida Activa</Text>
+        </View>
+      </View>
+
       {/* Content Area */}
       <View style={styles.contentArea}>
         {renderContent()}
@@ -137,6 +180,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.GRAY_50_FUNDO,
   },
+  kpiStrip: {
+    flexDirection: 'row',
+    backgroundColor: Colors.BRANCO,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.GRAY_200_BORDAS,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  kpiItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  kpiDivider: {
+    width: 1,
+    backgroundColor: Colors.GRAY_200_BORDAS,
+    marginVertical: 2,
+  },
+  kpiValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.GRAY_900_TEXTO1,
+  },
+  kpiLabel: {
+    fontSize: 10,
+    color: Colors.GRAY_500_TEXTO2,
+    marginTop: 2,
+  },
   contentArea: {
     flex: 1,
   },
@@ -146,7 +216,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.GRAY_200_BORDAS,
     paddingBottom: 4,
-    // Sombra sutil para separação
     shadowColor: Colors.PRETO_PRIMARIO,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,

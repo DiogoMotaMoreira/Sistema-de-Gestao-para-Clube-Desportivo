@@ -62,8 +62,9 @@ export const authService = {
           throw new AuthError(error.response?.data?.message || 'Utilizador ou password incorretos', 401);
         }
 
-        if (status === 403) {
-          throw new AuthError(error.response?.data?.message || 'Conta bloqueada por 15 minutos', 403);
+        const msg = typeof error.response?.data?.message === 'string' ? error.response.data.message : '';
+        if (status === 403 || msg.toLowerCase().includes('bloqueada')) {
+          throw new AuthError('Conta bloqueada. Contacte o administrador.', 403);
         }
 
         if (status >= 500) {

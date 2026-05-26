@@ -30,7 +30,7 @@ import { Colors } from '@/constants/colors';
 
 interface Column<T> {
   key: string;
-  title: string;
+  title: string | React.ReactNode;
   /** Render customizado para a célula */
   render?: (item: T) => React.ReactNode;
   /** Largura flex relativa (default: 1) */
@@ -70,7 +70,11 @@ function DesktopTable<T>({
               col.align === 'center' && tableStyles.alignCenter,
             ]}
           >
-            <Text style={tableStyles.headerText}>{col.title}</Text>
+            {typeof col.title === 'string' ? (
+              <Text style={tableStyles.headerText}>{col.title}</Text>
+            ) : (
+              col.title
+            )}
           </View>
         ))}
       </View>
@@ -172,7 +176,11 @@ function MobileCards<T>({
 
             return (
               <View key={col.key} style={mobileStyles.cardRow}>
-                <Text style={mobileStyles.cardLabel}>{col.title}</Text>
+                {typeof col.title === 'string' ? (
+                  <Text style={mobileStyles.cardLabel}>{col.title}</Text>
+                ) : (
+                  <View style={{ flex: 1 }}>{col.title}</View>
+                )}
                 {typeof cellContent === 'string' ? (
                   <Text style={mobileStyles.cardValue}>{cellContent}</Text>
                 ) : (

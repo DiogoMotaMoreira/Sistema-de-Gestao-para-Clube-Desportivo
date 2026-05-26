@@ -5,6 +5,8 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { ModalDetalheAuditoria } from './components/AdminModals';
 import { adminService, AuditLogEntry } from '@/services/adminService';
 import { Colors } from '@/constants/colors';
+import { SortableHeader, SortConfig } from '@/components/ui/SortableHeader';
+import { sortList } from '@/utils/sort';
 
 export function AuditoriaScreen(): React.JSX.Element {
   const [eventos, setEventos] = useState<AuditLogEntry[]>([]);
@@ -15,16 +17,43 @@ export function AuditoriaScreen(): React.JSX.Element {
 
   const [selectedModulo, setSelectedModulo] = useState<string>('');
   const [selectedTipo, setSelectedTipo] = useState<string>('');
+  const [dataInicio, setDataInicio] = useState<string>('');
+  const [dataFim, setDataFim] = useState<string>('');
+  const [searchString, setSearchString] = useState<string>('');
+  const [pesquisa, setPesquisa] = useState<string>('');
   const [moduloOpen, setModuloOpen] = useState<boolean>(false);
   const [tipoOpen, setTipoOpen] = useState<boolean>(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   useEffect(() => {
-    adminService.getAuditoria(page, 10, selectedModulo || undefined, selectedTipo || undefined).then(res => {
+    const handler = setTimeout(() => {
+      setPesquisa(searchString);
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchString]);
+
+  const handleSort = (field: string) => {
+    setSortConfig(prev => {
+      if (prev?.field === field) {
+        return prev.direction === 'asc' ? { field, direction: 'desc' } : null;
+      }
+      return { field, direction: 'asc' };
+    });
+  };
+
+  useEffect(() => {
+    const dIni = dataInicio && dataInicio.length === 10 ? dataInicio.split('/').reverse().join('-') : undefined;
+    const dFim = dataFim && dataFim.length === 10 ? dataFim.split('/').reverse().join('-') : undefined;
+    const sortBy = sortConfig?.field || 'timestamp';
+    const sortDir = sortConfig?.direction || 'desc';
+    
+    adminService.getAuditoria(page, 10, selectedModulo || undefined, selectedTipo || undefined, dIni, dFim, sortBy, sortDir, pesquisa).then(res => {
       setEventos(res.content);
       setTotalPages(res.totalPages);
       setTotalElements(res.totalElements);
     });
-  }, [page, selectedModulo, selectedTipo]);
+  }, [page, selectedModulo, selectedTipo, dataInicio, dataFim, sortConfig, pesquisa]);
 
   const getAcaoStyle = (acao: string) => {
     if (['BLOQUEAR_ACESSO', 'REVOGAR_ROLE', 'FORÇAR_RESET', 'ELIMINAR'].includes(acao)) {
@@ -61,8 +90,8 @@ export function AuditoriaScreen(): React.JSX.Element {
         {/* Filtros */}
         <View style={[styles.filtersContainer, { zIndex: 50 }]}>
            <View style={{ flexDirection: 'row', gap: 12, flex: 1, flexWrap: 'wrap', zIndex: 50 }}>
-              <TextInput style={styles.inputDate} placeholder="De: dd/mm/aaaa" />
-              <TextInput style={styles.inputDate} placeholder="Até: dd/mm/aaaa" />
+              <TextInput style={styles.inputDate} placeholder="De: dd/mm/aaaa" value={dataInicio} onChangeText={setDataInicio} />
+              <TextInput style={styles.inputDate} placeholder="Até: dd/mm/aaaa" value={dataFim} onChangeText={setDataFim} />
               
               {/* Módulo Filter */}
               <View style={{ zIndex: 100 }}>
@@ -117,25 +146,47 @@ export function AuditoriaScreen(): React.JSX.Element {
               </View>
               <View style={styles.searchWrapper}>
                  <Search size={16} color={Colors.GRAY_500_TEXTO2} style={{ marginLeft: 12 }} />
-                 <TextInput style={styles.searchInput} placeholder="Pesquisar por nome ou ID do ator..." />
+                 <TextInput 
+                   style={styles.searchInput} 
+                   placeholder="Pesquisar por nome ou ID do ator..." 
+                   value={searchString}
+                   onChangeText={setSearchString}
+                 />
               </View>
            </View>
-           <TouchableOpacity style={styles.btnOutline}>
-              <Download size={16} color={Colors.GRAY_900_TEXTO1} style={{ marginRight: 6 }} />
-              <Text style={styles.btnOutlineText}>Exportar Logs (CSV)</Text>
-           </TouchableOpacity>
+           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+             {(selectedModulo || selectedTipo || dataInicio || dataFim || searchString) ? (
+                <TouchableOpacity 
+                  onPress={() => {
+                    setSelectedModulo('');
+                    setSelectedTipo('');
+                    setDataInicio('');
+                    setDataFim('');
+                    setSearchString('');
+                    setSortConfig(null);
+                    setPage(0);
+                  }}
+                >
+                  <Text style={{ color: Colors.GRAY_500_TEXTO2, fontSize: 13 }}>✕ Limpar</Text>
+                </TouchableOpacity>
+             ) : null}
+             <TouchableOpacity style={styles.btnOutline}>
+                <Download size={16} color={Colors.GRAY_900_TEXTO1} style={{ marginRight: 6 }} />
+                <Text style={styles.btnOutlineText}>Exportar Logs (CSV)</Text>
+             </TouchableOpacity>
+           </View>
         </View>
 
         {/* Tabela de Auditoria */}
         <View style={styles.table}>
-           <View style={styles.tableHeader}>
-              <Text style={[styles.th, { flex: 1.5 }]}>DATA / HORA</Text>
-              <Text style={[styles.th, { flex: 2 }]}>ATOR</Text>
-              <Text style={[styles.th, { flex: 1.5 }]}>AÇÃO</Text>
-              <Text style={[styles.th, { flex: 1.5 }]}>MÓDULO</Text>
-              <Text style={[styles.th, { flex: 1.5 }]}>ENDEREÇO IP</Text>
-              <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>DETALHE</Text>
-           </View>
+            <View style={styles.tableHeader}>
+               <View style={{ flex: 1.5 }}><SortableHeader label="DATA / HORA" field="timestamp" sortConfig={sortConfig} onSort={handleSort} /></View>
+               <View style={{ flex: 2 }}><SortableHeader label="ATOR" field="ator" sortConfig={sortConfig} onSort={handleSort} /></View>
+               <View style={{ flex: 1.5 }}><SortableHeader label="AÇÃO" field="acao" sortConfig={sortConfig} onSort={handleSort} /></View>
+               <View style={{ flex: 1.5 }}><SortableHeader label="MÓDULO" field="entidade" sortConfig={sortConfig} onSort={handleSort} /></View>
+               <Text style={[styles.th, { flex: 1.5 }]}>ENDEREÇO IP</Text>
+               <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>DETALHE</Text>
+            </View>
            
            {eventos.map(e => {
               const acaoStyle = getAcaoStyle(e.acao);

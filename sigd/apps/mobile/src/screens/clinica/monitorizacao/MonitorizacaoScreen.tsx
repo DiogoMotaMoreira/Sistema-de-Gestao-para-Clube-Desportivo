@@ -1,51 +1,85 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { Calendar, Search, CheckCircle, Clock, XCircle, AlertTriangle, ExternalLink, Info } from 'lucide-react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Calendar, Search, Activity, Info } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
+import { clinicaService, OcorrenciaResponse } from '@/services/clinicaService';
+import { useFocusEffect } from '@react-navigation/native';
 
-// Tipos Mockados
-type EstadoPreventivo = 'VALIDO' | 'A_EXPIRAR' | 'EXPIRADO';
-
-interface AtletaMonitor {
-  id: string;
-  nome: string;
-  escalao: string;
-  dataValidade: string;
-  estado: EstadoPreventivo;
-  alertaEnviado: string | null;
-  alertaFalhou?: boolean;
+interface MonitorData extends OcorrenciaResponse {
+  grauAtual: string;
 }
 
-const MOCK_MONITOR: AtletaMonitor[] = [
-  { id: '1', nome: 'João Silva', escalao: 'Sub-15', dataValidade: '20/12/2026', estado: 'VALIDO', alertaEnviado: null },
-  { id: '2', nome: 'Tomás Costa', escalao: 'Sub-17', dataValidade: '30/05/2026', estado: 'A_EXPIRAR', alertaEnviado: '15/05/2026 · 10:00' },
-  { id: '3', nome: 'Ricardo Oliveira', escalao: 'Seniores', dataValidade: '10/05/2026', estado: 'EXPIRADO', alertaEnviado: '26/04/2026 · 14:00' },
-];
-
 export function MonitorizacaoScreen(): React.JSX.Element {
-  const [filterType, setFilterType] = useState<'TODOS' | 'A_EXPIRAR' | 'EXPIRADO'>('TODOS');
+  const [filterType, setFilterType] = useState<'TODOS' | 'INAPTO' | 'CONDICIONADO'>('TODOS');
   const [search, setSearch] = useState('');
+  const [ocorrencias, setOcorrencias] = useState<MonitorData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtrados = MOCK_MONITOR.filter(a => {
-    if (filterType === 'A_EXPIRAR' && a.estado !== 'A_EXPIRAR') return false;
-    if (filterType === 'EXPIRADO' && a.estado !== 'EXPIRADO') return false;
-    if (search && !a.nome.toLowerCase().includes(search.toLowerCase())) return false;
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+      const fetchOcorrencias = async () => {
+        setLoading(true);
+        try {
+          const data = await clinicaService.getOcorrenciasAtivas();
+          const mapped: MonitorData[] = await Promise.all(
+            data.map(async (oc) => {
+              try {
+                const evs = await clinicaService.getEvolucoes(oc.id);
+                const grauAtual = evs.length > 0 ? evs[evs.length - 1].grauRestricao : oc.grauRestricao;
+                return { ...oc, grauAtual };
+              } catch {
+                return { ...oc, grauAtual: oc.grauRestricao };
+              }
+            })
+          );
+          if (isActive) setOcorrencias(mapped);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          if (isActive) setLoading(false);
+        }
+      };
+      fetchOcorrencias();
+      return () => { isActive = false; };
+    }, [])
+  );
+
+  const filtrados = ocorrencias.filter(a => {
+    if (filterType === 'INAPTO' && a.grauAtual !== 'VERMELHO') return false;
+    if (filterType === 'CONDICIONADO' && a.grauAtual !== 'AMARELO') return false;
+    if (search && !(a.atletaNome || '').toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
+  const reavaliacoesProximas = ocorrencias.filter(o => {
+    if (!o.dataReavaliacao) return false;
+    const reav = new Date(o.dataReavaliacao);
+    const now = new Date();
+    const diff = reav.getTime() - now.getTime();
+    const days = Math.ceil(diff / (1000 * 3600 * 24));
+    return days >= 0 && days <= 7;
+  }).sort((a, b) => new Date(a.dataReavaliacao!).getTime() - new Date(b.dataReavaliacao!).getTime());
+
   return (
     <View style={styles.container}>
-      {/* Alerta de Reavaliações (Condicional - mock always visible for demo) */}
+      {/* Alerta de Reavaliações */}
       <View style={styles.alertCard}>
         <View style={styles.alertHeader}>
           <Calendar size={16} color="#B45309" />
           <Text style={styles.alertTitle}>Reavaliações Clínicas nos Próximos 7 Dias</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.alertList}>
-          <TouchableOpacity style={styles.alertPill}>
-            <Text style={styles.alertPillName}>Dr. João Silva</Text>
-            <Text style={styles.alertPillMeta}>Sub-17 · Reavaliação: 25/05/2026</Text>
-          </TouchableOpacity>
+          {reavaliacoesProximas.length > 0 ? (
+            reavaliacoesProximas.map(r => (
+              <TouchableOpacity key={r.id} style={styles.alertPill}>
+                <Text style={styles.alertPillName}>{r.atletaNome}</Text>
+                <Text style={styles.alertPillMeta}>Reavaliação: {r.dataReavaliacao}</Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={{ fontSize: 13, color: Colors.GRAY_500_TEXTO2 }}>Sem reavaliações nos próximos 7 dias.</Text>
+          )}
         </ScrollView>
       </View>
 
@@ -59,16 +93,16 @@ export function MonitorizacaoScreen(): React.JSX.Element {
             <Text style={[styles.toggleText, filterType === 'TODOS' && styles.toggleTextActiveTodos]}>Todos</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.toggleBtn, filterType === 'A_EXPIRAR' && styles.toggleBtnActiveAExpirar]}
-            onPress={() => setFilterType('A_EXPIRAR')}
+            style={[styles.toggleBtn, filterType === 'INAPTO' && styles.toggleBtnActiveInapto]}
+            onPress={() => setFilterType('INAPTO')}
           >
-            <Text style={[styles.toggleTextExpirar, filterType === 'A_EXPIRAR' && styles.toggleTextActiveExpirar]}>A Expirar {'(< 30 dias)'}</Text>
+            <Text style={[styles.toggleTextInapto, filterType === 'INAPTO' && styles.toggleTextActiveInapto]}>Inaptos</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.toggleBtn, filterType === 'EXPIRADO' && styles.toggleBtnActiveExpirados]}
-            onPress={() => setFilterType('EXPIRADO')}
+            style={[styles.toggleBtn, filterType === 'CONDICIONADO' && styles.toggleBtnActiveCondicionado]}
+            onPress={() => setFilterType('CONDICIONADO')}
           >
-            <Text style={[styles.toggleTextExpirados, filterType === 'EXPIRADO' && styles.toggleTextActiveExpirados]}>Expirados</Text>
+            <Text style={[styles.toggleTextCondicionado, filterType === 'CONDICIONADO' && styles.toggleTextActiveCondicionado]}>Condicionados</Text>
           </TouchableOpacity>
         </View>
 
@@ -88,57 +122,50 @@ export function MonitorizacaoScreen(): React.JSX.Element {
         {/* Cabeçalho */}
         <View style={styles.tableHeader}>
           <Text style={[styles.th, { flex: 2 }]}>ATLETA</Text>
-          <Text style={[styles.th, { flex: 2 }]}>ESCALÃO / EQUIPA</Text>
-          <Text style={[styles.th, { flex: 2 }]}>DATA VALIDADE EMD</Text>
-          <Text style={[styles.th, { flex: 2 }]}>ESTADO PREVENTIVO</Text>
-          <Text style={[styles.th, { flex: 2 }]}>ALERTA ENVIADO</Text>
-          <Text style={[styles.th, { flex: 1 }]}></Text>
+          <Text style={[styles.th, { flex: 2 }]}>DIAGNÓSTICO</Text>
+          <Text style={[styles.th, { flex: 1 }]}>DATA OCORRÊNCIA</Text>
+          <Text style={[styles.th, { flex: 2 }]}>GRAU ATUAL</Text>
+          <Text style={[styles.th, { flex: 1 }]}>REAVALIAÇÃO</Text>
         </View>
 
         {/* Linhas */}
         <ScrollView>
-          {filtrados.map(a => (
-            <View key={a.id} style={styles.tr}>
-              <Text style={[styles.tdBold, { flex: 2 }]}>{a.nome}</Text>
-              <Text style={[styles.td, { flex: 2 }]}>{a.escalao}</Text>
-              <Text style={[styles.td, { flex: 2 }]}>{a.dataValidade}</Text>
-              <View style={[styles.tdContent, { flex: 2 }]}>
-                {a.estado === 'VALIDO' && (
-                  <View style={[styles.badge, { backgroundColor: '#ECFDF5' }]}>
-                    <CheckCircle size={12} color="#047857" />
-                    <Text style={[styles.badgeText, { color: '#047857' }]}>Válido</Text>
-                  </View>
-                )}
-                {a.estado === 'A_EXPIRAR' && (
-                  <View style={[styles.badge, { backgroundColor: '#FFFBEB' }]}>
-                    <Clock size={12} color="#B45309" />
-                    <Text style={[styles.badgeText, { color: '#B45309' }]}>A Expirar</Text>
-                  </View>
-                )}
-                {a.estado === 'EXPIRADO' && (
-                  <View style={[styles.badge, { backgroundColor: '#FEE2E2' }]}>
-                    <XCircle size={12} color="#991B1B" />
-                    <Text style={[styles.badgeText, { color: '#991B1B' }]}>Expirado</Text>
-                  </View>
-                )}
-              </View>
-              <View style={[styles.tdContent, { flex: 2 }]}>
-                {a.alertaEnviado ? (
-                  <Text style={styles.tdMono}>{a.alertaEnviado}</Text>
-                ) : (
-                  <Text style={styles.td}>—</Text>
-                )}
-              </View>
-              <View style={[styles.tdContent, { flex: 1 }]}>
-                {a.estado === 'EXPIRADO' && (
-                  <TouchableOpacity style={styles.actionLink}>
-                    <Text style={styles.actionLinkText}>Fila EMD</Text>
-                    <ExternalLink size={12} color="#1D4ED8" />
-                  </TouchableOpacity>
-                )}
-              </View>
+          {loading ? (
+            <View style={{ padding: 32, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={Colors.DOURADO_CTA} />
             </View>
-          ))}
+          ) : filtrados.length === 0 ? (
+            <View style={{ padding: 32, alignItems: 'center' }}>
+              <Text style={{ color: Colors.GRAY_500_TEXTO2 }}>Sem ocorrências ativas.</Text>
+            </View>
+          ) : (
+            filtrados.map(a => {
+              const grauColor = a.grauAtual === 'VERMELHO' ? '#991B1B' : '#B45309';
+              const grauBg = a.grauAtual === 'VERMELHO' ? '#FEE2E2' : '#FFFBEB';
+              const grauLabel = a.grauAtual === 'VERMELHO' ? 'Interrupção Total' : 'Restrição Condicionada';
+              
+              return (
+                <View key={a.id} style={styles.tr}>
+                  <Text style={[styles.tdBold, { flex: 2 }]}>{a.atletaNome}</Text>
+                  <Text style={[styles.td, { flex: 2 }]}>{a.diagnostico}</Text>
+                  <Text style={[styles.td, { flex: 1 }]}>{a.dataOcorrencia}</Text>
+                  <View style={[styles.tdContent, { flex: 2 }]}>
+                    <View style={[styles.badge, { backgroundColor: grauBg }]}>
+                      <Activity size={12} color={grauColor} />
+                      <Text style={[styles.badgeText, { color: grauColor }]}>{grauLabel}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.tdContent, { flex: 1 }]}>
+                    {a.dataReavaliacao ? (
+                      <Text style={styles.tdMono}>{a.dataReavaliacao}</Text>
+                    ) : (
+                      <Text style={styles.td}>—</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })
+          )}
         </ScrollView>
       </View>
 
@@ -146,7 +173,7 @@ export function MonitorizacaoScreen(): React.JSX.Element {
       <View style={styles.footerInfo}>
         <Info size={12} color={Colors.GRAY_500_TEXTO2} />
         <Text style={styles.footerInfoText}>
-          Alertas automáticos de caducidade são enviados a 30 dias de expiração · Parâmetro configurado exclusivamente pelo Administrador de Sistema (RF-14) · O envio é processado em background pelo sistema — não requer ação manual.
+          O grau de restrição indicado reflete a evolução médica mais recente. Atletas em estado inativo não constam da listagem principal até deliberação do corpo médico.
         </Text>
       </View>
     </View>
@@ -227,26 +254,26 @@ const styles = StyleSheet.create({
   toggleTextActiveTodos: {
     fontWeight: '600',
   },
-  toggleBtnActiveAExpirar: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#B45309',
-  },
-  toggleTextExpirar: {
-    color: '#B45309',
-    fontSize: 14,
-  },
-  toggleTextActiveExpirar: {
-    fontWeight: '600',
-  },
-  toggleBtnActiveExpirados: {
+  toggleBtnActiveInapto: {
     backgroundColor: '#FEE2E2',
     borderColor: '#991B1B',
   },
-  toggleTextExpirados: {
+  toggleTextInapto: {
     color: '#991B1B',
     fontSize: 14,
   },
-  toggleTextActiveExpirados: {
+  toggleTextActiveInapto: {
+    fontWeight: '600',
+  },
+  toggleBtnActiveCondicionado: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#B45309',
+  },
+  toggleTextCondicionado: {
+    color: '#B45309',
+    fontSize: 14,
+  },
+  toggleTextActiveCondicionado: {
     fontWeight: '600',
   },
   searchContainer: {
@@ -323,15 +350,6 @@ const styles = StyleSheet.create({
   tdMono: {
     fontSize: 12,
     color: Colors.GRAY_500_TEXTO2,
-  },
-  actionLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionLinkText: {
-    fontSize: 12,
-    color: '#1D4ED8',
   },
   footerInfo: {
     flexDirection: 'row',

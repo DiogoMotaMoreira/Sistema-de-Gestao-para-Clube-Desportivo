@@ -7,6 +7,8 @@ import { ModalForcarReset, ModalEditarCamposCriticos } from './components/AdminM
 import { adminService, AdminUser } from '@/services/adminService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Colors } from '@/constants/colors';
+import { SortableHeader, SortConfig } from '@/components/ui/SortableHeader';
+import { sortList } from '@/utils/sort';
 
 export function GestaoAcessosScreen(): React.JSX.Element {
   const queryClient = useQueryClient();
@@ -25,6 +27,16 @@ export function GestaoAcessosScreen(): React.JSX.Element {
   const [role, setRole] = useState('');
   const [requirePasswordReset, setRequirePasswordReset] = useState(false);
   const [page, setPage] = useState(0);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = (field: string) => {
+    setSortConfig(prev => {
+      if (prev?.field === field) {
+        return prev.direction === 'asc' ? { field, direction: 'desc' } : null;
+      }
+      return { field, direction: 'asc' };
+    });
+  };
 
 
 
@@ -229,6 +241,15 @@ export function GestaoAcessosScreen(): React.JSX.Element {
            <TouchableOpacity style={styles.btnOutline}>
               <Text style={styles.btnOutlineText}>Filtros ▾</Text>
            </TouchableOpacity>
+           {searchString ? (
+              <TouchableOpacity onPress={() => {
+                 setSearchString('');
+                 setSortConfig(null);
+                 setPage(0);
+              }} style={{ marginLeft: 8 }}>
+                 <Text style={{ color: Colors.GRAY_500_TEXTO2, fontSize: 13 }}>✕ Limpar</Text>
+              </TouchableOpacity>
+           ) : null}
            <View style={{ flex: 1 }} />
            <TouchableOpacity style={styles.btnDourado} onPress={() => setIsNivel2(true)}>
               <Text style={styles.btnDouradoText}>+ Novo Colaborador</Text>
@@ -238,10 +259,10 @@ export function GestaoAcessosScreen(): React.JSX.Element {
         {/* Tabela */}
         <View style={styles.table}>
            <View style={styles.tableHeader}>
-              <Text style={[styles.th, { flex: 2.5 }]}>UTILIZADOR</Text>
-              <Text style={[styles.th, { flex: 2 }]}>PERFIL(ES)</Text>
-              <Text style={[styles.th, { flex: 1.5 }]}>ÚLTIMO LOGIN</Text>
-              <Text style={[styles.th, { flex: 1.5 }]}>ESTADO</Text>
+              <View style={{ flex: 2.5 }}><SortableHeader label="UTILIZADOR" field="nome" sortConfig={sortConfig} onSort={handleSort} /></View>
+              <View style={{ flex: 2 }}><SortableHeader label="PERFIL(ES)" field="roles" sortConfig={sortConfig} onSort={handleSort} /></View>
+              <View style={{ flex: 1.5 }}><SortableHeader label="ÚLTIMO LOGIN" field="ultimoLogin" sortConfig={sortConfig} onSort={handleSort} /></View>
+              <View style={{ flex: 1.5 }}><SortableHeader label="ESTADO" field="estado" sortConfig={sortConfig} onSort={handleSort} /></View>
               <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>AÇÕES</Text>
            </View>
            
@@ -250,7 +271,7 @@ export function GestaoAcessosScreen(): React.JSX.Element {
                  <Loader size={24} color={Colors.GRAY_500_TEXTO2} />
               </View>
            ) : (
-              pageData?.content.map(u => (
+              sortList(pageData?.content || [], sortConfig).map(u => (
                  <View key={u.id} style={styles.tableRow}>
                     <View style={{ flex: 2.5 }}>
                        <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.GRAY_900_TEXTO1 }}>{u.nome}</Text>

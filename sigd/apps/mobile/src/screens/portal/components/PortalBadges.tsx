@@ -4,7 +4,7 @@ import { CheckCircle, Clock, AlertCircle, Lock, Archive, LucideIcon } from 'luci
 
 export type EstadoFinanceiro = 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'VENCIDO_CRITICO' | 'EM_ATRASO';
 export type EstadoDocumental = 'APROVADO' | 'EM_ANALISE' | 'REJEITADO' | 'EM_FALTA';
-export type Elegibilidade = 'APTO' | 'BLOQUEADO' | 'VINCULO_ENCERRADO';
+export type Elegibilidade = string;
 
 // ── Badge de Estado Financeiro ──────────────────────────
 
@@ -49,10 +49,12 @@ export function BadgeDocumental({ estado, showLabel = true }: { estado: EstadoDo
 // ── Badge de Elegibilidade ──────────────────────────────
 
 export function BadgeElegibilidade({ estado, showLabel = true }: { estado: Elegibilidade, showLabel?: boolean }) {
-  let bg = '#ECFDF5', text = '#047857', border = '#047857', Icon = CheckCircle, label = 'Apto';
+  let bg = '#ECFDF5', text = '#047857', border = '#047857', Icon = CheckCircle, label = estado || 'Apto';
   
-  if (estado === 'BLOQUEADO') {
-    bg = '#FEE2E2'; text = '#991B1B'; border = '#991B1B'; Icon = Lock; label = 'Bloqueado';
+  if (estado === 'Condicionado' || estado === 'EMD Pendente') {
+    bg = '#FFFBEB'; text = '#B45309'; border = '#B45309'; Icon = Clock;
+  } else if (estado === 'Inapto' || estado === 'BLOQUEADO') {
+    bg = '#FEE2E2'; text = '#991B1B'; border = '#991B1B'; Icon = Lock;
   } else if (estado === 'VINCULO_ENCERRADO') {
     bg = '#F1F5F9'; text = '#64748B'; border = '#E2E8F0'; Icon = Archive; label = 'Vínculo Encerrado';
   }

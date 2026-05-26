@@ -3,8 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platfo
 import { Search, ChevronRight, Activity, Users, Plus, ShieldCheck, AlertTriangle, XCircle, Clock, Lock, FilePlus, Paperclip, CheckCircle, X } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
 import { Badge, Button } from '@/components/ui';
-import { clinicaService, AltaMedicaRequest, OcorrenciaResponse } from '@/services/clinicaService';
+import { clinicaService, AltaMedicaRequest, OcorrenciaResponse, GrauRestricaoDesportiva, EvolucaoResponse } from '@/services/clinicaService';
 import { secretariaService, AtletaResponse } from '@/services/secretariaService';
+import { SortableHeader, SortConfig } from '@/components/ui/SortableHeader';
+import { sortList } from '@/utils/sort';
 
 // ── Tipos ──────────────────────────────────────────────
 
@@ -53,6 +55,16 @@ export function DossiesClinicosScreen(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<'ativas' | 'historico' | 'emds'>('ativas');
   const [filterType, setFilterType] = useState<'TODOS' | 'INAPTOS'>('TODOS');
   const [search, setSearch] = useState('');
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = useCallback((field: string) => {
+    setSortConfig(prev => {
+      if (prev?.field === field) {
+        return prev.direction === 'asc' ? { field, direction: 'desc' } : null;
+      }
+      return { field, direction: 'asc' };
+    });
+  }, []);
 
   // Alta Médica modal state
   const [altaModalVisible, setAltaModalVisible] = useState(false);
@@ -61,6 +73,14 @@ export function DossiesClinicosScreen(): React.JSX.Element {
   const [altaDataEncerramento, setAltaDataEncerramento] = useState('');
   const [altaLoading, setAltaLoading] = useState(false);
   const [altaDateError, setAltaDateError] = useState('');
+
+  // Nova Ocorrência modal state
+  const [novaOcorrenciaVisible, setNovaOcorrenciaVisible] = useState(false);
+  const [novaOcTipo, setNovaOcTipo] = useState<'LESAO' | 'DOENCA' | 'TRAUMA'>('LESAO');
+  const [novaOcDiagnostico, setNovaOcDiagnostico] = useState('');
+  const [novaOcGrau, setNovaOcGrau] = useState<'VERDE' | 'AMARELO' | 'VERMELHO'>('AMARELO');
+  const [novaOcDataReav, setNovaOcDataReav] = useState('');
+  const [novaOcLoading, setNovaOcLoading] = useState(false);
 
   // Real atletas from API
   const [atletas, setAtletas] = useState<AtletaDossie[]>([]);
@@ -92,14 +112,30 @@ export function DossiesClinicosScreen(): React.JSX.Element {
   // Real ocorrências from API
   const [ocorrencias, setOcorrencias] = useState<OcorrenciaResponse[]>([]);
   const [ocorrenciasLoading, setOcorrenciasLoading] = useState(false);
+  const [evolucoesMap, setEvolucoesMap] = useState<Record<number, EvolucaoResponse[]>>({});
 
   const fetchOcorrencias = useCallback(async (atletaId: number) => {
     setOcorrenciasLoading(true);
     try {
       const data = await clinicaService.getOcorrenciasPorAtleta(atletaId);
       setOcorrencias(data);
+
+      // Fetch evolucoes for all ocorrencias (ativas and resolvidas)
+      const newEvolucoesMap: Record<number, EvolucaoResponse[]> = {};
+      await Promise.all(
+        data.map(async (oc) => {
+          try {
+            const evols = await clinicaService.getEvolucoes(oc.id);
+            newEvolucoesMap[oc.id] = evols;
+          } catch (e) {
+            console.warn('Failed to load evolucoes for oc', oc.id);
+          }
+        })
+      );
+      setEvolucoesMap(newEvolucoesMap);
     } catch {
       setOcorrencias([]);
+      setEvolucoesMap({});
     } finally {
       setOcorrenciasLoading(false);
     }
@@ -196,12 +232,89 @@ export function DossiesClinicosScreen(): React.JSX.Element {
     }
   };
 
+  const openNovaOcorrencia = () => {
+    setNovaOcTipo('LESAO');
+    setNovaOcDiagnostico('');
+    setNovaOcGrau('AMARELO');
+    setNovaOcDataReav('');
+    setNovaOcLoading(false);
+    setNovaOcorrenciaVisible(true);
+  };
+
+  const handleSubmitNovaOcorrencia = async () => {
+    if (!selectedAtleta || novaOcDiagnostico.trim().length < 10) return;
+    setNovaOcLoading(true);
+    try {
+      await clinicaService.registarOcorrencia({
+        atletaId: selectedAtleta.id,
+        dataOcorrencia: new Date().toISOString().substring(0, 10),
+        tipo: novaOcTipo,
+        diagnostico: novaOcDiagnostico.trim(),
+        grauRestricao: novaOcGrau,
+        dataReavaliacao: novaOcDataReav.trim() || null,
+      });
+      setNovaOcorrenciaVisible(false);
+      fetchOcorrencias(selectedAtleta.id);
+      fetchAtletas();
+      Alert.alert('Ocorrência Registada', 'A ocorrência clínica foi registada com sucesso.');
+    } catch (error: any) {
+      const mensagem = error.response?.data?.message || error.message || 'Erro desconhecido';
+      Alert.alert('Não foi possível registar', mensagem);
+    } finally {
+      setNovaOcLoading(false);
+    }
+  };
+
+  // Modal Evolução
+  const [evolucaoModalVisible, setEvolucaoModalVisible] = useState(false);
+  const [evolucaoOcorrenciaId, setEvolucaoOcorrenciaId] = useState<number | null>(null);
+  const [evolucaoGrau, setEvolucaoGrau] = useState<GrauRestricaoDesportiva>('AMARELO');
+  const [evolucaoDescricao, setEvolucaoDescricao] = useState('');
+  const [evolucaoLoading, setEvolucaoLoading] = useState(false);
+
+  const openEvolucaoModal = (ocorrenciaId: number) => {
+    setEvolucaoOcorrenciaId(ocorrenciaId);
+    setEvolucaoGrau('AMARELO');
+    setEvolucaoDescricao('');
+    setEvolucaoModalVisible(true);
+  };
+
+  const closeEvolucaoModal = () => {
+    setEvolucaoModalVisible(false);
+    setEvolucaoOcorrenciaId(null);
+    setEvolucaoDescricao('');
+  };
+
+  const handleSubmitEvolucao = async () => {
+    if (!evolucaoOcorrenciaId || evolucaoDescricao.trim().length < 10) return;
+    setEvolucaoLoading(true);
+    try {
+      await clinicaService.registarEvolucao(evolucaoOcorrenciaId, evolucaoGrau, evolucaoDescricao.trim());
+      closeEvolucaoModal();
+      if (selectedAtleta) {
+        fetchOcorrencias(selectedAtleta.id);
+      }
+      fetchAtletas();
+      Alert.alert('Sucesso', 'Evolução registada com sucesso.');
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || 'Erro desconhecido';
+      Alert.alert('Erro', msg);
+    } finally {
+      setEvolucaoLoading(false);
+    }
+  };
+
   if (viewState === 'DOSSIE' && selectedAtleta) {
     // Derive semáforo dynamically from real ocorrências
+    const getGrauAtual = (oc: OcorrenciaResponse) => {
+      const evs = evolucoesMap[oc.id];
+      if (evs && evs.length > 0) return evs[evs.length - 1].grauRestricao;
+      return oc.grauRestricao;
+    };
     const ativas = ocorrencias.filter(o => o.estado === 'ATIVA');
-    const computedSemaforo: Semaforo = ativas.some(o => o.grauRestricao === 'VERMELHO')
+    const computedSemaforo: Semaforo = ativas.some(o => getGrauAtual(o) === 'VERMELHO')
       ? 'INAPTO_LESAO'
-      : ativas.some(o => o.grauRestricao === 'AMARELO')
+      : ativas.some(o => getGrauAtual(o) === 'AMARELO')
         ? 'CONDICIONADO'
         : 'APTO';
     const s = getSemaforoData(ocorrenciasLoading ? selectedAtleta.semaforo : computedSemaforo);
@@ -232,7 +345,7 @@ export function DossiesClinicosScreen(): React.JSX.Element {
               <Icon size={16} color={s.text} />
               <Text style={[styles.bioBadgeText, { color: s.text }]}>{s.label}</Text>
             </View>
-            <TouchableOpacity style={styles.btnNovaOcorrencia}>
+            <TouchableOpacity style={styles.btnNovaOcorrencia} onPress={openNovaOcorrencia}>
               <Plus size={16} color={Colors.PRETO_PRIMARIO} />
               <Text style={styles.btnNovaOcorrenciaText}>Nova Ocorrência</Text>
             </TouchableOpacity>
@@ -260,6 +373,9 @@ export function DossiesClinicosScreen(): React.JSX.Element {
           ) : activeTab === 'ativas' && ocorrencias.filter(o => o.estado === 'ATIVA').length > 0 ? (
             <>
               {ocorrencias.filter(o => o.estado === 'ATIVA').map(oc => {
+                const grauAtual = getGrauAtual(oc);
+                const cardBorderColor = grauAtual === 'VERMELHO' ? '#991B1B' : grauAtual === 'AMARELO' ? '#B45309' : '#047857';
+
                 const grauColor = oc.grauRestricao === 'VERMELHO' ? '#991B1B'
                   : oc.grauRestricao === 'AMARELO' ? '#B45309' : '#047857';
                 const grauBg = oc.grauRestricao === 'VERMELHO' ? '#FEE2E2'
@@ -267,7 +383,7 @@ export function DossiesClinicosScreen(): React.JSX.Element {
                 const grauLabel = oc.grauRestricao === 'VERMELHO' ? 'Interrupção Total'
                   : oc.grauRestricao === 'AMARELO' ? 'Restrição Condicionada' : 'Sem Restrição';
                 return (
-                  <View key={oc.id} style={[styles.lesaoCard, { borderLeftColor: grauColor, marginBottom: 16 }]}>
+                  <View key={oc.id} style={[styles.lesaoCard, { borderLeftColor: cardBorderColor, marginBottom: 16 }]}>
                     <View style={styles.lesaoHeader}>
                       <View style={styles.lesaoHeaderTitle}>
                         <Text style={styles.lesaoName}>{oc.diagnostico}</Text>
@@ -281,7 +397,7 @@ export function DossiesClinicosScreen(): React.JSX.Element {
                           {oc.dataReavaliacao ? `Próxima Reavaliação: ${oc.dataReavaliacao}` : 'Sem reavaliação agendada'}
                         </Text>
                         <View style={styles.lesaoButtons}>
-                          <TouchableOpacity style={styles.btnEvolucao}>
+                          <TouchableOpacity style={styles.btnEvolucao} onPress={() => openEvolucaoModal(oc.id)}>
                             <FilePlus size={14} color={Colors.GRAY_900_TEXTO1} />
                             <Text style={styles.btnEvolucaoText}>Nova Evolução</Text>
                           </TouchableOpacity>
@@ -302,10 +418,33 @@ export function DossiesClinicosScreen(): React.JSX.Element {
                               <Text style={{ color: grauColor, fontSize: 11 }}>{grauLabel}</Text>
                             </View>
                           </View>
+                          <Text style={[styles.timelineNota, { fontStyle: 'normal', fontWeight: '600' }]}>Diagnóstico Inicial</Text>
                           <Text style={styles.timelineNota}>{oc.diagnostico}</Text>
                           <Text style={styles.timelineFooter}>
                             Registado por: {oc.medicoCriadorNome || 'N/D'} · {oc.criadoEm?.substring(0, 10) || ''}
                           </Text>
+                          {/* Evoluções list */}
+                          {evolucoesMap[oc.id] && evolucoesMap[oc.id].length > 0 && (
+                            <View style={{ marginTop: 16 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.GRAY_500_TEXTO2, marginBottom: 8, textTransform: 'uppercase' }}>Histórico de Evoluções</Text>
+                              {evolucoesMap[oc.id].map(ev => {
+                                const evGrauColor = ev.grauRestricao === 'VERMELHO' ? '#991B1B' : '#B45309';
+                                const evGrauBg = ev.grauRestricao === 'VERMELHO' ? '#FEE2E2' : '#FFFBEB';
+                                const evGrauLabel = ev.grauRestricao === 'VERMELHO' ? 'Interrupção Total' : 'Restrição Condicionada';
+                                return (
+                                  <View key={ev.id} style={{ marginBottom: 12, paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: Colors.GRAY_200_BORDAS }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                      <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.GRAY_900_TEXTO1 }}>{ev.registadoEm?.substring(0, 10) || ''}</Text>
+                                      <View style={[styles.grauBadge, { backgroundColor: evGrauBg }]}>
+                                        <Text style={{ color: evGrauColor, fontSize: 10 }}>{evGrauLabel}</Text>
+                                      </View>
+                                    </View>
+                                    <Text style={{ fontSize: 13, color: Colors.GRAY_900_TEXTO1 }}>{ev.descricao}</Text>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          )}
                         </View>
                       </View>
                     </View>
@@ -319,6 +458,92 @@ export function DossiesClinicosScreen(): React.JSX.Element {
               <Text style={styles.emptyTitle}>Sem ocorrências clínicas ativas.</Text>
               <Text style={styles.emptySub}>O atleta encontra-se clinicamente apto.</Text>
             </View>
+          ) : activeTab === 'historico' && ocorrencias.filter(o => o.estado === 'RESOLVIDA').length > 0 ? (
+            <>
+              {ocorrencias.filter(o => o.estado === 'RESOLVIDA').map(oc => {
+                const grauColor = oc.grauRestricao === 'VERMELHO' ? '#991B1B' : oc.grauRestricao === 'AMARELO' ? '#B45309' : '#047857';
+                const grauBg = oc.grauRestricao === 'VERMELHO' ? '#FEE2E2' : oc.grauRestricao === 'AMARELO' ? '#FFFBEB' : '#ECFDF5';
+                const grauLabel = oc.grauRestricao === 'VERMELHO' ? 'Interrupção Total' : oc.grauRestricao === 'AMARELO' ? 'Restrição Condicionada' : 'Sem Restrição';
+                const hasEvolucoes = evolucoesMap[oc.id] && evolucoesMap[oc.id].length > 0;
+                return (
+                  <View key={oc.id} style={[styles.lesaoCard, { borderLeftColor: '#047857', marginBottom: 16 }]}>
+                    <View style={styles.lesaoHeader}>
+                      <View style={styles.lesaoHeaderTitle}>
+                        <Text style={styles.lesaoName}>{oc.diagnostico}</Text>
+                        <View style={[styles.lesaoBadge, { backgroundColor: '#ECFDF5', borderColor: '#047857' }]}>
+                          <CheckCircle size={12} color="#047857" />
+                          <Text style={[styles.lesaoBadgeText, { color: '#047857' }]}>Resolvida</Text>
+                        </View>
+                      </View>
+                      <View style={styles.lesaoMeta}>
+                        <Text style={styles.lesaoMetaText}>
+                          {oc.dataDeliberacao ? `Resolvida a: ${oc.dataDeliberacao}` : 'Sem data de resolução'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.timeline}>
+                      {/* Diagnóstico Inicial */}
+                      <View style={styles.timelineNode}>
+                        <View style={[styles.timelineDot, { backgroundColor: grauColor }]} />
+                        <View style={[styles.timelineContent, { borderLeftColor: Colors.GRAY_200_BORDAS }]}>
+                          <View style={styles.timelineHeader}>
+                            <Text style={styles.timelineDate}>{oc.dataOcorrencia}</Text>
+                            <View style={[styles.grauBadge, { backgroundColor: grauBg }]}>
+                              <Text style={{ color: grauColor, fontSize: 11 }}>{grauLabel}</Text>
+                            </View>
+                          </View>
+                          <Text style={[styles.timelineNota, { fontStyle: 'normal', fontWeight: '600' }]}>Diagnóstico Inicial</Text>
+                          <Text style={styles.timelineNota}>{oc.diagnostico}</Text>
+                          <Text style={styles.timelineFooter}>
+                            Registado por: {oc.medicoCriadorNome || 'N/D'} · {oc.criadoEm?.substring(0, 10) || ''}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Evoluções list */}
+                      {hasEvolucoes && evolucoesMap[oc.id].map((ev) => {
+                        const evGrauColor = ev.grauRestricao === 'VERMELHO' ? '#991B1B' : '#B45309';
+                        const evGrauBg = ev.grauRestricao === 'VERMELHO' ? '#FEE2E2' : '#FFFBEB';
+                        const evGrauLabel = ev.grauRestricao === 'VERMELHO' ? 'Interrupção Total' : 'Restrição Condicionada';
+                        return (
+                          <View key={ev.id} style={styles.timelineNode}>
+                            <View style={[styles.timelineDot, { backgroundColor: evGrauColor }]} />
+                            <View style={[styles.timelineContent, { borderLeftColor: Colors.GRAY_200_BORDAS }]}>
+                              <View style={styles.timelineHeader}>
+                                <Text style={styles.timelineDate}>{ev.registadoEm?.substring(0, 10) || ''}</Text>
+                                <View style={[styles.grauBadge, { backgroundColor: evGrauBg }]}>
+                                  <Text style={{ color: evGrauColor, fontSize: 11 }}>{evGrauLabel}</Text>
+                                </View>
+                              </View>
+                              <Text style={[styles.timelineNota, { fontStyle: 'normal', fontWeight: '600' }]}>Evolução</Text>
+                              <Text style={styles.timelineNota}>{ev.descricao}</Text>
+                            </View>
+                          </View>
+                        );
+                      })}
+
+                      {/* Alta Médica */}
+                      <View style={styles.timelineNode}>
+                        <View style={[styles.timelineDot, { backgroundColor: '#047857' }]} />
+                        <View style={[styles.timelineContent, { borderLeftColor: 'transparent', paddingBottom: 0 }]}>
+                          <View style={styles.timelineHeader}>
+                            <Text style={styles.timelineDate}>{oc.dataDeliberacao || ''}</Text>
+                            <View style={[styles.grauBadge, { backgroundColor: '#ECFDF5' }]}>
+                              <Text style={{ color: '#047857', fontSize: 11 }}>Sem Restrição</Text>
+                            </View>
+                          </View>
+                          <Text style={[styles.timelineNota, { fontStyle: 'normal', fontWeight: '600' }]}>Alta Médica</Text>
+                          <Text style={styles.timelineNota}>{oc.obsDeliberacao}</Text>
+                          <Text style={styles.timelineFooter}>
+                            Registado por: {oc.medicoDeliberacaoNome || 'N/D'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </>
           ) : activeTab === 'historico' ? (
             <View style={styles.emptyState}>
               <Clock size={48} color={Colors.GRAY_200_BORDAS} opacity={0.5} />
@@ -438,6 +663,210 @@ export function DossiesClinicosScreen(): React.JSX.Element {
           </View>
         </Modal>
 
+        {/* Modal Nova Ocorrência */}
+        <Modal
+          visible={novaOcorrenciaVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setNovaOcorrenciaVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { maxHeight: '85%' }]}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Nova Ocorrência Clínica</Text>
+                  <Text style={styles.modalSubtitle}>{selectedAtleta?.nome}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setNovaOcorrenciaVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <X size={20} color={Colors.GRAY_500_TEXTO2} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                {/* Tipo */}
+                <Text style={styles.fieldLabel}>Tipo de Ocorrência *</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  {(['LESAO', 'DOENCA', 'TRAUMA'] as const).map(t => (
+                    <TouchableOpacity
+                      key={t}
+                      style={[styles.toggleBtn, novaOcTipo === t && { backgroundColor: Colors.DOURADO_CTA, borderColor: Colors.DOURADO_CTA }]}
+                      onPress={() => setNovaOcTipo(t)}
+                    >
+                      <Text style={[{ fontSize: 13, color: Colors.GRAY_900_TEXTO1 }, novaOcTipo === t && { fontWeight: '700' }]}>{t === 'LESAO' ? 'Lesão' : t === 'DOENCA' ? 'Doença' : 'Trauma'}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Diagnóstico */}
+                <Text style={styles.fieldLabel}>Diagnóstico * (mín. 10 caracteres)</Text>
+                <TextInput
+                  style={[styles.fieldTextarea, novaOcDiagnostico.length > 0 && novaOcDiagnostico.trim().length < 10 && styles.fieldInputError]}
+                  placeholder="Descreva o diagnóstico clínico..."
+                  placeholderTextColor={Colors.GRAY_500_TEXTO2}
+                  value={novaOcDiagnostico}
+                  onChangeText={setNovaOcDiagnostico}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+                {novaOcDiagnostico.length > 0 && novaOcDiagnostico.trim().length < 10 && (
+                  <Text style={styles.fieldError}>Mínimo 10 caracteres.</Text>
+                )}
+
+                {/* Grau de Restrição */}
+                <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Grau de Restrição *</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  {([['AMARELO', '#B45309', '#FFFBEB'], ['VERMELHO', '#991B1B', '#FEE2E2']] as const).map(([g, color, bg]) => (
+                    <TouchableOpacity
+                      key={g}
+                      style={[styles.toggleBtn, novaOcGrau === g && { backgroundColor: bg, borderColor: color }]}
+                      onPress={() => setNovaOcGrau(g)}
+                    >
+                      <Text style={[{ fontSize: 13, color: novaOcGrau === g ? color : Colors.GRAY_900_TEXTO1 }, novaOcGrau === g && { fontWeight: '700' }]}>
+                        {g === 'AMARELO' ? 'Parcial' : 'Total'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Data de Reavaliação */}
+                <Text style={styles.fieldLabel}>Data de Reavaliação (AAAA-MM-DD)</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder="2026-06-15"
+                  placeholderTextColor={Colors.GRAY_500_TEXTO2}
+                  value={novaOcDataReav}
+                  onChangeText={setNovaOcDataReav}
+                  maxLength={10}
+                />
+                <Text style={styles.fieldHelper}>* Opcional. Deixe em branco se não aplicar.</Text>
+              </ScrollView>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.btnCancelOutline} onPress={() => setNovaOcorrenciaVisible(false)}>
+                  <Text style={styles.btnCancelOutlineText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.btnConfirmarAlta,
+                    (novaOcDiagnostico.trim().length < 10 || novaOcLoading) && styles.btnConfirmarAltaDisabled,
+                  ]}
+                  disabled={novaOcDiagnostico.trim().length < 10 || novaOcLoading}
+                  onPress={handleSubmitNovaOcorrencia}
+                >
+                  {novaOcLoading ? (
+                    <ActivityIndicator size="small" color="#047857" />
+                  ) : (
+                    <>
+                      <FilePlus size={16} color={novaOcDiagnostico.trim().length >= 10 ? '#047857' : '#9CA3AF'} />
+                      <Text style={[styles.btnConfirmarAltaText, novaOcDiagnostico.trim().length < 10 && { color: '#9CA3AF' }]}>Registar Ocorrência</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal Nova Evolução */}
+        <Modal
+          visible={evolucaoModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeEvolucaoModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Nova Evolução</Text>
+                  <Text style={styles.modalSubtitle}>{selectedAtleta?.nome}</Text>
+                </View>
+                <TouchableOpacity onPress={closeEvolucaoModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <X size={20} color={Colors.GRAY_500_TEXTO2} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                <Text style={styles.fieldLabel}>Grau de Restrição Desportiva *</Text>
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                  <TouchableOpacity
+                    style={[
+                      { flex: 1, height: 44, borderRadius: 8, borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, alignItems: 'center', justifyContent: 'center' },
+                      evolucaoGrau === 'AMARELO' && { backgroundColor: '#FFFBEB', borderColor: '#B45309' },
+                    ]}
+                    onPress={() => setEvolucaoGrau('AMARELO')}
+                  >
+                    <Text style={[
+                      { fontSize: 13, fontWeight: '600', color: Colors.GRAY_500_TEXTO2 },
+                      evolucaoGrau === 'AMARELO' && { color: '#B45309' },
+                    ]}>Condicionada</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      { flex: 1, height: 44, borderRadius: 8, borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, alignItems: 'center', justifyContent: 'center' },
+                      evolucaoGrau === 'VERMELHO' && { backgroundColor: '#FEE2E2', borderColor: '#991B1B' },
+                    ]}
+                    onPress={() => setEvolucaoGrau('VERMELHO')}
+                  >
+                    <Text style={[
+                      { fontSize: 13, fontWeight: '600', color: Colors.GRAY_500_TEXTO2 },
+                      evolucaoGrau === 'VERMELHO' && { color: '#991B1B' },
+                    ]}>Interrupção Total</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.fieldLabel}>Descrição da evolução *</Text>
+                <TextInput
+                  style={[styles.fieldTextarea]}
+                  placeholder="Detalhe a evolução clínica do atleta..."
+                  placeholderTextColor={Colors.GRAY_500_TEXTO2}
+                  value={evolucaoDescricao}
+                  onChangeText={setEvolucaoDescricao}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+                <View style={styles.charCountRow}>
+                  <Text style={[
+                    styles.charCount,
+                    evolucaoDescricao.trim().length < 10 && evolucaoDescricao.length > 0 ? { color: '#991B1B' } : {},
+                  ]}>
+                    {evolucaoDescricao.length} chars
+                  </Text>
+                </View>
+                {evolucaoDescricao.length > 0 && evolucaoDescricao.trim().length < 10 && (
+                  <Text style={styles.fieldError}>A descrição deve ter pelo menos 10 caracteres.</Text>
+                )}
+              </ScrollView>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.btnCancelOutline} onPress={closeEvolucaoModal}>
+                  <Text style={styles.btnCancelOutlineText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.btnConfirmarAlta,
+                    (evolucaoDescricao.trim().length < 10) && styles.btnConfirmarAltaDisabled,
+                  ]}
+                  onPress={handleSubmitEvolucao}
+                  disabled={evolucaoDescricao.trim().length < 10}
+                >
+                  {evolucaoLoading ? (
+                    <ActivityIndicator size="small" color="#047857" />
+                  ) : (
+                    <Text style={[
+                      styles.btnConfirmarAltaText,
+                      (evolucaoDescricao.trim().length < 10) && { color: '#9CA3AF' },
+                    ]}>Registar Evolução</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
       </View>
     );
   }
@@ -467,8 +896,14 @@ export function DossiesClinicosScreen(): React.JSX.Element {
         />
       </View>
 
+      <View style={{ flexDirection: 'row', paddingHorizontal: 24, paddingVertical: 8, gap: 16, backgroundColor: Colors.BRANCO, borderBottomWidth: 1, borderBottomColor: Colors.GRAY_200_BORDAS, alignItems: 'center' }}>
+        <Text style={{ fontSize: 13, color: Colors.GRAY_500_TEXTO2, fontWeight: '500' }}>Ordenar por:</Text>
+        <SortableHeader label="NOME" field="nome" sortConfig={sortConfig} onSort={handleSort} />
+        <SortableHeader label="ESTADO" field="semaforo" sortConfig={sortConfig} onSort={handleSort} />
+      </View>
+
       <ScrollView style={styles.gridContainer} contentContainerStyle={styles.gridContent}>
-        {atletasFiltrados.map(a => {
+        {sortList(atletasFiltrados, sortConfig).map(a => {
           const s = getSemaforoData(a.semaforo);
           const Icon = s.icon;
           return (

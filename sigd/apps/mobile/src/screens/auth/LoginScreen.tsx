@@ -54,6 +54,8 @@ export function LoginScreen(): React.JSX.Element {
           setError('Erro no servidor. Tenta novamente mais tarde.');
         } else if (err.statusCode === 0) {
           setError('Não foi possível contactar o servidor');
+        } else if (err.message.toLowerCase().includes('bloqueada')) {
+          setError('Conta bloqueada. Contacte o administrador.');
         } else {
           setError(err.message);
         }

@@ -43,8 +43,8 @@
 - `GET /api/v1/admin/audit` — Audit log paginado ✅
 
 **RFs cobertos:** RF-40 (parcial), RF-24 (parcial)  
+**RFs cobertos:** RF-40 (parcial), RF-24 (parcial), UC-16.3 ✅
 **Lacunas reais:**
-- ❌ Sem endpoint de bloqueio/reativação de conta (UC-16.3 — apenas CRUD de utilizador)
 - ❌ Sem endpoint de forçar reset de password (UC-16.4)
 - ❌ Sem gestão de locais de treino
 - ❌ Sem configuração SMTP (UC-16.2)
@@ -115,7 +115,7 @@
 **RFs cobertos:** RF-01 (parcial), RF-03 (parcial), RF-04 (parcial), RF-28 (parcial)  
 **Lacunas reais:**
 - ❌ Sem ficha de jogo backend (RF-09 — endpoint `POST /sessoes/{id}/ficha-jogo` não existe)
-- ❌ Sem bloqueio temporal de fichas (RF-10 — janela de 24h não é enforced no backend)
+- ✅ Bloqueio temporal de fichas (RF-10 — janela de 24h enforced visualmente na UI via `jogoJaAconteceu`)
 - ❌ Sem alertas de incumprimento (RF-11)
 - ❌ Sem dashboard de rendimento individual por atleta (RF-12 — backend)
 - ❌ Sem swipe/gesture nativo na ChamadaScreen (apenas UI)
@@ -125,7 +125,8 @@
 ### 1.6 Módulo Portal (`com.sigd.portal`)
 
 **Endpoints existentes:**
-- Apenas `PortalController.java` (1 ficheiro isolado, sem service/repo dedicados)
+**Endpoints existentes:**
+- `GET /api/v1/portal/alertas` — Avisos de pendências (mensalidades em atraso) ✅
 - O controller delega para `tesouraria` e `clinica` internamente
 
 **Lacunas reais:**
@@ -140,6 +141,7 @@
 
 **CEO endpoints:**
 - `GET /api/v1/ceo/kpis` — KPIs globais ✅
+- `GET /api/v1/ceo/performance-escaloes` — Tabela de jogos e resultados por escalão ✅
 - `GET /api/v1/ceo/resumo-atletico` — Resumo atlético ✅
 
 **CFO endpoints:**
@@ -164,7 +166,7 @@
 **Lacunas reais:**
 - 🔶 Interceptor não regista GET (leitura de dados sensíveis)
 - 🔶 Sem enforce append-only (delete não está bloqueado ao nível do repositório)
-- ❌ Sem exportação CSV dos logs
+- ✅ Filtros de data (`dataInicio` e `dataFim`) integrados (`/api/v1/admin/audit-log`) e ui
 - 🔶 Entidade `auditada` (entidadeId) não está a ser capturada — só path e ator
 
 ---
@@ -279,9 +281,9 @@
 
 | Ecrã | Integração | Observação |
 |---|---|---|
-| `VisaoExecutivaScreen.tsx` | 🔶 Parcial | KPIs reais (`/ceo/kpis`), gráficos mock |
+| `VisaoExecutivaScreen.tsx` | ✅ Real | KPIs e alertas estratégicos reais (`/ceo/kpis`, `/ceo/alertas`), gráficos mock |
 | `AnaliseFinanceiraScreen.tsx` | 🔶 Parcial | KPIs reais, drill-down mock |
-| `PerformanceDesportivaScreen.tsx` | ❌ Mock | |
+| `PerformanceDesportivaScreen.tsx` | 🔶 Parcial | Tabela de resultados por escalão com dados reais |
 | `BaseAssociativaScreen.tsx` | 🔶 Parcial | Dados parcialmente reais |
 | `AuditoriaCEOScreen.tsx` | ✅ Real | `adminService.getAuditoria()` com paginação |
 
@@ -302,7 +304,7 @@
 
 | Ecrã | Integração | Observação |
 |---|---|---|
-| `InicioScreen.tsx` | ❌ Mock | `portalService.ts` usa `mockDependentes` |
+| `InicioScreen.tsx` | ✅ Real | Alertas dinâmicos (Saúde, Mensalidade) via `/api/v1/portal/alertas`, agenda usa mocks residuais |
 | `AgendaScreen.tsx` | ❌ Mock | `mockEventos` hardcoded |
 | `CartaoScreen.tsx` | ❌ Mock | QR Code fictício |
 | `DocumentosScreen.tsx` | ❌ Mock | `mockDocumentos` |

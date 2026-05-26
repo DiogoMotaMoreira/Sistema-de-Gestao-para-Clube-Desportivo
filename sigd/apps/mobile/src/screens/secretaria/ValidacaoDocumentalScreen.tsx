@@ -40,6 +40,13 @@ function getBadgeConfig(estado: EstadoDocumental) {
 
 export function ValidacaoDocumentalScreen(): React.JSX.Element {
   const [pesquisa, setPesquisa] = useState('');
+  const [activeTab, setActiveTab] = useState<'TODOS' | 'COMPLETO' | 'INCOMPLETO' | 'EM_FALTA'>('TODOS');
+  const [toast, setToast] = useState<{message: string, type: 'success'|'error'} | null>(null);
+
+  const showToast = (message: string, type: 'success'|'error' = 'success') => {
+    setToast({message, type});
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const { data: pageData, isLoading, isError } = useQuery({
     queryKey: ['atletasValidacao'],
@@ -48,11 +55,11 @@ export function ValidacaoDocumentalScreen(): React.JSX.Element {
 
   const atletas = pageData?.content ?? [];
 
-  const atletasFiltrados = pesquisa.trim()
-    ? atletas.filter(a =>
-        a.nomeCompleto.toLowerCase().includes(pesquisa.toLowerCase())
-      )
-    : atletas;
+  const atletasFiltrados = atletas.filter(a => {
+    if (activeTab !== 'TODOS' && calcularEstadoDocumental(a) !== activeTab) return false;
+    if (pesquisa.trim() && !a.nomeCompleto.toLowerCase().includes(pesquisa.toLowerCase())) return false;
+    return true;
+  });
 
   // Contadores para o resumo
   const completos = atletas.filter(a => calcularEstadoDocumental(a) === 'COMPLETO').length;
@@ -67,8 +74,7 @@ export function ValidacaoDocumentalScreen(): React.JSX.Element {
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Confirmar',
-          onPress: () =>
-            Alert.alert('Sucesso', 'Documentação validada com sucesso.'),
+          onPress: () => showToast('Documentação validada com sucesso!'),
         },
       ]
     );
@@ -83,21 +89,25 @@ export function ValidacaoDocumentalScreen(): React.JSX.Element {
 
       {/* Resumo por estado */}
       <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, { borderColor: '#A7F3D0' }]}>
+        <TouchableOpacity style={[styles.summaryCard, activeTab === 'TODOS' && styles.summaryCardActive]} onPress={() => setActiveTab('TODOS')}>
+          <Text style={[styles.summaryCount, { color: Colors.GRAY_900_TEXTO1 }]}>{atletas.length}</Text>
+          <Text style={styles.summaryLabel}>Todos</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.summaryCard, { borderColor: '#A7F3D0' }, activeTab === 'COMPLETO' && styles.summaryCardActive]} onPress={() => setActiveTab('COMPLETO')}>
           <CheckCircle size={20} color="#047857" />
           <Text style={[styles.summaryCount, { color: '#047857' }]}>{completos}</Text>
           <Text style={styles.summaryLabel}>Completos</Text>
-        </View>
-        <View style={[styles.summaryCard, { borderColor: '#FDE68A' }]}>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.summaryCard, { borderColor: '#FDE68A' }, activeTab === 'INCOMPLETO' && styles.summaryCardActive]} onPress={() => setActiveTab('INCOMPLETO')}>
           <AlertTriangle size={20} color="#B45309" />
           <Text style={[styles.summaryCount, { color: '#B45309' }]}>{incompletos}</Text>
           <Text style={styles.summaryLabel}>Incompletos</Text>
-        </View>
-        <View style={[styles.summaryCard, { borderColor: '#FECACA' }]}>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.summaryCard, { borderColor: '#FECACA' }, activeTab === 'EM_FALTA' && styles.summaryCardActive]} onPress={() => setActiveTab('EM_FALTA')}>
           <XCircle size={20} color="#991B1B" />
           <Text style={[styles.summaryCount, { color: '#991B1B' }]}>{emFalta}</Text>
           <Text style={styles.summaryLabel}>Em Falta</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Pesquisa */}
@@ -172,6 +182,14 @@ export function ValidacaoDocumentalScreen(): React.JSX.Element {
           })
         )}
       </ScrollView>
+
+      {/* Toast de Feedback Visual */}
+      {toast && (
+        <View style={[styles.toastContainer, { backgroundColor: toast.type === 'success' ? '#047857' : '#991B1B' }]}>
+          {toast.type === 'success' ? <CheckCircle size={20} color="#FFF" /> : <XCircle size={20} color="#FFF" />}
+          <Text style={styles.toastText}>{toast.message}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -218,6 +236,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 4,
     backgroundColor: Colors.GRAY_50_FUNDO,
+  },
+  summaryCardActive: {
+    backgroundColor: Colors.BRANCO,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   summaryCount: { fontSize: 22, fontWeight: '700' },
   summaryLabel: { fontSize: 11, color: Colors.GRAY_500_TEXTO2, fontWeight: '500' },
@@ -296,4 +321,25 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 64 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: Colors.GRAY_900_TEXTO1, marginTop: 16 },
   emptySubtitle: { fontSize: 14, color: Colors.GRAY_500_TEXTO2, marginTop: 8 },
+
+  toastContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    right: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  toastText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });

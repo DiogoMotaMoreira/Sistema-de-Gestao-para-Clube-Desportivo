@@ -9,14 +9,14 @@ export interface Dependente {
   nome: string;
   escalao: string;
   equipa: string;
-  elegibilidade: 'APTO' | 'BLOQUEADO' | 'VINCULO_ENCERRADO';
+  elegibilidade: string;
   idade: number;
   numeroSocio?: string;
 }
 
 export interface AlertaPortal {
   id: number;
-  tipo: 'JUSTIFICACAO_PENDENTE' | 'EMD_EXPIRA' | 'DOCUMENTO_REJEITADO' | 'PROXIMO_TREINO' | 'PROXIMO_JOGO';
+  tipo: 'JUSTIFICACAO_PENDENTE' | 'EMD_EXPIRA' | 'DOCUMENTO_REJEITADO' | 'PROXIMO_TREINO' | 'PROXIMO_JOGO' | 'MENSALIDADE' | 'SAUDE';
   titulo: string;
   subtitulo: string;
   urgencia?: 'CRITICA' | 'ALTA' | 'NORMAL';
@@ -161,7 +161,8 @@ export const portalService = {
   },
 
   getAlertas: async (dependenteId: number): Promise<AlertaPortal[]> => {
-    return new Promise(resolve => setTimeout(() => resolve([]), 400));
+    const { data } = await api.get<AlertaPortal[]>('/portal/alertas');
+    return data;
   },
 
   getEventos: async (dependenteId: number, passados: boolean): Promise<EventoPortal[]> => {

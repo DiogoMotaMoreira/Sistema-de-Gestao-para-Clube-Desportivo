@@ -15,10 +15,15 @@ export function AnaliseFinanceiraScreen(): React.JSX.Element {
   
   const [fluxos, setFluxos] = useState<FluxoCaixa[]>([]);
   const [rubricas, setRubricas] = useState<RubricaFinanceira[]>([]);
+  const [resumo, setResumo] = useState<any>(null);
 
   useEffect(() => {
     ceoService.getFluxosCaixa().then(setFluxos);
     ceoService.getRubricasFinanceiras('Clube').then(setRubricas);
+    
+    // Import cfoService instead or fetch manually
+    // Since we need to import cfoService, let's just fetch it directly or import it at the top.
+    import('@/services/cfoService').then(m => m.cfoService.getResumoFinanceiro().then(setResumo));
   }, []);
 
   return (
@@ -62,7 +67,7 @@ export function AnaliseFinanceiraScreen(): React.JSX.Element {
              <View style={styles.grid3}>
                 <CeoKpiCard 
                    label="RECEITA CAPTADA"
-                   valorFormatado="1.240.500,00 €"
+                   valorFormatado={resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.global.receita) : "—"}
                    subtexto="Época 2025/2026"
                    icon={FileText}
                    variacaoTexto="+12,3% vs. anterior"
@@ -70,7 +75,7 @@ export function AnaliseFinanceiraScreen(): React.JSX.Element {
                 />
                 <CeoKpiCard 
                    label="DÍVIDA VENCIDA TOTAL"
-                   valorFormatado="45.200,00 €"
+                   valorFormatado={resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.global.divida) : "—"}
                    subtexto="Mensalidades em atraso"
                    icon={FileText}
                    valorCor={Colors.ERRO_TEXT}
@@ -80,7 +85,7 @@ export function AnaliseFinanceiraScreen(): React.JSX.Element {
                 />
                 <CeoKpiCard 
                    label="RÁCIO DE LIQUIDEZ"
-                   valorFormatado="96,5%"
+                   valorFormatado={resumo ? `${resumo.global.taxaLiquidacao.toFixed(1)}%` : "—"}
                    subtexto="Receita Captada / (Receita + Dívida)"
                    icon={FileText}
                    valorCor={Colors.SUCESSO_TEXT}
@@ -112,11 +117,11 @@ export function AnaliseFinanceiraScreen(): React.JSX.Element {
              <View style={styles.panelCompare}>
                 <View style={[styles.badgePanel, { backgroundColor: Colors.PRETO_PRIMARIO }]}><Text style={{ color: Colors.BRANCO, fontSize: 12, fontWeight: '600' }}>ASSOCIAÇÃO / CLUBE</Text></View>
                 
-                <View style={styles.kpiInlineRow}>
-                   <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>RECEITA</Text><Text style={styles.kpiInlineValue}>820.300,00 €</Text></View>
-                   <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>DÍVIDA</Text><Text style={[styles.kpiInlineValue, { color: Colors.ERRO_TEXT }]}>28.500,00 €</Text></View>
-                   <View style={[styles.kpiInlineItem, { borderRightWidth: 0 }]}><Text style={styles.kpiInlineLabel}>COBERTURA</Text><Text style={[styles.kpiInlineValue, { color: Colors.SUCESSO_TEXT }]}>96,6%</Text></View>
-                </View>
+                 <View style={styles.kpiInlineRow}>
+                    <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>RECEITA</Text><Text style={styles.kpiInlineValue}>{resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.clube.receita) : "—"}</Text></View>
+                    <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>DÍVIDA</Text><Text style={[styles.kpiInlineValue, { color: Colors.ERRO_TEXT }]}>{resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.clube.divida) : "—"}</Text></View>
+                    <View style={[styles.kpiInlineItem, { borderRightWidth: 0 }]}><Text style={styles.kpiInlineLabel}>COBERTURA</Text><Text style={[styles.kpiInlineValue, { color: Colors.SUCESSO_TEXT }]}>{resumo ? `${((resumo.clube.receita / (resumo.clube.receita + resumo.clube.divida)) * 100 || 0).toFixed(1)}%` : "—"}</Text></View>
+                 </View>
 
                 <View style={styles.chartMockAreaMini}>
                    <LineChart size={32} color={Colors.GRAY_200_BORDAS} />
@@ -145,11 +150,11 @@ export function AnaliseFinanceiraScreen(): React.JSX.Element {
              <View style={styles.panelCompare}>
                 <View style={[styles.badgePanel, { backgroundColor: '#FFFBEB' }]}><Text style={{ color: '#B45309', fontSize: 12, fontWeight: '600' }}>SAD / FORMAÇÃO</Text></View>
                 
-                <View style={styles.kpiInlineRow}>
-                   <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>RECEITA</Text><Text style={styles.kpiInlineValue}>420.200,00 €</Text></View>
-                   <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>DÍVIDA</Text><Text style={[styles.kpiInlineValue, { color: Colors.ERRO_TEXT }]}>16.700,00 €</Text></View>
-                   <View style={[styles.kpiInlineItem, { borderRightWidth: 0 }]}><Text style={styles.kpiInlineLabel}>COBERTURA</Text><Text style={[styles.kpiInlineValue, { color: Colors.SUCESSO_TEXT }]}>96,1%</Text></View>
-                </View>
+                 <View style={styles.kpiInlineRow}>
+                    <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>RECEITA</Text><Text style={styles.kpiInlineValue}>{resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.sad.receita) : "—"}</Text></View>
+                    <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>DÍVIDA</Text><Text style={[styles.kpiInlineValue, { color: Colors.ERRO_TEXT }]}>{resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.sad.divida) : "—"}</Text></View>
+                    <View style={[styles.kpiInlineItem, { borderRightWidth: 0 }]}><Text style={styles.kpiInlineLabel}>COBERTURA</Text><Text style={[styles.kpiInlineValue, { color: Colors.SUCESSO_TEXT }]}>{resumo ? `${((resumo.sad.receita / (resumo.sad.receita + resumo.sad.divida)) * 100 || 0).toFixed(1)}%` : "—"}</Text></View>
+                 </View>
 
                 <View style={styles.chartMockAreaMini}>
                    <LineChart size={32} color={Colors.GRAY_200_BORDAS} />

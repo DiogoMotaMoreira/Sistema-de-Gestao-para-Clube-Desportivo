@@ -11,17 +11,17 @@
 ## Auditoria Global (RF-24)
 - **Funcional:** Interceptor Automático (`AuditInterceptor`) implementado, que guarda metadados (ator, IP, entidade, ação) de todos os requests POST/PUT/DELETE em `audit_log`.
 
-## Notas de Implementação Adicionais REST do Backend (Spring Boot) desenvolvidos: listar, criar, bloquear, reativar utilizadores com validação anti-bloqueio próprio. Dados de testes em base de dados inicializados via *Flyway Seed V4* (`cfo`, `diretor`, `ee`, `atleta`). O `adminService.ts` no frontend está ligado à API real via Axios com autenticação JWT. Listagem, paginação, pesquisa com debounce e submissões assíncronas ativas.
+## Notas de Implementação Adicionais REST do Backend (Spring Boot) desenvolvidos: listar, criar, bloquear, reativar utilizadores com validação anti-bloqueio próprio. O UC-16.3 está integralmente implementado no `GestaoAcessosScreen` que agora bloqueia, reativa e regista alertas na UI, alterando o badge para Inativo. Dados de testes em base de dados inicializados via *Flyway Seed V4* (`cfo`, `diretor`, `ee`, `atleta`). O `adminService.ts` no frontend está ligado à API real via Axios com autenticação JWT. Listagem, paginação, pesquisa com debounce e submissões assíncronas ativas.
 - **Com Mocks:** O endpoint de Audit Log `/api/v1/admin/audit-log` está a retornar Page.empty() (Mock) no backend e o frontend usa array fixo para `getAuditoria`, `getNotificacoesFalhadas` e `getLocaisTreino`. Teste de Modais (UI usa o primeiro utilizador da página).
 - **Quebrado ou Incompleto:** A aba de Configurações Globais (Gateway de Comunicações e Locais de Treino) não tem formulários completos nem lógica ligada desenvolvida.
 - **Endpoints backend em falta:** Endpoints de Audit Log reais, Endpoints para Parâmetros Globais, SMTP Gateway e Locais de Treino.
 - **Segurança:** Lockout por brute force implementado (RNF-07) limitando contas por 15 min após 5 falhas no login.
 
 ## Módulo CEO (Visão Executiva)
-- **Funcional:** Navegação e estrutura de ecrãs.
+- **Funcional:** Navegação e estrutura de ecrãs. Dashboard executivo exibe alertas estratégicos reais baseados em EMDs, obrigações em atraso e lesões graves (INAPTO).
 - **Com Mocks:** Totalmente dependente do `ceoService.ts` com promessas simuladas (Mocks) para gráficos de taxa de ocupação, performance global, KPIs financeiros macro e vitórias.
 - **Treinador:** RF-15 (Bloqueio sistémico por EMD caducado) e lógica de semáforo de prontidão (RF-16) totalmente operacional no backend e mobile.
-- **CEO Dashboard:** KPI Engine implementado com sucesso via `GET /api/v1/ceo/kpis`. Dashboard executivo exibe dados operacionais reais em tempo real em vez de mocks.
+- **CEO Dashboard:** KPI Engine implementado com sucesso via `GET /api/v1/ceo/kpis`. A Análise de Performance por Escalão usa dados reais na tabela (`GET /api/v1/ceo/performance-escaloes`) agregando dados reais da `EventoDesportivoRepository`. Dashboard executivo exibe dados operacionais reais em tempo real em vez de mocks.
 
 ## O Que Falta Fazer (Next Steps)
 - **Endpoints backend em falta:** Todos os endpoints analíticos de Data Warehouse (`/api/v1/ceo/*`).
@@ -54,7 +54,7 @@
 
 ## Módulo Portal (Encarregado de Educação / Atleta)
 - **Funcional:** Terminar Sessão, visualização do Resumo Financeiro, Listagem de Obrigações, KPIs e cópia de NIB/Ref. Cartão Digital com estado real e exibição do N.º de Sócio e Prontidão/Elegibilidade (RF-39 Parcial) integrados via `GET /api/v1/portal/me`.
-- **Com Mocks:** Lógica residual em algumas queries pontuais. Notificações/Alertas estáticos. QR code ainda atua como placeholder visual.
+- **Com Mocks:** Lógica residual em algumas queries pontuais. QR code ainda atua como placeholder visual. No entanto, o `InicioScreen` já usa notificações e alertas reais baseados nas obrigações financeiras reais (`GET /api/v1/portal/alertas`).
 - **Quebrado ou Incompleto:** O clube não aceita pagamentos remotos por app.
 - **Endpoints backend em falta:** Download de faturas reais/PDFs, Websockets/SSE para push notifications.
 

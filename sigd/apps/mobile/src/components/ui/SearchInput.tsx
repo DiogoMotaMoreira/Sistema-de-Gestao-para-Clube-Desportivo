@@ -33,7 +33,7 @@ interface SearchInputProps {
 export function SearchInput({
   placeholder = 'Pesquisar...',
   onSearch,
-  minChars = 3,
+  minChars = 0,
   debounceMs = 300,
   style,
 }: SearchInputProps): React.JSX.Element {

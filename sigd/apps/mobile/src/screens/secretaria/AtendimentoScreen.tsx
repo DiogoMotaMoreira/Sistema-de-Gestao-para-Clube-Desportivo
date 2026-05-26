@@ -6,7 +6,7 @@ import { secretariaService, EncarregadoResponse, ObrigacaoResponse } from '../..
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '../../components/ui/PageHeader';
 
-type ViewState = 'SEARCH' | 'PROFILE' | 'CHECKOUT';
+type ViewState = 'SEARCH' | 'PROFILE' | 'CHECKOUT' | 'SUCCESS';
 
 export function AtendimentoScreen(): React.JSX.Element {
   const [view, setView] = useState<ViewState>('SEARCH');
@@ -16,6 +16,7 @@ export function AtendimentoScreen(): React.JSX.Element {
   
   const [selectedObrigacoes, setSelectedObrigacoes] = useState<number[]>([]);
   const [metodoPagamento, setMetodoPagamento] = useState<'NUMERARIO' | 'MULTIBANCO' | 'MBWAY'>('NUMERARIO');
+  const [receiptData, setReceiptData] = useState<{ date: Date; total: number; method: string; items: ObrigacaoResponse[] } | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -43,12 +44,17 @@ export function AtendimentoScreen(): React.JSX.Element {
         await secretariaService.registarPagamento(id);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, ids) => {
       queryClient.invalidateQueries({ queryKey: ['obrigacoesEE', selectedEE?.id] });
-      Alert.alert('Sucesso', 'Pagamento registado com sucesso!');
-      setView('SEARCH');
-      setSelectedEE(null);
-      setSelectedObrigacoes([]);
+      const items = pendentes.filter(o => ids.includes(o.id));
+      const totalPaid = items.reduce((acc, curr) => acc + curr.valor, 0);
+      setReceiptData({
+        date: new Date(),
+        total: totalPaid,
+        method: metodoPagamento,
+        items
+      });
+      setView('SUCCESS');
     },
     onError: () => Alert.alert('Erro', 'Ocorreu um erro ao registar os pagamentos.')
   });
@@ -72,6 +78,13 @@ export function AtendimentoScreen(): React.JSX.Element {
     if (estado === 'PAGO') return { bg: '#ECFDF5', text: '#047857' };
     if (estado === 'EM_ATRASO') return { bg: '#FEE2E2', text: '#991B1B' };
     return { bg: '#FEF3C7', text: '#B45309' };
+  };
+
+  const handleNovoAtendimento = () => {
+    setView('SEARCH');
+    setSelectedEE(null);
+    setSelectedObrigacoes([]);
+    setReceiptData(null);
   };
 
   return (
@@ -244,6 +257,49 @@ export function AtendimentoScreen(): React.JSX.Element {
                 {pagarMutation.isPending ? <ActivityIndicator color={Colors.BRANCO} /> : <Text style={styles.btnConfirmText}>Confirmar Pagamento</Text>}
               </TouchableOpacity>
             </View>
+          </View>
+        )}
+
+        {/* VISTA SUCCESS */}
+        {view === 'SUCCESS' && selectedEE && receiptData && (
+          <View style={{ alignItems: 'center', marginTop: 32 }}>
+            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+              <Check size={48} color="#047857" />
+            </View>
+            <Text style={{ fontSize: 24, fontWeight: '700', color: Colors.GRAY_900_TEXTO1, marginBottom: 8 }}>Pagamento Registado com Sucesso</Text>
+            <Text style={{ fontSize: 16, color: Colors.GRAY_500_TEXTO2, marginBottom: 32 }}>O recibo foi processado e arquivado.</Text>
+
+            <View style={[styles.card, { width: '100%', flexDirection: 'column', padding: 24 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={styles.metaLabel}>Data:</Text>
+                <Text style={styles.metaValue}>{receiptData.date.toLocaleString('pt-PT')}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={styles.metaLabel}>Encarregado:</Text>
+                <Text style={styles.metaValue}>{selectedEE.nome}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: Colors.GRAY_200_BORDAS }}>
+                <Text style={styles.metaLabel}>Método:</Text>
+                <Text style={styles.metaValue}>{receiptData.method === 'NUMERARIO' ? 'Numerário' : receiptData.method === 'MULTIBANCO' ? 'Multibanco' : 'MBWay'}</Text>
+              </View>
+
+              <Text style={[styles.metaLabel, { marginBottom: 12 }]}>Obrigações Pagas:</Text>
+              {receiptData.items.map(ob => (
+                <View key={ob.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 14, color: Colors.GRAY_900_TEXTO1 }}>{ob.tipo}{ob.atletaNome ? ` — ${ob.atletaNome}` : ''}</Text>
+                  <Text style={{ fontSize: 14, color: Colors.GRAY_900_TEXTO1 }}>{ob.valor.toFixed(2)}€</Text>
+                </View>
+              ))}
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 24, paddingTop: 24, borderTopWidth: 1, borderTopColor: Colors.GRAY_200_BORDAS }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.GRAY_900_TEXTO1 }}>Total</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#047857' }}>{receiptData.total.toFixed(2)}€</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={[styles.btnPrimary, { width: '100%', alignItems: 'center', marginTop: 24 }]} onPress={handleNovoAtendimento}>
+              <Text style={styles.btnPrimaryText}>Novo Atendimento</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>

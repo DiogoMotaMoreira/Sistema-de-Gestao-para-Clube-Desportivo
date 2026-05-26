@@ -5,7 +5,7 @@ import { treinadorService, FichaJogoResponse } from '@/services/treinadorService
 import { Trophy, CheckCircle, ArrowLeft, Plus, Minus, ClipboardList } from 'lucide-react-native';
 
 export function FichaJogoFlowScreen({ route, navigation }: any): React.JSX.Element {
-  console.log('FichaJogo params:', route?.params);
+
   const eventoId = route?.params?.eventoId;
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -40,7 +40,7 @@ export function FichaJogoFlowScreen({ route, navigation }: any): React.JSX.Eleme
   }, [eventoId, navigation]);
 
   const handleSubmeter = async () => {
-    console.log('Submeter ficha:', { eventoId, golosMarcados, golosSofridos });
+
 
     if (!eventoId) {
       Alert.alert('Erro', 'Não foi possível submeter a ficha: ID do evento inválido ou ausente.');
@@ -49,7 +49,7 @@ export function FichaJogoFlowScreen({ route, navigation }: any): React.JSX.Eleme
 
     setLoading(true);
     try {
-      console.log('A chamar POST ficha-jogo para evento:', eventoId);
+
       await treinadorService.submeterFichaJogo(eventoId, golosMarcados, golosSofridos, observacoes);
       Alert.alert('Sucesso', 'Ficha submetida com sucesso!');
       navigation.goBack();

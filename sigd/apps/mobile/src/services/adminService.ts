@@ -227,15 +227,20 @@ export const adminService = {
     page = 0,
     size = 20,
     modulo?: string,
-    tipo?: string
+    tipo?: string,
+    dataInicio?: string,
+    dataFim?: string,
+    sortBy: string = 'timestamp',
+    sortDir: string = 'desc',
+    search?: string
   ): Promise<PageResponse<AuditLogEntry>> => {
-    const params: Record<string, any> = { page, size };
+    const params: Record<string, any> = { page, size, sortBy, sortDir };
     if (modulo) params.modulo = modulo;
     if (tipo) params.tipo = tipo;
+    if (dataInicio) params.dataInicio = dataInicio;
+    if (dataFim) params.dataFim = dataFim;
+    if (search) params.search = search;
     const { data } = await api.get<PageResponse<BackendAuditLog>>('/audit-log', { params });
-    if (data && data.content && data.content.length > 0) {
-      console.log('Audit response:', JSON.stringify(data.content[0]));
-    }
     return {
       ...data,
       content: data.content.map(mapToAuditLogEntry),

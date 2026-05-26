@@ -6,7 +6,7 @@ import { SemaforoBadge } from '../components/SemaforoBadge';
 import { ChevronRight, ChevronLeft, Check, AlertTriangle } from 'lucide-react-native';
 
 export function ConvocatoriaFlowScreen({ route, navigation }: any): React.JSX.Element {
-  console.log('ConvocatoriaFlow params:', route?.params);
+
   const eventoId = route?.params?.eventoId ?? null;
   const equipaId = route?.params?.equipaId ?? null;
   

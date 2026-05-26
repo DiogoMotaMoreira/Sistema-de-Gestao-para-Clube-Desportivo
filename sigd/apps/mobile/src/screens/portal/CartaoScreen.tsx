@@ -110,7 +110,7 @@ export function CartaoScreen({ navigation }: any): React.JSX.Element {
         setErrorMsg('Nenhum dependente associado.');
       }
     }).catch(e => {
-      console.log('Erro ao carregar atleta', e);
+
       setAtletaCartao({
         nome: user?.name || 'Sócio Boavista',
         numeroSocio: null,

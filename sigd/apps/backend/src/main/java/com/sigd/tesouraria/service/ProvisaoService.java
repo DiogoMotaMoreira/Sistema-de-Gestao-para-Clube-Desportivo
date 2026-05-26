@@ -56,11 +56,12 @@ public class ProvisaoService {
                 valorMensalidade = BigDecimal.ZERO;
             }
 
-            // e. Verifica se já existe obrigação para este atleta/época (QUOTA_ANUAL)
+            // e. Verifica se já existe obrigação para este atleta no mesmo ano civil (QUOTA_ANUAL)
+            int anoAtual = LocalDate.now().getYear();
             boolean hasQuota = obrigacaoRepo.findByAtletaId(atleta.getId()).stream()
                     .anyMatch(o -> o.getTipo() == TipoObrigacao.QUOTA_ANUAL &&
-                            !o.getDataVencimento().isBefore(epoca.getDataInicio()) &&
-                            !o.getDataVencimento().isAfter(epoca.getDataFim()));
+                            o.getDataVencimento() != null &&
+                            o.getDataVencimento().getYear() == anoAtual);
 
             // Cria QUOTA_ANUAL se não existir
             if (!hasQuota && escalao.getQuotaAnual() != null && escalao.getQuotaAnual().compareTo(BigDecimal.ZERO) > 0) {
@@ -79,7 +80,9 @@ public class ProvisaoService {
             LocalDate dataVencimentoMensalidade = LocalDate.now().plusMonths(1).withDayOfMonth(1);
             boolean hasMensalidade = obrigacaoRepo.findByAtletaId(atleta.getId()).stream()
                     .anyMatch(o -> o.getTipo() == TipoObrigacao.MENSALIDADE &&
-                            o.getDataVencimento().equals(dataVencimentoMensalidade));
+                            o.getDataVencimento() != null &&
+                            o.getDataVencimento().getYear() == dataVencimentoMensalidade.getYear() &&
+                            o.getDataVencimento().getMonthValue() == dataVencimentoMensalidade.getMonthValue());
 
             if (!hasMensalidade && valorMensalidade.compareTo(BigDecimal.ZERO) > 0) {
                 ObrigacaoFinanceira mensalidade = new ObrigacaoFinanceira();

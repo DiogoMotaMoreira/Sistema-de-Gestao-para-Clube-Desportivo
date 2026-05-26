@@ -94,6 +94,19 @@ export interface AltaMedicaRequest {
   dataEncerramento: string; // ISO format: YYYY-MM-DD
 }
 
+export interface EvolucaoRequest {
+  grauRestricao: GrauRestricaoDesportiva;
+  descricao: string;
+}
+
+export interface EvolucaoResponse {
+  id: number;
+  ocorrenciaId: number;
+  grauRestricao: GrauRestricaoDesportiva;
+  descricao: string;
+  registadoEm: string;
+}
+
 // ── Axios Instance ────────────────────────────────────
 
 function getAuthHeaders(): Record<string, string> {
@@ -184,6 +197,27 @@ export const clinicaService = {
     const { data } = await api.post<OcorrenciaResponse>(
       `/ocorrencias/${ocorrenciaId}/alta`,
       alta,
+    );
+    return data;
+  },
+
+  /**
+   * Regista uma evolução clínica para uma ocorrência.
+   */
+  async registarEvolucao(ocorrenciaId: number, grauRestricao: GrauRestricaoDesportiva, descricao: string): Promise<EvolucaoResponse> {
+    const { data } = await api.post<EvolucaoResponse>(
+      `/ocorrencias/${ocorrenciaId}/evolucao`,
+      { grauRestricao, descricao },
+    );
+    return data;
+  },
+
+  /**
+   * Lista o histórico de evoluções de uma ocorrência.
+   */
+  async getEvolucoes(ocorrenciaId: number): Promise<EvolucaoResponse[]> {
+    const { data } = await api.get<EvolucaoResponse[]>(
+      `/ocorrencias/${ocorrenciaId}/evolucoes`,
     );
     return data;
   },

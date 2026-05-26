@@ -23,6 +23,9 @@ export function DetalheJogoScreen({ route, navigation }: any): React.JSX.Element
   if (!jogo) return <View style={styles.container} />;
 
   const s = jogo.subEstadoJogo;
+  const jogoJaAconteceu = jogo.dataHora 
+    ? new Date(jogo.dataHora) < new Date() 
+    : false;
 
   async function downloadPdf(convocatoriaId: number) {
     try {
@@ -92,16 +95,22 @@ export function DetalheJogoScreen({ route, navigation }: any): React.JSX.Element
           </TouchableOpacity>
         )}
 
-        {jogo.estado === 'AGENDADO' && (
+        {jogo.estado === 'AGENDADO' && !jogoJaAconteceu && (
+          <View style={{ marginTop: 16, alignItems: 'center' }}>
+            <Text style={{ color: Colors.GRAY_500_TEXTO2, fontSize: 14 }}>Ficha disponível após o jogo</Text>
+          </View>
+        )}
+
+        {jogo.estado === 'AGENDADO' && jogoJaAconteceu && (
           <TouchableOpacity 
-            style={[styles.btnErro, { marginTop: 8 }]} 
+            style={[styles.btnDourado, { marginTop: 8 }]} 
             onPress={() => navigation.navigate('FichaJogoFlow', { 
               eventoId: jogo.id,
               adversario: jogo.adversario 
             })}
           >
-            <ClipboardList size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.btnErroText}>Registar Ficha de Jogo</Text>
+            <ClipboardList size={18} color="#000000" style={{ marginRight: 8 }} />
+            <Text style={styles.btnDouradoText}>Registar Ficha de Jogo</Text>
           </TouchableOpacity>
         )}
 

@@ -96,6 +96,14 @@ public class PortalController {
             String motivoRejeicao
     ) {}
 
+    public record AlertaPortalDTO(
+            Long id,
+            String tipo,
+            String titulo,
+            String subtitulo,
+            String urgencia
+    ) {}
+
     @GetMapping("/me")
     public ResponseEntity<PortalMeResponse> me() {
         EncarregadoEducacao ee = obterEncarregadoLogado();
@@ -122,6 +130,50 @@ public class PortalController {
     public ResponseEntity<SituacaoFinanceiraDTO> situacaoFinanceira() {
         EncarregadoEducacao ee = obterEncarregadoLogado();
         return ResponseEntity.ok(encarregadoService.obterSituacaoFinanceira(ee.getId()));
+    }
+
+    @GetMapping("/alertas")
+    public ResponseEntity<List<AlertaPortalDTO>> getAlertas() {
+        EncarregadoEducacao ee = obterEncarregadoLogado();
+        List<ObrigacaoFinanceiraDTO.Response> obrigacoes = obrigacaoFinanceiraService.listarPorEncarregado(ee.getId());
+        List<AlertaPortalDTO> alertas = new java.util.ArrayList<>();
+        long alertaId = 1L;
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+
+        for (ObrigacaoFinanceiraDTO.Response ob : obrigacoes) {
+            if (("PENDENTE".equals(ob.estado()) || "EM_ATRASO".equals(ob.estado()) || "VENCIDO".equals(ob.estado())) 
+                    && ob.dataVencimento().isBefore(hoje)) {
+                alertas.add(new AlertaPortalDTO(
+                        alertaId++,
+                        "MENSALIDADE",
+                        "Mensalidade em atraso",
+                        ob.tipo() + " no valor de " + ob.valor() + "€",
+                        "CRITICA"
+                ));
+            }
+        }
+
+        for (Atleta atleta : ee.getAtletas()) {
+            if (atleta.getEstadoElegibilidade() == com.sigd.core.model.EstadoElegibilidade.INAPTO) {
+                alertas.add(new AlertaPortalDTO(
+                        alertaId++,
+                        "SAUDE",
+                        "Atleta Inapto",
+                        atleta.getNomeCompleto() + " encontra-se clinicamente inapto.",
+                        "CRITICA"
+                ));
+            } else if (atleta.getEstadoElegibilidade() == com.sigd.core.model.EstadoElegibilidade.CONDICIONADO) {
+                alertas.add(new AlertaPortalDTO(
+                        alertaId++,
+                        "SAUDE",
+                        "Atleta Condicionado",
+                        atleta.getNomeCompleto() + " encontra-se com restrições.",
+                        "AVISO"
+                ));
+            }
+        }
+
+        return ResponseEntity.ok(alertas);
     }
 
     @GetMapping("/agenda")
@@ -211,7 +263,15 @@ public class PortalController {
         String escalaoNome = (atleta.getEquipa() != null && atleta.getEquipa().getEscalao() != null)
                 ? atleta.getEquipa().getEscalao().getDesignacao()
                 : "-";
-        String elegibilidade = atleta.getEstadoElegibilidade() != null ? atleta.getEstadoElegibilidade().name() : "APTO";
+        String elegibilidadeStr = "Apto";
+        if (atleta.getEstadoElegibilidade() != null) {
+            switch (atleta.getEstadoElegibilidade()) {
+                case APTO -> elegibilidadeStr = "Apto";
+                case CONDICIONADO -> elegibilidadeStr = "Condicionado";
+                case INAPTO -> elegibilidadeStr = "Inapto";
+                case PENDENTE_EMD -> elegibilidadeStr = "EMD Pendente";
+            }
+        }
         int idade = 0;
         if (atleta.getDataNascimento() != null) {
             idade = java.time.Period.between(atleta.getDataNascimento(), java.time.LocalDate.now()).getYears();
@@ -221,7 +281,7 @@ public class PortalController {
                 atleta.getNomeCompleto(),
                 escalaoNome,
                 equipaNome,
-                elegibilidade,
+                elegibilidadeStr,
                 idade,
                 atleta.getNumeroSocio()
         );

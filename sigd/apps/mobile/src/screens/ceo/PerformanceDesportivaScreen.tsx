@@ -16,6 +16,11 @@ export function PerformanceDesportivaScreen(): React.JSX.Element {
     queryFn: ceoService.getKpisDesportivos,
   });
 
+  const { data: performanceEscaloes, isLoading: isPerfLoading } = useQuery({
+    queryKey: ['ceoPerformanceEscaloes'],
+    queryFn: ceoService.getPerformanceEscaloes,
+  });
+
   return (
     <View style={styles.container}>
       <PageHeader
@@ -84,43 +89,25 @@ export function PerformanceDesportivaScreen(): React.JSX.Element {
         <View style={styles.table}>
            <View style={styles.tableHeader}>
               <Text style={[styles.th, { flex: 2 }]}>ESCALÃO</Text>
-              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>JOGOS</Text>
-              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>V</Text>
-              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>E</Text>
-              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>D</Text>
-              <Text style={[styles.th, { flex: 1.5, textAlign: 'center' }]}>GOLOS FAVOR</Text>
-              <Text style={[styles.th, { flex: 1.5, textAlign: 'center' }]}>GOLOS CONTRA</Text>
-              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>SALDO</Text>
-              <Text style={[styles.th, { flex: 2 }]}>ESTADO DOS DADOS</Text>
+              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>TOTAL DE JOGOS</Text>
+              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>CONCLUÍDOS</Text>
+              <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>AGENDADOS</Text>
            </View>
            
-           <View style={styles.tableRow}>
-              <Text style={[styles.td, { flex: 2, fontWeight: '600' }]}>Sub-15</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>8</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>5</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>2</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>1</Text>
-              <Text style={[styles.td, { flex: 1.5, textAlign: 'center' }]}>18</Text>
-              <Text style={[styles.td, { flex: 1.5, textAlign: 'center' }]}>9</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center', color: Colors.SUCESSO_TEXT, fontWeight: '700' }]}>+9</Text>
-              <Text style={[styles.td, { flex: 2 }]}>—</Text>
-           </View>
-
-           <View style={styles.tableRow}>
-              <Text style={[styles.td, { flex: 2, fontWeight: '600' }]}>Sub-17</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>7</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>4</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>1</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>2</Text>
-              <Text style={[styles.td, { flex: 1.5, textAlign: 'center' }]}>12</Text>
-              <Text style={[styles.td, { flex: 1.5, textAlign: 'center' }]}>8</Text>
-              <Text style={[styles.td, { flex: 1, textAlign: 'center', color: Colors.SUCESSO_TEXT, fontWeight: '700' }]}>+4</Text>
-              <View style={{ flex: 2 }}>
-                 <View style={[styles.badgePill, { backgroundColor: '#FFFBEB', alignSelf: 'flex-start' }]}>
-                    <Text style={{ color: '#B45309', fontSize: 11, fontWeight: '600' }}>Provisório</Text>
-                 </View>
-              </View>
-           </View>
+           {isPerfLoading ? (
+               <View style={{ padding: 24, alignItems: 'center' }}>
+                  <Text style={{ color: Colors.GRAY_500_TEXTO2 }}>A carregar dados...</Text>
+               </View>
+           ) : (
+               performanceEscaloes?.map((perf, index) => (
+                   <View key={index} style={styles.tableRow}>
+                      <Text style={[styles.td, { flex: 2, fontWeight: '600' }]}>{perf.escalao}</Text>
+                      <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>{perf.totalJogos}</Text>
+                      <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>{perf.jogosConcluidos}</Text>
+                      <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>{perf.jogosAgendados}</Text>
+                   </View>
+               ))
+           )}
         </View>
 
         {/* Gráfico Win Rate */}

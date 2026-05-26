@@ -25,6 +25,7 @@ public interface EncarregadoEducacaoRepository extends JpaRepository<Encarregado
      */
     @Query("SELECT e FROM EncarregadoEducacao e WHERE " +
            "LOWER(e.nome) LIKE LOWER(CONCAT('%', :termo, '%')) OR " +
+           "LOWER(e.email) LIKE LOWER(CONCAT('%', :termo, '%')) OR " +
            "e.nif LIKE CONCAT('%', :termo, '%')")
     Page<EncarregadoEducacao> pesquisar(@Param("termo") String termo, Pageable pageable);
 

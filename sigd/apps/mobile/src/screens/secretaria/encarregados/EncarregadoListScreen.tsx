@@ -25,6 +25,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { secretariaService, type EncarregadoResponse } from '@/services/secretariaService';
 import { EncarregadoForm } from './EncarregadoCreateEditScreen';
+import { SortableHeader, SortConfig } from '@/components/ui/SortableHeader';
+import { sortList } from '@/utils/sort';
 
 interface EncarregadoListScreenProps {
   onSelectEncarregado?: (id: number) => void;
@@ -36,6 +38,16 @@ export function EncarregadoListScreen({
   const [pesquisa, setPesquisa] = useState('');
   const [page, setPage] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const handleSort = useCallback((field: string) => {
+    setSortConfig(prev => {
+      if (prev?.field === field) {
+        return prev.direction === 'asc' ? { field, direction: 'desc' } : null;
+      }
+      return { field, direction: 'asc' };
+    });
+  }, []);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['encarregados', pesquisa, page],
@@ -55,7 +67,7 @@ export function EncarregadoListScreen({
   const columns = [
     {
       key: 'nome',
-      title: 'NOME',
+      title: <SortableHeader label="NOME" field="nome" sortConfig={sortConfig} onSort={handleSort} />,
       flex: 2,
       render: (item: EncarregadoResponse) => (
         <Text style={tableTextStyles.name}>{item.nome}</Text>
@@ -63,7 +75,7 @@ export function EncarregadoListScreen({
     },
     {
       key: 'nif',
-      title: 'NIF',
+      title: <SortableHeader label="NIF" field="nif" sortConfig={sortConfig} onSort={handleSort} />,
       flex: 1,
       render: (item: EncarregadoResponse) => (
         <Text style={tableTextStyles.cell}>{item.nif ?? '—'}</Text>
@@ -71,7 +83,7 @@ export function EncarregadoListScreen({
     },
     {
       key: 'email',
-      title: 'EMAIL',
+      title: <SortableHeader label="EMAIL" field="email" sortConfig={sortConfig} onSort={handleSort} />,
       flex: 2,
       render: (item: EncarregadoResponse) => (
         <Text style={tableTextStyles.cell}>{item.email ?? '—'}</Text>
@@ -122,11 +134,26 @@ export function EncarregadoListScreen({
       </View>
 
       {/* Search */}
-      <SearchInput
-        placeholder="Pesquisar por nome ou NIF..."
-        onSearch={handleSearch}
-        style={styles.searchInput}
-      />
+      <View style={styles.filtersContainer}>
+        <View style={{ flex: 1 }}>
+          <SearchInput
+            placeholder="Pesquisar por nome ou NIF..."
+            onSearch={handleSearch}
+          />
+        </View>
+        {pesquisa ? (
+          <TouchableOpacity 
+            onPress={() => {
+              handleSearch('');
+              setSortConfig(null);
+              setPage(0);
+            }}
+            style={styles.limparBtn}
+          >
+            <Text style={styles.limparText}>✕ Limpar</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
       {/* Content */}
       <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
@@ -144,7 +171,7 @@ export function EncarregadoListScreen({
           <>
             <DataTable
               columns={columns}
-              data={data.content}
+              data={sortList(data.content, sortConfig)}
               keyExtractor={(item) => String(item.id)}
             />
 
@@ -219,9 +246,21 @@ const styles = StyleSheet.create({
     color: Colors.GRAY_500_TEXTO2,
     marginTop: 2,
   },
-  searchInput: {
+  filtersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 24,
     marginBottom: 16,
+    gap: 12,
+  },
+  limparBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  limparText: {
+    fontSize: 13,
+    color: Colors.GRAY_500_TEXTO2,
+    fontWeight: '500',
   },
   scrollArea: {
     flex: 1,

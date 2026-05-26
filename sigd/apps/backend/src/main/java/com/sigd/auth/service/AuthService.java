@@ -74,7 +74,7 @@ public class AuthService {
 
         // 2. Verificar se a conta está ativa
         if (!user.getAtivo()) {
-            throw new IllegalStateException("Conta desativada. Contacte o administrador.");
+            throw new RuntimeException("Conta bloqueada. Contacte o administrador.");
         }
 
         // 3. Validar password com BCrypt
@@ -145,7 +145,7 @@ public class AuthService {
 
         // 4. Verificar se a conta continua ativa
         if (!user.getAtivo()) {
-            throw new IllegalStateException("Conta desativada. Contacte o administrador.");
+            throw new RuntimeException("Conta bloqueada. Contacte o administrador.");
         }
 
         // 5. Gerar novo access token (manter o mesmo refresh token)

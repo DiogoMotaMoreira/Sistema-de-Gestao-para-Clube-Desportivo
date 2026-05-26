@@ -68,6 +68,37 @@ export function InicioScreen({ navigation }: any): React.JSX.Element {
                  </View>
                );
              }
+             if (alerta.tipo === 'MENSALIDADE') {
+               return (
+                 <View key={alerta.id} style={[styles.cardAlert, { borderLeftColor: '#991B1B', borderColor: '#FEE2E2' }]}>
+                    <View style={[styles.badgePill, { backgroundColor: '#FEE2E2' }]}>
+                       <AlertTriangle size={12} color="#991B1B" />
+                       <Text style={[styles.badgePillText, { color: '#991B1B' }]}>AÇÃO NECESSÁRIA</Text>
+                    </View>
+                    <Text style={styles.cardTitle}>{alerta.titulo}</Text>
+                    <Text style={[styles.cardSub, { color: '#991B1B', fontStyle: 'italic' }]}>{alerta.subtitulo}</Text>
+                    <TouchableOpacity style={[styles.btnFullOutline, { borderColor: '#991B1B' }]} onPress={() => navigation.navigate('Conta')}>
+                       <Text style={[styles.btnFullText, { color: '#991B1B' }]}>Ir para Pagamentos</Text>
+                    </TouchableOpacity>
+                 </View>
+               );
+             }
+             if (alerta.tipo === 'SAUDE') {
+               const isCritica = alerta.urgencia === 'CRITICA';
+               const colorMain = isCritica ? '#991B1B' : '#B45309';
+               const colorBg = isCritica ? '#FEE2E2' : '#FFFBEB';
+               
+               return (
+                 <View key={alerta.id} style={[styles.cardAlert, { borderLeftColor: colorMain, borderColor: colorBg }]}>
+                    <View style={[styles.badgePill, { backgroundColor: colorBg }]}>
+                       <AlertTriangle size={12} color={colorMain} />
+                       <Text style={[styles.badgePillText, { color: colorMain }]}>ALERTA CLÍNICO</Text>
+                    </View>
+                    <Text style={styles.cardTitle}>{alerta.titulo}</Text>
+                    <Text style={[styles.cardSub, { color: colorMain, fontStyle: 'italic' }]}>{alerta.subtitulo}</Text>
+                 </View>
+               );
+             }
              return null;
            })
         )}
@@ -114,7 +145,7 @@ export function InicioScreen({ navigation }: any): React.JSX.Element {
            <View style={[styles.cardAlert, { borderLeftColor: '#047857' }]}>
               <ShieldCheck size={32} color="#047857" style={{ opacity: 0.8, marginBottom: 12 }} />
               <Text style={[styles.cardTitle, { color: '#047857', fontSize: 16 }]}>Tudo em ordem!</Text>
-              <Text style={styles.cardSub}>{dependente?.nome} · Apto · Documentação válida</Text>
+              <Text style={styles.cardSub}>{dependente?.nome} · {dependente?.elegibilidade || 'Apto'} · Documentação válida</Text>
               <Text style={styles.cardSub}>Sem eventos agendados para breve.</Text>
            </View>
         )}

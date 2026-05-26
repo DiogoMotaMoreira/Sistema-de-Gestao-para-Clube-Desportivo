@@ -22,6 +22,15 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     @Query("SELECT a FROM AuditLog a WHERE " +
            "(:modulo IS NULL OR :modulo = '' OR a.entidade = :modulo) AND " +
-           "(:tipo IS NULL OR :tipo = '' OR a.acao = :tipo)")
-    Page<AuditLog> filterLogs(@Param("modulo") String modulo, @Param("tipo") String tipo, Pageable pageable);
+           "(:tipo IS NULL OR :tipo = '' OR a.acao = :tipo) AND " +
+           "(:dataInicio IS NULL OR a.timestamp >= :dataInicio) AND " +
+           "(:dataFim IS NULL OR a.timestamp <= :dataFim) AND " +
+           "(:search IS NULL OR :search = '' OR LOWER(a.ator) LIKE LOWER(CONCAT('%', :search, '%')) OR CAST(a.usuarioId AS string) LIKE CONCAT('%', :search, '%'))")
+    Page<AuditLog> filterLogs(
+        @Param("modulo") String modulo, 
+        @Param("tipo") String tipo, 
+        @Param("dataInicio") LocalDateTime dataInicio, 
+        @Param("dataFim") LocalDateTime dataFim, 
+        @Param("search") String search,
+        Pageable pageable);
 }

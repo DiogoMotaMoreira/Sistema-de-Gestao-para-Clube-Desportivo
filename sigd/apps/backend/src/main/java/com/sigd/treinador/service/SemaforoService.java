@@ -6,7 +6,9 @@ import com.sigd.core.model.EstadoOcorrencia;
 import com.sigd.core.model.GrauRestricaoDesportiva;
 import com.sigd.core.model.Ocorrencia;
 import com.sigd.core.repository.AtletaRepository;
+import com.sigd.core.repository.OcorrenciaEvolucaoRepository;
 import com.sigd.core.repository.OcorrenciaRepository;
+import com.sigd.core.model.OcorrenciaEvolucao;
 import com.sigd.treinador.dto.SemaforoDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +22,12 @@ public class SemaforoService {
 
     private final AtletaRepository atletaRepository;
     private final OcorrenciaRepository ocorrenciaRepository;
+    private final OcorrenciaEvolucaoRepository evolucaoRepository;
 
-    public SemaforoService(AtletaRepository atletaRepository, OcorrenciaRepository ocorrenciaRepository) {
+    public SemaforoService(AtletaRepository atletaRepository, OcorrenciaRepository ocorrenciaRepository, OcorrenciaEvolucaoRepository evolucaoRepository) {
         this.atletaRepository = atletaRepository;
         this.ocorrenciaRepository = ocorrenciaRepository;
+        this.evolucaoRepository = evolucaoRepository;
     }
 
     /**
@@ -46,9 +50,12 @@ public class SemaforoService {
             boolean temAmarelo = false;
 
             for (Ocorrencia oc : ocorrenciasAtivas) {
-                if (oc.getGrauRestricao() == GrauRestricaoDesportiva.VERMELHO) {
+                List<OcorrenciaEvolucao> evolucoes = evolucaoRepository.findByOcorrenciaIdOrderByRegistadoEmAsc(oc.getId());
+                GrauRestricaoDesportiva grau = evolucoes.isEmpty() ? oc.getGrauRestricao() : evolucoes.get(evolucoes.size() - 1).getGrauRestricao();
+
+                if (grau == GrauRestricaoDesportiva.VERMELHO) {
                     temVermelho = true;
-                } else if (oc.getGrauRestricao() == GrauRestricaoDesportiva.AMARELO) {
+                } else if (grau == GrauRestricaoDesportiva.AMARELO) {
                     temAmarelo = true;
                 }
             }

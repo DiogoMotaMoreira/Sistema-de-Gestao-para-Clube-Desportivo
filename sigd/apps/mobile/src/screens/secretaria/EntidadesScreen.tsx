@@ -57,24 +57,33 @@ function SearchBar({
   placeholder,
   value,
   onChange,
+  onClear,
 }: {
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
+  onClear?: () => void;
 }): React.JSX.Element {
   return (
-    <View style={s.searchRow}>
-      <Search size={16} color={Colors.GRAY_500_TEXTO2} />
-      <TextInput
-        style={s.searchInput}
-        placeholder={placeholder}
-        placeholderTextColor={Colors.GRAY_500_TEXTO2}
-        value={value}
-        onChangeText={onChange}
-        autoCapitalize="none"
-        autoCorrect={false}
-        accessibilityLabel={placeholder}
-      />
+    <View style={s.searchContainerWrapper}>
+      <View style={[s.searchRow, { flex: 1 }]}>
+        <Search size={16} color={Colors.GRAY_500_TEXTO2} />
+        <TextInput
+          style={s.searchInput}
+          placeholder={placeholder}
+          placeholderTextColor={Colors.GRAY_500_TEXTO2}
+          value={value}
+          onChangeText={onChange}
+          autoCapitalize="none"
+          autoCorrect={false}
+          accessibilityLabel={placeholder}
+        />
+      </View>
+      {onClear && (
+        <TouchableOpacity onPress={onClear} style={s.limparBtn}>
+          <Text style={s.limparText}>✕ Limpar</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -85,6 +94,8 @@ function TabAtletas(): React.JSX.Element {
   const [pesquisa, setPesquisa] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [page, setPage] = useState(0);
+  const [estadoFilter, setEstadoFilter] = useState<string>('Todos');
+  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearch = useCallback((query: string) => {
@@ -96,6 +107,15 @@ function TabAtletas(): React.JSX.Element {
     }, 300);
   }, []);
 
+  const handleSort = (field: string) => {
+    setSortConfig(prev => {
+      if (prev?.field === field) {
+        return prev.direction === 'asc' ? { field, direction: 'desc' } : null;
+      }
+      return { field, direction: 'asc' };
+    });
+  };
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['entidades-atletas', debouncedQuery, page],
     queryFn: () =>
@@ -103,6 +123,25 @@ function TabAtletas(): React.JSX.Element {
   });
 
   const atletas = data?.content ?? [];
+  const filteredAtletas = atletas
+    .filter((a: AtletaResponse) => estadoFilter === 'Todos' || a.estadoElegibilidade === estadoFilter)
+    .sort((a: AtletaResponse, b: AtletaResponse) => {
+      if (!sortConfig) return 0;
+      let valA = '';
+      let valB = '';
+      if (sortConfig.field === 'nomeCompleto') {
+        valA = a.nomeCompleto.toLowerCase();
+        valB = b.nomeCompleto.toLowerCase();
+      } else if (sortConfig.field === 'estadoElegibilidade') {
+        valA = a.estadoElegibilidade;
+        valB = b.estadoElegibilidade;
+      }
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const hasFilters = pesquisa || estadoFilter !== 'Todos' || sortConfig !== null;
 
   return (
     <View style={s.tabContent}>
@@ -110,7 +149,24 @@ function TabAtletas(): React.JSX.Element {
         placeholder="Pesquisar atleta por nome..."
         value={pesquisa}
         onChange={handleSearch}
+        onClear={hasFilters ? () => {
+          handleSearch('');
+          setEstadoFilter('Todos');
+          setSortConfig(null);
+          setPage(0);
+        } : undefined}
       />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.togglesContainer}>
+        {['Todos', 'APTO', 'CONDICIONADO', 'INAPTO', 'PENDENTE_EMD'].map(estado => (
+          <TouchableOpacity
+            key={estado}
+            style={[s.toggleBtn, estadoFilter === estado && s.toggleBtnActive]}
+            onPress={() => setEstadoFilter(estado)}
+          >
+            <Text style={[s.toggleText, estadoFilter === estado && s.toggleTextActive]}>{estado}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {isLoading ? (
         <View style={s.center}>
@@ -139,7 +195,15 @@ function TabAtletas(): React.JSX.Element {
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
         >
-          {atletas.map((a: AtletaResponse) => (
+          <View style={s.listHeaderRow}>
+            <TouchableOpacity onPress={() => handleSort('nomeCompleto')} style={{ flex: 1, paddingVertical: 8 }}>
+               <Text style={s.listHeaderSortable}>NOME {sortConfig?.field === 'nomeCompleto' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleSort('estadoElegibilidade')} style={{ paddingVertical: 8 }}>
+               <Text style={s.listHeaderSortable}>ESTADO {sortConfig?.field === 'estadoElegibilidade' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</Text>
+            </TouchableOpacity>
+          </View>
+          {filteredAtletas.map((a: AtletaResponse) => (
             <View key={a.id} style={s.card}>
               <View style={s.cardAvatar}>
                 <Text style={s.avatarText}>
@@ -228,6 +292,7 @@ function TabEncarregados(): React.JSX.Element {
   });
 
   const ees = data?.content ?? [];
+  const hasFilters = pesquisa !== '';
 
   return (
     <View style={s.tabContent}>
@@ -235,6 +300,7 @@ function TabEncarregados(): React.JSX.Element {
         placeholder="Pesquisar por nome ou NIF..."
         value={pesquisa}
         onChange={handleSearch}
+        onClear={hasFilters ? () => handleSearch('') : undefined}
       />
 
       {isLoading ? (
@@ -333,18 +399,22 @@ function TabEncarregados(): React.JSX.Element {
 
 function TabEquipas(): React.JSX.Element {
   const [pesquisa, setPesquisa] = useState('');
+  const [modalidadeFilter, setModalidadeFilter] = useState('Todas');
 
   const { data: equipas = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['entidades-equipas'],
     queryFn: () => secretariaService.getEquipas(),
   });
 
-  const filtered = pesquisa.trim()
-    ? equipas.filter((e) =>
-        e.nome.toLowerCase().includes(pesquisa.toLowerCase()) ||
-        (e.escalaoDesignacao ?? '').toLowerCase().includes(pesquisa.toLowerCase())
-      )
-    : equipas;
+  const modalidades = Array.from(new Set(equipas.map(e => e.modalidadeNome).filter(Boolean)));
+
+  const filtered = equipas.filter((e) => {
+    const matchesSearch = !pesquisa.trim() || e.nome.toLowerCase().includes(pesquisa.trim().toLowerCase()) || (e.escalaoDesignacao ?? '').toLowerCase().includes(pesquisa.trim().toLowerCase());
+    const matchesModalidade = modalidadeFilter === 'Todas' || e.modalidadeNome === modalidadeFilter;
+    return matchesSearch && matchesModalidade;
+  });
+
+  const hasFilters = pesquisa.trim() !== '' || modalidadeFilter !== 'Todas';
 
   return (
     <View style={s.tabContent}>
@@ -352,7 +422,30 @@ function TabEquipas(): React.JSX.Element {
         placeholder="Pesquisar equipa..."
         value={pesquisa}
         onChange={setPesquisa}
+        onClear={hasFilters ? () => {
+          setPesquisa('');
+          setModalidadeFilter('Todas');
+        } : undefined}
       />
+      {modalidades.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.togglesContainer}>
+          <TouchableOpacity
+            style={[s.toggleBtn, modalidadeFilter === 'Todas' && s.toggleBtnActive]}
+            onPress={() => setModalidadeFilter('Todas')}
+          >
+            <Text style={[s.toggleText, modalidadeFilter === 'Todas' && s.toggleTextActive]}>Todas</Text>
+          </TouchableOpacity>
+          {modalidades.map(m => (
+            <TouchableOpacity
+              key={m}
+              style={[s.toggleBtn, modalidadeFilter === m && s.toggleBtnActive]}
+              onPress={() => setModalidadeFilter(m as string)}
+            >
+              <Text style={[s.toggleText, modalidadeFilter === m && s.toggleTextActive]}>{m as string}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       {isLoading ? (
         <View style={s.center}>
@@ -508,6 +601,13 @@ const s = StyleSheet.create({
     flex: 1,
     paddingTop: 16,
   },
+  searchContainerWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginBottom: 16,
+    gap: 12,
+  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -517,9 +617,57 @@ const s = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginHorizontal: 24,
+    gap: 8,
+  },
+  limparBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  limparText: {
+    fontSize: 13,
+    color: Colors.GRAY_500_TEXTO2,
+    fontWeight: '500',
+  },
+  togglesContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
     marginBottom: 16,
     gap: 8,
+    maxHeight: 40,
+  },
+  toggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.GRAY_100_HOVER,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    alignSelf: 'flex-start',
+    marginRight: 8,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#1B2B5E',
+    borderColor: '#1B2B5E',
+  },
+  toggleText: {
+    fontSize: 12,
+    color: Colors.GRAY_500_TEXTO2,
+    fontWeight: '500',
+  },
+  toggleTextActive: {
+    color: Colors.DOURADO_CTA,
+    fontWeight: '700',
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+  listHeaderSortable: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.GRAY_500_TEXTO2,
   },
   searchInput: {
     flex: 1,

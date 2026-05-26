@@ -84,6 +84,14 @@ export interface RegistoAvaliacao {
   nota: number | null;
 }
 
+export interface EstatisticasAtleta {
+  totalSessoes: number;
+  presencas: number;
+  ausencias: number;
+  taxaPresenca: number;
+  avaliacaoMedia: number;
+}
+
 // ── Axios Instance ────────────────────────────────────
 
 function getAuthHeaders(): Record<string, string> {
@@ -334,5 +342,13 @@ export const treinadorService = {
 
   downloadConvocatoriaPdf(convocatoriaId: number) {
     window.open(`http://localhost:8080/api/v1/treinador/convocatorias/${convocatoriaId}/pdf`, '_blank');
-  }
+  },
+
+  /**
+   * Obtém estatísticas de assiduidade e avaliação de um atleta.
+   */
+  async getEstatisticasAtleta(atletaId: number): Promise<EstatisticasAtleta> {
+    const { data } = await api.get<EstatisticasAtleta>(`/treinador/atletas/${atletaId}/estatisticas`);
+    return data;
+  },
 };

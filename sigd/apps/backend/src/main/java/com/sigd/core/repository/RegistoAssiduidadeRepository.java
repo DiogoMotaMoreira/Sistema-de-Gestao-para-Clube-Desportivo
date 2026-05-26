@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface RegistoAssiduidadeRepository extends JpaRepository<RegistoAssiduidade, Long> {
     List<RegistoAssiduidade> findBySessaoId(Long sessaoId);
     Optional<RegistoAssiduidade> findBySessaoIdAndAtletaId(Long sessaoId, Long atletaId);
+    List<RegistoAssiduidade> findByAtletaId(Long atletaId);
 }

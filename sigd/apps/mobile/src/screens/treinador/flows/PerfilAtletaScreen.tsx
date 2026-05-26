@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Colors } from '@/constants/colors';
-import { treinadorService, AtletaPlantel, SemaforoClinico } from '@/services/treinadorService';
+import { treinadorService, AtletaPlantel, SemaforoClinico, EstatisticasAtleta } from '@/services/treinadorService';
 import { SemaforoBadge } from '../components/SemaforoBadge';
 import { CheckCircle, Minus } from 'lucide-react-native';
 
 export function PerfilAtletaScreen({ route, navigation }: any): React.JSX.Element {
   const { atletaId } = route.params;
   const [atleta, setAtleta] = useState<AtletaPlantel | null>(null);
+  const [stats, setStats] = useState<EstatisticasAtleta | null>(null);
 
   useEffect(() => {
     navigation.setOptions({ title: 'Perfil do Atleta' });
@@ -30,9 +31,10 @@ export function PerfilAtletaScreen({ route, navigation }: any): React.JSX.Elemen
           semaforo: semaforoMapeado
         });
       }
-    }).catch(err => {
-      console.error('Erro ao carregar perfil do atleta com semáforo:', err);
-    });
+    }).catch(() => {});
+    treinadorService.getEstatisticasAtleta(atletaId)
+      .then(setStats)
+      .catch(() => {});
   }, [atletaId, navigation]);
 
   if (!atleta) return <View style={styles.container} />;
@@ -54,31 +56,33 @@ export function PerfilAtletaScreen({ route, navigation }: any): React.JSX.Elemen
       </View>
 
       {/* Estatísticas Recentes */}
-      <Text style={styles.sectionTitle}>ESTATÍSTICAS RECENTES</Text>
+      <Text style={styles.sectionTitle}>ESTATÍSTICAS REAIS</Text>
       <View style={styles.statsCard}>
         <View style={styles.statsGrid}>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Taxa de Assiduidade (4 sem.)</Text>
-            <Text style={[styles.statValue, { color: corAssiduidade }]}>
-              {atleta.assiduidade ? `${atleta.assiduidade}%` : '—'}
+            <Text style={styles.statLabel}>Taxa de Presença</Text>
+            <Text style={[styles.statValue, {
+              color: (stats?.taxaPresenca ?? 0) >= 80 ? '#047857' : (stats?.taxaPresenca ?? 0) >= 60 ? '#B45309' : '#991B1B'
+            }]}>
+              {stats ? `${stats.taxaPresenca.toFixed(1)}%` : '—'}
             </Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Avaliação Média (5 sess.)</Text>
+            <Text style={styles.statLabel}>Avaliação Média</Text>
             <Text style={styles.statValue}>
-              {atleta.mediaAvaliacao ? `${atleta.mediaAvaliacao.toFixed(1)} / 5.0` : '—'}
+              {stats ? (stats.avaliacaoMedia > 0 ? `${stats.avaliacaoMedia.toFixed(1)} / 5.0` : '—') : '—'}
             </Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Minutos Esta Época</Text>
+            <Text style={styles.statLabel}>Presenças</Text>
             <Text style={styles.statValue}>
-              {atleta.minutosEpoca ? `${atleta.minutosEpoca} min` : '—'}
+              {stats ? `${stats.presencas}` : '—'}
             </Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Convocatórias Esta Época</Text>
+            <Text style={styles.statLabel}>Total Sessões</Text>
             <Text style={styles.statValue}>
-              {atleta.convocatoriasEpoca ?? '—'}
+              {stats ? `${stats.totalSessoes}` : '—'}
             </Text>
           </View>
         </View>

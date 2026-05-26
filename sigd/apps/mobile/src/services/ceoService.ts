@@ -104,8 +104,24 @@ export const ceoService = {
     return data;
   },
 
+  getPerformanceEscaloes: async (): Promise<{ escalao: string, totalJogos: number, jogosConcluidos: number, jogosAgendados: number }[]> => {
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.get<any[]>('http://localhost:8080/api/v1/ceo/performance-escaloes', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data;
+  },
+
   getAlertas: async (periodo: string): Promise<AlertaEstrategico[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(mockAlertas), 300));
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.get<any[]>('http://localhost:8080/api/v1/ceo/alertas', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data.map((item: any, index: number) => ({
+      id: index.toString(),
+      texto: item.mensagem,
+      severidade: item.urgente ? 'Crítico' : 'Aviso',
+    }));
   },
   
   getKpiReceitaTotal: async (periodo: string): Promise<KpiCardData> => {

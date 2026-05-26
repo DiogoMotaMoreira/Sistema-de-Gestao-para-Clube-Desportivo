@@ -2,6 +2,7 @@ package com.sigd.clinica.service;
 
 import com.sigd.clinica.dto.AltaMedicaDTO;
 import com.sigd.clinica.dto.DeliberacaoDTO;
+import com.sigd.clinica.dto.EvolucaoDTO;
 import com.sigd.clinica.dto.FilaEMDDTO;
 import com.sigd.clinica.dto.FilaEMDStatsDTO;
 import com.sigd.clinica.dto.OcorrenciaDTO;
@@ -12,6 +13,7 @@ import com.sigd.core.exception.OcorrenciaNotFoundException;
 import com.sigd.core.model.*;
 import com.sigd.core.repository.AtletaRepository;
 import com.sigd.core.repository.OcorrenciaRepository;
+import com.sigd.core.repository.OcorrenciaEvolucaoRepository;
 import com.sigd.core.repository.UtilizadorRepository;
 
 import org.springframework.data.domain.Page;
@@ -34,13 +36,16 @@ import java.util.List;
 public class OcorrenciaService {
 
     private final OcorrenciaRepository ocorrenciaRepo;
+    private final OcorrenciaEvolucaoRepository evolucaoRepo;
     private final AtletaRepository atletaRepo;
     private final UtilizadorRepository utilizadorRepo;
 
     public OcorrenciaService(OcorrenciaRepository ocorrenciaRepo,
+                             OcorrenciaEvolucaoRepository evolucaoRepo,
                              AtletaRepository atletaRepo,
                              UtilizadorRepository utilizadorRepo) {
         this.ocorrenciaRepo = ocorrenciaRepo;
+        this.evolucaoRepo = evolucaoRepo;
         this.atletaRepo = atletaRepo;
         this.utilizadorRepo = utilizadorRepo;
     }
@@ -204,8 +209,8 @@ public class OcorrenciaService {
             if (outrasAtivas.isEmpty()) {
                 atleta.setEstadoElegibilidade(EstadoElegibilidade.APTO);
             } else {
-                boolean temVermelho = outrasAtivas.stream().anyMatch(o -> o.getGrauRestricao() == GrauRestricaoDesportiva.VERMELHO);
-                boolean temAmarelo = outrasAtivas.stream().anyMatch(o -> o.getGrauRestricao() == GrauRestricaoDesportiva.AMARELO);
+                boolean temVermelho = outrasAtivas.stream().anyMatch(o -> getGrauAtual(o) == GrauRestricaoDesportiva.VERMELHO);
+                boolean temAmarelo = outrasAtivas.stream().anyMatch(o -> getGrauAtual(o) == GrauRestricaoDesportiva.AMARELO);
                 if (temVermelho) {
                     atleta.setEstadoElegibilidade(EstadoElegibilidade.INAPTO);
                 } else if (temAmarelo) {
@@ -259,9 +264,8 @@ public class OcorrenciaService {
 
         // Encerrar a ocorrência
         ocorrencia.setEstado(EstadoOcorrencia.RESOLVIDA);
-        ocorrencia.setGrauRestricao(GrauRestricaoDesportiva.VERDE);
         ocorrencia.setObsDeliberacao(altaDTO.parecer());
-        ocorrencia.setDataDeliberacao(altaDTO.dataEncerramento());
+        ocorrencia.setDataDeliberacao(LocalDate.now());
         ocorrencia.setMedicoDeliberacao(medico);
 
         ocorrencia = ocorrenciaRepo.save(ocorrencia);
@@ -277,9 +281,9 @@ public class OcorrenciaService {
             atleta.setEstadoElegibilidade(EstadoElegibilidade.APTO);
         } else {
             boolean temVermelho = outrasAtivas.stream()
-                    .anyMatch(o -> o.getGrauRestricao() == GrauRestricaoDesportiva.VERMELHO);
+                    .anyMatch(o -> getGrauAtual(o) == GrauRestricaoDesportiva.VERMELHO);
             boolean temAmarelo = outrasAtivas.stream()
-                    .anyMatch(o -> o.getGrauRestricao() == GrauRestricaoDesportiva.AMARELO);
+                    .anyMatch(o -> getGrauAtual(o) == GrauRestricaoDesportiva.AMARELO);
             if (temVermelho) {
                 atleta.setEstadoElegibilidade(EstadoElegibilidade.INAPTO);
             } else if (temAmarelo) {
@@ -303,6 +307,56 @@ public class OcorrenciaService {
         Ocorrencia ocorrencia = ocorrenciaRepo.findById(id)
                 .orElseThrow(() -> new OcorrenciaNotFoundException(id));
         return toResponse(ocorrencia);
+    }
+
+    /**
+     * Regista uma nova evolução clínica para uma ocorrência.
+     */
+    public EvolucaoDTO.Response registarEvolucao(EvolucaoDTO.Request request, Long medicoId) {
+        Ocorrencia ocorrencia = ocorrenciaRepo.findById(request.ocorrenciaId())
+                .orElseThrow(() -> new OcorrenciaNotFoundException(request.ocorrenciaId()));
+
+        if (ocorrencia.getEstado() != EstadoOcorrencia.ATIVA) {
+            throw new IllegalStateException("Apenas ocorrências ATIVAS podem ter evolução.");
+        }
+
+        Utilizador medico = utilizadorRepo.findById(medicoId).orElse(null);
+
+        OcorrenciaEvolucao evolucao = new OcorrenciaEvolucao();
+        evolucao.setOcorrencia(ocorrencia);
+        evolucao.setGrauRestricao(request.grauRestricao());
+        evolucao.setDescricao(request.descricao());
+        evolucao.setMedico(medico);
+
+        evolucao = evolucaoRepo.save(evolucao);
+
+        // Recalcular elegibilidade do atleta
+
+
+        Atleta atleta = ocorrencia.getAtleta();
+        if (request.grauRestricao() == GrauRestricaoDesportiva.VERMELHO) {
+            atleta.setEstadoElegibilidade(EstadoElegibilidade.INAPTO);
+        } else if (request.grauRestricao() == GrauRestricaoDesportiva.AMARELO) {
+            atleta.setEstadoElegibilidade(EstadoElegibilidade.CONDICIONADO);
+        }
+        atletaRepo.save(atleta);
+
+        return toEvolucaoResponse(evolucao);
+    }
+
+    private GrauRestricaoDesportiva getGrauAtual(Ocorrencia oc) {
+        List<OcorrenciaEvolucao> evolucoes = evolucaoRepo.findByOcorrenciaIdOrderByRegistadoEmAsc(oc.getId());
+        return evolucoes.isEmpty() ? oc.getGrauRestricao() : evolucoes.get(evolucoes.size() - 1).getGrauRestricao();
+    }
+
+    /**
+     * Lista evoluções de uma ocorrência.
+     */
+    @Transactional(readOnly = true)
+    public List<EvolucaoDTO.Response> getEvolucoes(Long ocorrenciaId) {
+        return evolucaoRepo.findByOcorrenciaIdOrderByRegistadoEmAsc(ocorrenciaId).stream()
+                .map(this::toEvolucaoResponse)
+                .toList();
     }
 
     // === Helpers privados ===
@@ -337,6 +391,16 @@ public class OcorrenciaService {
                 o.getGrauRestricao(),
                 o.getDataReavaliacao(),
                 diasPendente
+        );
+    }
+
+    private EvolucaoDTO.Response toEvolucaoResponse(OcorrenciaEvolucao e) {
+        return new EvolucaoDTO.Response(
+                e.getId(),
+                e.getOcorrencia().getId(),
+                e.getGrauRestricao(),
+                e.getDescricao(),
+                e.getRegistadoEm()
         );
     }
 

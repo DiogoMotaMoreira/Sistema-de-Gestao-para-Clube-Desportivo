@@ -30,7 +30,7 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
     .finally(() => setLoading(false));
   }, [periodo]);
 
-  console.log('CFO kpis:', kpis);
+
 
   return (
     <View style={styles.container}>

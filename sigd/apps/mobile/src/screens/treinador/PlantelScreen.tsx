@@ -4,12 +4,33 @@ import { Search, ChevronRight, Users } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
 import { treinadorService, AtletaPlantel, SemaforoClinico } from '@/services/treinadorService';
 import { SemaforoBadge } from './components/SemaforoBadge';
+import { useFocusEffect } from '@react-navigation/native';
+import { SortableHeader, SortConfig } from '@/components/ui/SortableHeader';
+import { sortList } from '@/utils/sort';
 
 export function PlantelScreen({ navigation }: any): React.JSX.Element {
   const [plantel, setPlantel] = useState<AtletaPlantel[]>([]);
   const [filterType, setFilterType] = useState<'TODOS' | 'INAPTOS'>('TODOS');
+  const [searchString, setSearchString] = useState('');
   const [search, setSearch] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearch(searchString);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchString]);
+
+  const handleSort = (field: string) => {
+    setSortConfig(prev => {
+      if (prev?.field === field) {
+        return prev.direction === 'asc' ? { field, direction: 'desc' } : null;
+      }
+      return { field, direction: 'asc' };
+    });
+  };
 
   useEffect(() => {
     navigation.setOptions({
@@ -17,8 +38,8 @@ export function PlantelScreen({ navigation }: any): React.JSX.Element {
         <TextInput
           style={styles.headerSearchInput}
           placeholder="Pesquisar atleta..."
-          value={search}
-          onChangeText={setSearch}
+          value={searchString}
+          onChangeText={setSearchString}
           autoFocus
         />
       ) : 'Plantel',
@@ -30,31 +51,33 @@ export function PlantelScreen({ navigation }: any): React.JSX.Element {
     });
   }, [navigation, isSearching, search]);
 
-  useEffect(() => {
-    const equipaId = 1;
-    Promise.all([
-      treinadorService.getPlantel(equipaId),
-      treinadorService.getSemaforoPlantel(equipaId)
-    ]).then(([plantelData, semaforoData]) => {
-      const semaforoMap = new Map(semaforoData.map(s => [s.atletaId, s.semaforo]));
-      const plantelComSemaforo = plantelData.map(atleta => {
-        const semaforoReal = semaforoMap.get(atleta.id);
-        
-        let semaforoMapeado: SemaforoClinico = 'APTO';
-        if (semaforoReal === 'AMARELO') semaforoMapeado = 'CONDICIONADO';
-        else if (semaforoReal === 'VERMELHO') semaforoMapeado = 'INAPTO_EMD';
-        else if (semaforoReal === 'BLOQUEADO') semaforoMapeado = 'INAPTO_LESAO';
-        
-        return {
-          ...atleta,
-          semaforo: semaforoMapeado
-        };
+  useFocusEffect(
+    React.useCallback(() => {
+      const equipaId = 1;
+      Promise.all([
+        treinadorService.getPlantel(equipaId),
+        treinadorService.getSemaforoPlantel(equipaId)
+      ]).then(([plantelData, semaforoData]) => {
+        const semaforoMap = new Map(semaforoData.map(s => [s.atletaId, s.semaforo]));
+        const plantelComSemaforo = plantelData.map(atleta => {
+          const semaforoReal = semaforoMap.get(atleta.id);
+          
+          let semaforoMapeado: SemaforoClinico = 'APTO';
+          if (semaforoReal === 'AMARELO') semaforoMapeado = 'CONDICIONADO';
+          else if (semaforoReal === 'VERMELHO') semaforoMapeado = 'INAPTO_EMD';
+          else if (semaforoReal === 'BLOQUEADO') semaforoMapeado = 'INAPTO_LESAO';
+          
+          return {
+            ...atleta,
+            semaforo: semaforoMapeado
+          };
+        });
+        setPlantel(plantelComSemaforo);
+      }).catch(err => {
+        console.error('Erro ao carregar plantel com semáforo:', err);
       });
-      setPlantel(plantelComSemaforo);
-    }).catch(err => {
-      console.error('Erro ao carregar plantel com semáforo:', err);
-    });
-  }, []);
+    }, [])
+  );
 
   const atletasFiltrados = plantel.filter(a => {
     if (filterType === 'INAPTOS' && a.semaforo === 'APTO') return false;
@@ -86,6 +109,14 @@ export function PlantelScreen({ navigation }: any): React.JSX.Element {
         </TouchableOpacity>
       </View>
 
+      {/* Sort Bar */}
+      <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 16, borderBottomWidth: 1, borderBottomColor: Colors.GRAY_200_BORDAS, alignItems: 'center' }}>
+        <Text style={{ fontSize: 13, color: Colors.GRAY_500_TEXTO2, fontWeight: '500' }}>Ordenar por:</Text>
+        <SortableHeader label="NOME" field="nome" sortConfig={sortConfig} onSort={handleSort} />
+        <SortableHeader label="POSIÇÃO" field="posicao" sortConfig={sortConfig} onSort={handleSort} />
+        <SortableHeader label="ESTADO" field="semaforo" sortConfig={sortConfig} onSort={handleSort} />
+      </View>
+
       {/* Lista */}
       <ScrollView contentContainerStyle={styles.listContent}>
         {atletasFiltrados.length === 0 ? (
@@ -95,7 +126,7 @@ export function PlantelScreen({ navigation }: any): React.JSX.Element {
             <Text style={styles.emptySub}>A Direção Técnica ainda não alocou atletas.</Text>
           </View>
         ) : (
-          atletasFiltrados.map(atleta => {
+          sortList(atletasFiltrados, sortConfig).map(atleta => {
             const isInapto = atleta.semaforo.startsWith('INAPTO');
             return (
               <TouchableOpacity 

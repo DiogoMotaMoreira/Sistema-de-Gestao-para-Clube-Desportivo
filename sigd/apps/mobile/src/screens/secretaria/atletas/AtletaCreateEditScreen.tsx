@@ -58,6 +58,7 @@ export function AtletaForm({
   })) || [];
 
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const getErrors = (): Record<string, string> => {
     const errs: Record<string, string> = {};
@@ -76,8 +77,8 @@ export function AtletaForm({
       }
     }
 
-    if (nif && !/^\d{9}$/.test(nif)) {
-      errs.nif = 'Apenas 9 dígitos numéricos';
+    if (!nif.trim() || !/^\d{9}$/.test(nif)) {
+      errs.nif = 'NIF obrigatório (9 dígitos)';
     }
 
     if (numeroSocio && !/^[A-Za-z0-9]+$/.test(numeroSocio)) {
@@ -103,6 +104,7 @@ export function AtletaForm({
   };
 
   const handleSubmit = async (): Promise<void> => {
+    setSubmitted(true);
     if (hasErrors) return;
 
     const payload: AtletaRequest = {
@@ -138,7 +140,7 @@ export function AtletaForm({
         placeholder="Nome completo do atleta"
         value={nomeCompleto}
         onChangeText={setNomeCompleto}
-        error={errors.nomeCompleto}
+        error={submitted ? errors.nomeCompleto : undefined}
         required
       />
       <Input
@@ -146,7 +148,7 @@ export function AtletaForm({
         placeholder="AAAA-MM-DD"
         value={dataNascimento}
         onChangeText={setDataNascimento}
-        error={errors.dataNascimento}
+        error={submitted ? errors.dataNascimento : undefined}
         required
       />
       <Input
@@ -154,7 +156,8 @@ export function AtletaForm({
         placeholder="Número de Identificação Fiscal"
         value={nif}
         onChangeText={setNif}
-        error={nif.length > 0 ? errors.nif : undefined}
+        error={submitted ? errors.nif : undefined}
+        required
         keyboardType="numeric"
         maxLength={9}
       />
@@ -163,7 +166,7 @@ export function AtletaForm({
         placeholder="Nº de sócio (se aplicável)"
         value={numeroSocio}
         onChangeText={setNumeroSocio}
-        error={numeroSocio.length > 0 ? errors.numeroSocio : undefined}
+        error={submitted ? errors.numeroSocio : undefined}
       />
       <Input
         label="Posição"
@@ -177,7 +180,7 @@ export function AtletaForm({
         options={encarregadosOptions}
         selectedValue={encarregadoId}
         onValueChange={setEncarregadoId}
-        error={errors.encarregadoId}
+        error={submitted ? errors.encarregadoId : undefined}
         required
       />
       <Select
@@ -195,7 +198,6 @@ export function AtletaForm({
           onPress={() => void handleSubmit()}
           variant="primary"
           loading={loading}
-          disabled={hasErrors}
         />
       </View>
     </View>

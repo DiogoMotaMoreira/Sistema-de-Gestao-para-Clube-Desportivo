@@ -2,6 +2,7 @@ package com.sigd.clinica.controller;
 
 import com.sigd.clinica.dto.AltaMedicaDTO;
 import com.sigd.clinica.dto.DeliberacaoDTO;
+import com.sigd.clinica.dto.EvolucaoDTO;
 import com.sigd.clinica.dto.FilaEMDDTO;
 import com.sigd.clinica.dto.FilaEMDStatsDTO;
 import com.sigd.clinica.dto.OcorrenciaDTO;
@@ -134,6 +135,33 @@ public class OcorrenciaController {
             @AuthenticationPrincipal Utilizador medico) {
         OcorrenciaDTO.Response response = ocorrenciaService.emitirAlta(id, altaDTO, medico.getId());
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * POST /api/v1/clinica/ocorrencias/{id}/evolucao
+     *
+     * Regista uma nova evolução para uma ocorrência. Requer ROLE_MEDICO.
+     */
+    @PostMapping("/ocorrencias/{id}/evolucao")
+    @PreAuthorize("hasRole('ROLE_MEDICO')")
+    public ResponseEntity<EvolucaoDTO.Response> registarEvolucao(
+            @PathVariable Long id,
+            @Valid @RequestBody EvolucaoDTO.Request request,
+            @AuthenticationPrincipal Utilizador medico) {
+        EvolucaoDTO.Request updatedReq = new EvolucaoDTO.Request(id, request.grauRestricao(), request.descricao());
+        EvolucaoDTO.Response response = ocorrenciaService.registarEvolucao(updatedReq, medico.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * GET /api/v1/clinica/ocorrencias/{id}/evolucoes
+     *
+     * Lista evoluções de uma ocorrência. Requer ROLE_MEDICO ou ROLE_DIRETOR_TECNICO.
+     */
+    @GetMapping("/ocorrencias/{id}/evolucoes")
+    @PreAuthorize("hasAnyRole('ROLE_MEDICO', 'ROLE_DIRETOR_TECNICO')")
+    public ResponseEntity<List<EvolucaoDTO.Response>> getEvolucoes(@PathVariable Long id) {
+        return ResponseEntity.ok(ocorrenciaService.getEvolucoes(id));
     }
 
 }
