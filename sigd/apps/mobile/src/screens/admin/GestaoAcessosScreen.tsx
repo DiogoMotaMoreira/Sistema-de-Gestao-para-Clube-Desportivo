@@ -26,10 +26,7 @@ export function GestaoAcessosScreen(): React.JSX.Element {
   const [requirePasswordReset, setRequirePasswordReset] = useState(false);
   const [page, setPage] = useState(0);
 
-  // Epoca state
-  const [nomeEpoca, setNomeEpoca] = useState('');
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
+
 
   // Debounce search
   useEffect(() => {
@@ -46,10 +43,7 @@ export function GestaoAcessosScreen(): React.JSX.Element {
     queryFn: () => adminService.getUsers(pesquisa, page, 10),
   });
 
-  const { data: epocas } = useQuery({
-    queryKey: ['adminEpocas'],
-    queryFn: adminService.getEpocas,
-  });
+
 
   // Mutations
   const createMutation = useMutation({
@@ -64,20 +58,7 @@ export function GestaoAcessosScreen(): React.JSX.Element {
     },
   });
 
-  const createEpocaMutation = useMutation({
-    mutationFn: () => adminService.criarEpoca(nomeEpoca, dataInicio, dataFim),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminEpocas'] });
-      setNomeEpoca('');
-      setDataInicio('');
-      setDataFim('');
-    },
-  });
 
-  const ativarEpocaMutation = useMutation({
-    mutationFn: adminService.ativarEpoca,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminEpocas'] }),
-  });
 
   const bloquearMutation = useMutation({
     mutationFn: adminService.bloquearUser,
@@ -232,27 +213,7 @@ export function GestaoAcessosScreen(): React.JSX.Element {
            {pageData?.totalElements || 0} colaboradores registados
         </Text>
 
-        {/* Secção de Épocas */}
-        <View style={styles.card}>
-           <Text style={styles.cardTitle}>Época Desportiva</Text>
-           {epocas?.map(e => (
-             <View key={e.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.GRAY_200_BORDAS }}>
-                <View>
-                   <Text style={{ fontWeight: '600', color: Colors.GRAY_900_TEXTO1 }}>{e.nome} <Text style={{ color: e.estado === 'ATIVA' ? Colors.SUCESSO_TEXT : Colors.GRAY_500_TEXTO2, fontSize: 12 }}>({e.estado})</Text></Text>
-                   <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>{e.dataInicio} até {e.dataFim}</Text>
-                </View>
-                {e.estado !== 'ATIVA' && (
-                  <Button variant="secondary" label="Ativar" onPress={() => ativarEpocaMutation.mutate(e.id)} disabled={ativarEpocaMutation.isPending} />
-                )}
-             </View>
-           ))}
-           <View style={{ marginTop: 16, flexDirection: 'row', gap: 8 }}>
-              <Input label="Nome" placeholder="2026/2027" value={nomeEpoca} onChangeText={setNomeEpoca} />
-              <Input label="Início" placeholder="2026-09-01" value={dataInicio} onChangeText={setDataInicio} />
-              <Input label="Fim" placeholder="2027-06-30" value={dataFim} onChangeText={setDataFim} />
-           </View>
-           <Button variant="primary" label="Criar Época" onPress={() => createEpocaMutation.mutate()} disabled={!nomeEpoca || !dataInicio || !dataFim || createEpocaMutation.isPending} style={{ marginTop: 8 }} />
-        </View>
+
 
         {/* Barra de Filtros */}
         <View style={styles.filtersContainer}>

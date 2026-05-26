@@ -11,6 +11,10 @@ export function JogosScreen({ navigation }: any): React.JSX.Element {
     treinadorService.getJogos(1).then(setJogos);
   }, []);
 
+  const agora = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const hoje = `${agora.getFullYear()}-${pad(agora.getMonth() + 1)}-${pad(agora.getDate())}`;
+
   const renderCard = (jogo: EventoTreinador) => {
     const s = jogo.subEstadoJogo;
 
@@ -148,10 +152,10 @@ export function JogosScreen({ navigation }: any): React.JSX.Element {
       ) : (
         <>
           <Text style={styles.sectionTitle}>PRÓXIMOS JOGOS</Text>
-          {jogos.filter(j => j.tipo === 'JOGO' && j.dataHora > new Date().toISOString()).map(renderCard)}
+          {jogos.filter(j => j.tipo === 'JOGO' && j.estado === 'AGENDADO' && (j.data ? j.data >= hoje : j.dataHora >= agora.toISOString())).map(renderCard)}
           
           <Text style={styles.sectionTitle}>JOGOS ANTERIORES</Text>
-          {jogos.filter(j => j.tipo === 'JOGO' && j.dataHora <= new Date().toISOString()).map(renderCard)}
+          {jogos.filter(j => j.tipo === 'JOGO' && (j.estado === 'CONCLUIDO' || (j.data ? j.data < hoje : j.dataHora < agora.toISOString()))).map(renderCard)}
         </>
       )}
     </ScrollView>

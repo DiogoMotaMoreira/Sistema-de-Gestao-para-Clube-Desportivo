@@ -92,13 +92,29 @@ export function DetalheJogoScreen({ route, navigation }: any): React.JSX.Element
           </TouchableOpacity>
         )}
 
-        {s === 'PASSADO_FICHA_PENDENTE' && (
+        {jogo.estado === 'AGENDADO' && (
           <TouchableOpacity 
-            style={styles.btnErro} 
-            onPress={() => navigation.navigate('FichaJogoFlow', { eventoId: jogo.id })}
+            style={[styles.btnErro, { marginTop: 8 }]} 
+            onPress={() => navigation.navigate('FichaJogoFlow', { 
+              eventoId: jogo.id,
+              adversario: jogo.adversario 
+            })}
           >
             <ClipboardList size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.btnErroText}>Preencher Ficha de Jogo</Text>
+            <Text style={styles.btnErroText}>Registar Ficha de Jogo</Text>
+          </TouchableOpacity>
+        )}
+
+        {jogo.estado === 'CONCLUIDO' && (
+          <TouchableOpacity 
+            style={[styles.btnDourado, { marginTop: 8 }]} 
+            onPress={() => navigation.navigate('FichaJogoFlow', { 
+              eventoId: jogo.id,
+              adversario: jogo.adversario 
+            })}
+          >
+            <ClipboardList size={18} color="#000000" style={{ marginRight: 8 }} />
+            <Text style={styles.btnDouradoText}>Ver Ficha de Jogo</Text>
           </TouchableOpacity>
         )}
       </View>

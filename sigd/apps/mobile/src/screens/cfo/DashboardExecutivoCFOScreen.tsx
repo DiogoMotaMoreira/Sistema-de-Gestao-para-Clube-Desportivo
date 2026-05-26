@@ -6,6 +6,7 @@ import { CeoFilters, PresetPeriodo } from '../ceo/components/CeoFilters';
 import { CeoKpiCard } from '../ceo/components/CeoKpiCard';
 import { ModalDrillDownDividaCFO } from './components/CfoModals';
 import { cfoService, DetalhePassivoCFO, FluxoCaixaCFO } from '@/services/cfoService';
+import { ceoService, CeoKpisDTO } from '@/services/ceoService';
 import { Colors } from '@/constants/colors';
 
 export function DashboardExecutivoCFOScreen(): React.JSX.Element {
@@ -14,6 +15,7 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
   const [detalheDivida, setDetalheDivida] = useState<DetalhePassivoCFO[]>([]);
   const [fluxos, setFluxos] = useState<FluxoCaixaCFO[]>([]);
   const [resumo, setResumo] = useState<any>(null);
+  const [kpis, setKpis] = useState<CeoKpisDTO | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,11 +23,14 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
     Promise.all([
       cfoService.getResumoFinanceiro().then(setResumo),
       cfoService.getDetalhePassivo().then(setDetalheDivida),
-      cfoService.getFluxosUltimos().then(setFluxos)
+      cfoService.getFluxosUltimos().then(setFluxos),
+      ceoService.getKpis().then(setKpis)
     ])
     .catch(console.error)
     .finally(() => setLoading(false));
   }, [periodo]);
+
+  console.log('CFO kpis:', kpis);
 
   return (
     <View style={styles.container}>
@@ -77,7 +82,7 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
            />
            <CeoKpiCard 
               label="SÓCIOS ATIVOS"
-              valorFormatado="12.450"
+              valorFormatado={kpis ? new Intl.NumberFormat('pt-PT').format(kpis.totalSocios) : "—"}
               subtexto="Taxa de regularidade associativa: 88%"
               icon={Users}
               variacaoTexto="+3,1% face ao mês anterior"
@@ -85,7 +90,7 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
            />
            <CeoKpiCard 
               label="ATLETAS FEDERADOS"
-              valorFormatado="450"
+              valorFormatado={kpis ? new Intl.NumberFormat('pt-PT').format(kpis.totalAtletas) : "—"}
               subtexto="Distribuídos por 18 equipas"
               icon={ShieldCheck}
               variacaoTexto="+4,0% face à época anterior"

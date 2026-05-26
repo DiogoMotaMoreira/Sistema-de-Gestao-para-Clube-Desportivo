@@ -6,7 +6,7 @@ package com.sigd.core.exception;
 public class DeliberacaoNaoAutorizadaException extends RuntimeException {
 
     public DeliberacaoNaoAutorizadaException() {
-        super("Apenas admin pode registar deliberações");
+        super("Apenas medico pode registar deliberações");
     }
 
     public DeliberacaoNaoAutorizadaException(String message) {

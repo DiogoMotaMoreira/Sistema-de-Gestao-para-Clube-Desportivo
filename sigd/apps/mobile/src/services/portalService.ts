@@ -66,7 +66,7 @@ export interface ObrigacaoFinanceira {
   entidade: string;
   valor: number;
   dataVencimento: string;
-  estado: 'PAGO' | 'PENDENTE' | 'VENCIDO';
+  estado: 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'EM_ATRASO';
   dataPagamento?: string;
 }
 
@@ -165,14 +165,13 @@ export const portalService = {
   },
 
   getEventos: async (dependenteId: number, passados: boolean): Promise<EventoPortal[]> => {
-    return new Promise(resolve => setTimeout(() => {
-      const now = new Date();
-      if (passados) {
-        resolve(mockEventos.filter(e => new Date(e.dataHora) < now));
-      } else {
-        resolve(mockEventos.filter(e => new Date(e.dataHora) >= now));
-      }
-    }, 300));
+    const { data } = await api.get<EventoPortal[]>('/portal/agenda');
+    const now = new Date();
+    if (passados) {
+      return data.filter(e => new Date(e.dataHora) < now);
+    } else {
+      return data.filter(e => new Date(e.dataHora) >= now);
+    }
   },
 
   submeterJustificacao: async (eventoId: number, motivo: string): Promise<boolean> => {
@@ -180,7 +179,8 @@ export const portalService = {
   },
 
   getDocumentos: async (dependenteId: number): Promise<DocumentoPortal[]> => {
-    return new Promise(resolve => setTimeout(() => resolve(mockDocumentos), 300));
+    const { data } = await api.get<DocumentoPortal[]>(`/portal/documentos?atletaId=${dependenteId}`);
+    return data;
   },
 
   submeterDocumento: async (dependenteId: number, tipo: string): Promise<boolean> => {
@@ -217,7 +217,7 @@ export const portalService = {
         entidade: ob.entidadeJuridica || 'SAD',
         valor: ob.valor,
         dataVencimento: ob.dataVencimento,
-        estado: ob.estado === 'EM_ATRASO' ? 'VENCIDO' : ob.estado,
+        estado: ob.estado,
         dataPagamento: ob.dataPagamento || undefined,
       }))
     };
@@ -233,7 +233,7 @@ export const portalService = {
         entidade: ob.entidadeJuridica || 'SAD',
         valor: ob.valor,
         dataVencimento: ob.dataVencimento,
-        estado: ob.estado === 'EM_ATRASO' ? 'VENCIDO' : (ob.estado as 'PAGO' | 'PENDENTE' | 'VENCIDO'),
+        estado: ob.estado as 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'EM_ATRASO',
         dataPagamento: ob.dataPagamento || undefined,
       }));
   }

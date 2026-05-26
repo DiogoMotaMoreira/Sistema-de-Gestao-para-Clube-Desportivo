@@ -1,16 +1,105 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { ChevronLeft, ChevronRight, Plus, ExternalLink, Clock } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
-import { diretorDesportivoService, EventoCalendario } from '@/services/diretorDesportivoService';
+import { diretorDesportivoService, EventoCalendario, EquipaDT } from '@/services/diretorDesportivoService';
 
 export function CalendarioGlobalScreen({ navigation }: any): React.JSX.Element {
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
+  const [equipas, setEquipas] = useState<EquipaDT[]>([]);
+  const [selectedEquipaId, setSelectedEquipaId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
   const [showSlideOver, setShowSlideOver] = useState(false);
 
+  const fetchDados = async () => {
+    setLoading(true);
+    try {
+      const eqList = await diretorDesportivoService.getEquipas();
+      setEquipas(eqList);
+      
+      const allEventosPromises = eqList.map(async (eq) => {
+        const evs = await diretorDesportivoService.getEventosEquipa(eq.id);
+        return evs.map((e: any) => {
+          const isJogo = e.tipo !== 'TREINO';
+          return {
+            id: e.id,
+            tipo: (isJogo ? 'JOGO' : 'TREINO') as 'TREINO' | 'JOGO',
+            titulo: isJogo ? `${e.equipaNome} vs ${e.adversario}` : `Treino · ${e.equipaNome}`,
+            dataHora: `${e.data}T${e.horaInicio}`,
+            instalacao: e.local,
+            fichaFalta: isJogo && !e.temConvocatoria, // Simulação de pendência
+            semConvocatoria: isJogo && !e.temConvocatoria,
+            equipaId: eq.id,
+            equipaNome: e.equipaNome,
+            adversario: e.adversario
+          };
+        });
+      });
+      
+      const results = await Promise.all(allEventosPromises);
+      const flatEventos = results.flat();
+      setEventos(flatEventos);
+    } catch (err) {
+      console.error('Erro ao carregar dados do calendário:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    diretorDesportivoService.getEventos(5, 2026).then(setEventos);
+    fetchDados();
   }, []);
+
+  const handleCycleEquipa = () => {
+    if (equipas.length === 0) return;
+    if (selectedEquipaId === null) {
+      setSelectedEquipaId(equipas[0].id);
+    } else {
+      const index = equipas.findIndex(eq => eq.id === selectedEquipaId);
+      if (index === equipas.length - 1) {
+        setSelectedEquipaId(null);
+      } else {
+        setSelectedEquipaId(equipas[index + 1].id);
+      }
+    }
+  };
+
+  const filteredEventos = selectedEquipaId === null 
+    ? eventos 
+    : eventos.filter(e => (e as any).equipaId === selectedEquipaId);
+
+  // Contadores dinâmicos calculados a partir dos dados reais para o mês de Maio 2026
+  const treinosCount = eventos.filter(e => e.tipo === 'TREINO' && e.dataHora.startsWith('2026-05')).length;
+  const jogosCount = eventos.filter(e => e.tipo === 'JOGO' && e.dataHora.startsWith('2026-05')).length;
+  const pendenciasCount = eventos.filter(e => e.fichaFalta && e.dataHora.startsWith('2026-05')).length;
+
+  // Gerar dias do calendário para Maio de 2026 (Maio começa na sexta-feira dia 1)
+  const generateDaysForMay2026 = () => {
+    const days: { day: number; month: number; year: number; isCurrentMonth: boolean; dateString: string }[] = [];
+    
+    // Abril (dias 26 a 30)
+    for (let d = 26; d <= 30; d++) {
+      days.push({ day: d, month: 4, year: 2026, isCurrentMonth: false, dateString: `2026-04-${d}` });
+    }
+    // Maio (dias 1 a 31)
+    for (let d = 1; d <= 31; d++) {
+      const padD = d.toString().padStart(2, '0');
+      days.push({ day: d, month: 5, year: 2026, isCurrentMonth: true, dateString: `2026-05-${padD}` });
+    }
+    // Junho (dias 1 a 6)
+    for (let d = 1; d <= 6; d++) {
+      const padD = d.toString().padStart(2, '0');
+      days.push({ day: d, month: 6, year: 2026, isCurrentMonth: false, dateString: `2026-06-${padD}` });
+    }
+    
+    return days;
+  };
+
+  const calendarDays = generateDaysForMay2026();
+  const weeks: (typeof calendarDays)[] = [];
+  for (let i = 0; i < calendarDays.length; i += 7) {
+    weeks.push(calendarDays.slice(i, i + 7));
+  }
 
   return (
     <View style={styles.container}>
@@ -25,22 +114,24 @@ export function CalendarioGlobalScreen({ navigation }: any): React.JSX.Element {
         <View style={styles.statsBar}>
            <View style={styles.statItem}>
               <Text style={styles.statLabel}>ESTE MÊS — TREINOS</Text>
-              <Text style={[styles.statValue, { color: '#047857' }]}>24</Text>
+              <Text style={[styles.statValue, { color: '#047857' }]}>{treinosCount}</Text>
            </View>
            <View style={styles.statDivider} />
            <View style={styles.statItem}>
               <Text style={styles.statLabel}>ESTE MÊS — JOGOS</Text>
-              <Text style={[styles.statValue, { color: '#1D4ED8' }]}>8</Text>
+              <Text style={[styles.statValue, { color: '#1D4ED8' }]}>{jogosCount}</Text>
            </View>
            <View style={styles.statDivider} />
            <View style={styles.statItem}>
               <Text style={styles.statLabel}>PENDÊNCIAS</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={[styles.statValue, { color: '#991B1B' }]}>2</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Analise')} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                   <Text style={{ fontSize: 12, color: '#1D4ED8', marginRight: 4 }}>Ver Incumprimentos</Text>
-                   <ExternalLink size={12} color="#1D4ED8" />
-                </TouchableOpacity>
+                <Text style={[styles.statValue, { color: '#991B1B' }]}>{pendenciasCount}</Text>
+                {pendenciasCount > 0 && (
+                  <TouchableOpacity onPress={() => navigation.navigate('Analise')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                     <Text style={{ fontSize: 12, color: '#1D4ED8', marginRight: 4 }}>Ver Incumprimentos</Text>
+                     <ExternalLink size={12} color="#1D4ED8" />
+                  </TouchableOpacity>
+                )}
               </View>
            </View>
         </View>
@@ -59,9 +150,11 @@ export function CalendarioGlobalScreen({ navigation }: any): React.JSX.Element {
                 <TouchableOpacity style={styles.toggleBtn}><Text style={styles.toggleBtnText}>Semanal</Text></TouchableOpacity>
              </View>
              
-             <View style={styles.dropdownMock}>
-               <Text style={{ fontSize: 14, color: '#0F172A' }}>Equipa: Ver Todas</Text>
-             </View>
+             <TouchableOpacity style={styles.dropdownMock} onPress={handleCycleEquipa}>
+               <Text style={{ fontSize: 14, color: '#0F172A' }}>
+                 Equipa: {selectedEquipaId === null ? 'Ver Todas' : (equipas.find(e => e.id === selectedEquipaId)?.nome || '')}
+               </Text>
+             </TouchableOpacity>
            </View>
 
            <TouchableOpacity style={styles.btnDourado} onPress={() => setShowSlideOver(true)}>
@@ -70,7 +163,7 @@ export function CalendarioGlobalScreen({ navigation }: any): React.JSX.Element {
            </TouchableOpacity>
         </View>
 
-        {/* Grelha de Calendário Mockada */}
+        {/* Grelha de Calendário Real */}
         <View style={styles.grid}>
           {/* Header Dias da semana */}
           <View style={styles.gridHeader}>
@@ -78,34 +171,41 @@ export function CalendarioGlobalScreen({ navigation }: any): React.JSX.Element {
                <View key={d} style={styles.gridHeaderCell}><Text style={styles.gridHeaderText}>{d}</Text></View>
              ))}
           </View>
-          {/* Corpo (Apenas 1 semana de mock para o layout) */}
-          <View style={styles.gridRow}>
-             {[10, 11, 12, 13, 14, 15, 16].map(d => (
-               <View key={d} style={styles.gridCell}>
-                 <Text style={styles.dayNumber}>{d}</Text>
-                 
-                 {/* Renderizar Eventos neste dia */}
-                 {eventos.filter(e => new Date(e.dataHora).getDate() === d).map(e => {
-                    let bg = '#ECFDF5', text = '#047857', border = '#047857';
-                    if (e.tipo === 'JOGO') { bg = '#EFF6FF'; text = '#1D4ED8'; border = '#1D4ED8'; }
-                    if (e.tipo === 'MANUTENCAO') { bg = '#FFFBEB'; text = '#B45309'; border = '#B45309'; }
-
-                    return (
-                      <View key={e.id} style={[styles.eventoBloco, { backgroundColor: bg, borderLeftColor: border }]}>
-                         <Text style={[styles.eventoTexto, { color: text }]} numberOfLines={1}>{e.titulo}</Text>
-                         {e.fichaFalta && <View style={styles.pontoVermelho} />}
-                         {e.semConvocatoria && (
-                            <View style={styles.badgeSemConvocatoria}>
-                              <Clock size={10} color="#B45309" />
-                              <Text style={styles.badgeSemConvocatoriaText}>Sem convocatória</Text>
-                            </View>
-                         )}
-                      </View>
-                    );
-                 })}
-               </View>
-             ))}
-          </View>
+          
+          {loading && eventos.length === 0 ? (
+            <View style={{ height: 200, justifyContent: 'center', alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#F1C40F" />
+            </View>
+          ) : (
+            weeks.map((week, wIdx) => (
+              <View key={wIdx} style={styles.gridRow}>
+                {week.map((dayObj, dIdx) => (
+                  <View key={dIdx} style={[styles.gridCell, !dayObj.isCurrentMonth && { opacity: 0.4 }]}>
+                    <Text style={styles.dayNumber}>{dayObj.day}</Text>
+                    
+                    {/* Renderizar Eventos neste dia */}
+                    {filteredEventos.filter(e => e.dataHora.split('T')[0] === dayObj.dateString).map(e => {
+                       let bg = '#ECFDF5', text = '#047857', border = '#047857';
+                       if (e.tipo === 'JOGO') { bg = '#EFF6FF'; text = '#1D4ED8'; border = '#1D4ED8'; }
+                       // Manutenção logic needs mapping if needed
+                       return (
+                         <View key={e.id} style={[styles.eventoBloco, { backgroundColor: bg, borderLeftColor: border }]}>
+                            <Text style={[styles.eventoTexto, { color: text }]} numberOfLines={1}>{e.titulo}</Text>
+                            {e.fichaFalta && <View style={styles.pontoVermelho} />}
+                            {e.semConvocatoria && (
+                               <View style={styles.badgeSemConvocatoria}>
+                                 <Clock size={10} color="#B45309" />
+                                 <Text style={styles.badgeSemConvocatoriaText}>Sem convocatória</Text>
+                               </View>
+                            )}
+                         </View>
+                       );
+                    })}
+                  </View>
+                ))}
+              </View>
+            ))
+          )}
         </View>
 
       </ScrollView>

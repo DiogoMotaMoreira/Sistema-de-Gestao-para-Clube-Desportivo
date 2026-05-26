@@ -1,7 +1,19 @@
 # Caminho: C:\Projetos\LI4\Sistema-de-Gestao-para-Clube-Desportivo\sigd\start.ps1
 
-$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
-$env:PATH = "$env:JAVA_HOME\bin;$env:USERPROFILE\tools\apache-maven-3.9.6\bin;$env:PATH"
+$pcAtual = $env:USERNAME
+
+if ($pcAtual -eq "rafae") {
+    $env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.11.10-hotspot"
+    $env:PATH = "$env:JAVA_HOME\bin;C:\Users\rafae\tools\apache-maven-3.9.6\bin;$env:PATH"
+} elseif ($pcAtual -eq "nunog") {
+    $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
+    $env:PATH = "$env:JAVA_HOME\bin;C:\Users\nunog\tools\apache-maven-3.9.6\bin;$env:PATH"
+} else {
+    # Fallback genérico usando o perfil de utilizador
+    $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot"
+    $env:PATH = "$env:JAVA_HOME\bin;$env:USERPROFILE\tools\apache-maven-3.9.6\bin;$env:PATH"
+}
+
 
 $backendPath = "$PSScriptRoot\apps\backend"
 $frontendPath = "$PSScriptRoot\apps\mobile"

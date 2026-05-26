@@ -4,6 +4,9 @@ import com.sigd.auth.dto.LoginRequest;
 import com.sigd.auth.dto.LoginResponse;
 import com.sigd.core.model.Utilizador;
 import com.sigd.core.repository.UtilizadorRepository;
+import com.sigd.audit.model.AuditLog;
+import com.sigd.audit.repository.AuditLogRepository;
+import java.time.LocalDateTime;
 
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -30,13 +33,16 @@ public class AuthService {
     private final UtilizadorRepository utilizadorRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogRepository auditLogRepository;
 
     public AuthService(UtilizadorRepository utilizadorRepository,
                        JwtService jwtService,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       AuditLogRepository auditLogRepository) {
         this.utilizadorRepository = utilizadorRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.auditLogRepository = auditLogRepository;
     }
 
     /**
@@ -85,6 +91,19 @@ public class AuthService {
         // Sucesso: limpar tentativas e bloqueios
         tentativasFalhadas.remove(username);
         bloqueadoAte.remove(username);
+
+        // Audit Log
+        Utilizador utilizador = user;
+        System.out.println("AUDIT LOGIN gravado para: " + username);
+        AuditLog auditLog = new AuditLog();
+        auditLog.setAtor(username);
+        auditLog.setAcao("LOGIN");
+        auditLog.setEntidade("Utilizador");
+        auditLog.setEntidadeId(utilizador.getId());
+        auditLog.setDetalhes("Login efectuado com sucesso");
+        auditLog.setTimestamp(LocalDateTime.now());
+        auditLog.setIpAddress("127.0.0.1");
+        auditLogRepository.save(auditLog);
 
         // 4. Gerar tokens
         String accessToken = jwtService.generateAccessToken(user);

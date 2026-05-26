@@ -73,6 +73,13 @@ export interface CeoKpisDTO {
   atletasInaptos: number;
 }
 
+export interface CeoKpisDesportivosDTO {
+  totalJogos: number;
+  jogosConcluidos: number;
+  jogosAgendados: number;
+  totalSessoesTreino: number;
+}
+
 const mockAlertas: AlertaEstrategico[] = [
   { id: '1', texto: '3 escalões com fichas de jogo em incumprimento', severidade: 'Crítico' },
   { id: '2', texto: 'Taxa de regularidade de sócios desceu 8% este mês', severidade: 'Aviso' },
@@ -84,6 +91,14 @@ export const ceoService = {
     // We add the authorization headers
     const token = useAuthStore.getState().token;
     const { data } = await axios.get<CeoKpisDTO>('http://localhost:8080/api/v1/ceo/kpis', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data;
+  },
+
+  getKpisDesportivos: async (): Promise<CeoKpisDesportivosDTO> => {
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.get<CeoKpisDesportivosDTO>('http://localhost:8080/api/v1/ceo/kpis-desportivos', {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     return data;

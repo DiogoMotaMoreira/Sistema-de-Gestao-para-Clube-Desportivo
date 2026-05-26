@@ -3,6 +3,7 @@ package com.sigd.clinica.service;
 import com.sigd.clinica.dto.AltaMedicaDTO;
 import com.sigd.clinica.dto.DeliberacaoDTO;
 import com.sigd.clinica.dto.FilaEMDDTO;
+import com.sigd.clinica.dto.FilaEMDStatsDTO;
 import com.sigd.clinica.dto.OcorrenciaDTO;
 import com.sigd.core.exception.AtletaComRestricaoException;
 import com.sigd.core.exception.AtletaNotFoundException;
@@ -107,6 +108,31 @@ public class OcorrenciaService {
     }
 
     /**
+     * Obtém estatísticas da fila de EMD (Pendentes, Aprovados este mês, Rejeitados).
+     */
+    @Transactional(readOnly = true)
+    public FilaEMDStatsDTO obterFilaEMDStats() {
+        long pendentes = ocorrenciaRepo.findAll().stream()
+                .filter(o -> o.getEstadoEMD() == EstadoEMD.EM_AVALIACAO)
+                .count();
+
+        LocalDate inicioMes = LocalDate.now().withDayOfMonth(1);
+        long aprovadosEsteMes = ocorrenciaRepo.findAll().stream()
+                .filter(o -> o.getEstadoEMD() == EstadoEMD.DELIBERADO
+                        && o.getGrauRestricao() == GrauRestricaoDesportiva.VERDE
+                        && o.getDataDeliberacao() != null
+                        && !o.getDataDeliberacao().isBefore(inicioMes))
+                .count();
+
+        long rejeitados = ocorrenciaRepo.findAll().stream()
+                .filter(o -> o.getEstadoEMD() == EstadoEMD.DELIBERADO
+                        && o.getGrauRestricao() == GrauRestricaoDesportiva.VERMELHO)
+                .count();
+
+        return new FilaEMDStatsDTO(pendentes, aprovadosEsteMes, rejeitados);
+    }
+
+    /**
      * Lista todas as ocorrências de um atleta.
      *
      * @throws AtletaNotFoundException se o atleta não existir
@@ -148,8 +174,8 @@ public class OcorrenciaService {
         Utilizador medico = utilizadorRepo.findById(medicoDeliberacaoId)
                 .orElseThrow(() -> new DeliberacaoNaoAutorizadaException());
 
-        // Verificar que o utilizador tem role ADMIN
-        if (!"ROLE_ADMIN".equals(medico.getRole())) {
+        // Verificar que o utilizador tem role MEDICO
+        if (!"ROLE_MEDICO".equals(medico.getRole())) {
             throw new DeliberacaoNaoAutorizadaException();
         }
 

@@ -13,8 +13,8 @@ export function BadgeFinanceiro({ estado, showLabel = true }: { estado: EstadoFi
   
   if (estado === 'PENDENTE') {
     bg = '#FFFBEB'; text = '#B45309'; border = '#B45309'; Icon = Clock; label = 'Pendente';
-  } else if (estado === 'VENCIDO' || estado === 'VENCIDO_CRITICO' || estado === 'EM_ATRASO') {
-    bg = '#FEE2E2'; text = '#991B1B'; border = '#991B1B'; Icon = AlertCircle; label = 'Vencido';
+  } else if (estado === 'EM_ATRASO' || estado === 'VENCIDO' || estado === 'VENCIDO_CRITICO') {
+    bg = '#FEE2E2'; text = '#991B1B'; border = '#991B1B'; Icon = AlertCircle; label = 'Em Atraso';
   }
 
   return (

@@ -2,24 +2,26 @@ package com.sigd.audit;
 
 import com.sigd.audit.model.AuditLog;
 import com.sigd.audit.repository.AuditLogRepository;
+import com.sigd.auth.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
 public class AuditInterceptor implements HandlerInterceptor {
 
-    private final AuditLogRepository auditLogRepository;
+    @Autowired
+    private AuditLogRepository auditLogRepository;
 
-    public AuditInterceptor(AuditLogRepository auditLogRepository) {
-        this.auditLogRepository = auditLogRepository;
-    }
+    @Autowired
+    private JwtService jwtService;
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        if (request.getRequestURI().contains("/auth/login")) return;
+
         String method = request.getMethod();
         int status = response.getStatus();
 
@@ -27,9 +29,14 @@ public class AuditInterceptor implements HandlerInterceptor {
                 && status >= 200 && status < 300) {
 
             String username = "SISTEMA";
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.isAuthenticated()) {
-                username = auth.getName();
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    username = jwtService.extractUsername(token);
+                } catch (Exception e) {
+                    username = "SISTEMA";
+                }
             }
 
             String path = request.getRequestURI();

@@ -1,109 +1,232 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/colors';
-import { treinadorService, AtletaPlantel } from '@/services/treinadorService';
-import { SemaforoBadge } from '../components/SemaforoBadge';
-import { Check } from 'lucide-react-native';
+import { treinadorService, FichaJogoResponse } from '@/services/treinadorService';
+import { Trophy, CheckCircle, ArrowLeft, Plus, Minus, ClipboardList } from 'lucide-react-native';
 
 export function FichaJogoFlowScreen({ route, navigation }: any): React.JSX.Element {
-  const { eventoId } = route.params;
-  const [plantel, setPlantel] = useState<AtletaPlantel[]>([]);
-  const [titulares, setTitulares] = useState<number[]>([]);
+  console.log('FichaJogo params:', route?.params);
+  const eventoId = route?.params?.eventoId;
 
-  const TETO_TITULARES = 11; // 11 para futebol
+  const [loading, setLoading] = useState<boolean>(true);
+  const [fichaExistente, setFichaExistente] = useState<FichaJogoResponse | null>(null);
+  const [modoLeitura, setModoLeitura] = useState<boolean>(false);
+
+  // Form State
+  const [golosMarcados, setGolosMarcados] = useState<number>(0);
+  const [golosSofridos, setGolosSofridos] = useState<number>(0);
+  const [observacoes, setObservacoes] = useState<string>('');
 
   useEffect(() => {
-    navigation.setOptions({ title: 'XI Inicial' });
+    navigation.setOptions({ title: 'Ficha de Jogo' });
+
+    if (!eventoId) {
+      setLoading(false);
+      return;
+    }
+
+    treinadorService.getFichaJogo(eventoId)
+      .then(ficha => {
+        setFichaExistente(ficha);
+        setModoLeitura(true);
+        setLoading(false);
+      })
+      .catch(() => {
+        // 404 - ficha não existe, prosseguir para o formulário
+        setFichaExistente(null);
+        setModoLeitura(false);
+        setLoading(false);
+      });
+  }, [eventoId, navigation]);
+
+  const handleSubmeter = async () => {
+    console.log('Submeter ficha:', { eventoId, golosMarcados, golosSofridos });
+
+    if (!eventoId) {
+      Alert.alert('Erro', 'Não foi possível submeter a ficha: ID do evento inválido ou ausente.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.log('A chamar POST ficha-jogo para evento:', eventoId);
+      await treinadorService.submeterFichaJogo(eventoId, golosMarcados, golosSofridos, observacoes);
+      Alert.alert('Sucesso', 'Ficha submetida com sucesso!');
+      navigation.goBack();
+    } catch (error: any) {
+      Alert.alert('Erro', 'Não foi possível submeter: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.DOURADO_CTA} />
+        <Text style={styles.loadingText}>A carregar dados...</Text>
+      </View>
+    );
+  }
+
+  // ── Modo Leitura (Ficha já submetida) ────────────────────────
+  if (modoLeitura && fichaExistente) {
+    const isVitoria = fichaExistente.resultado === 'VITORIA';
+    const isEmpate = fichaExistente.resultado === 'EMPATE';
     
-    treinadorService.getPlantel(1).then(p => {
-       // Apenas aptos e condicionados seriam convocados na realidade
-       setPlantel(p.filter(a => !a.semaforo.startsWith('INAPTO')));
-    });
-  }, [navigation]);
+    let resultLabel = 'Derrota';
+    let resultColor: string = Colors.ERRO_TEXT;
+    let resultBg: string = Colors.ERRO_BG;
+    
+    if (isVitoria) {
+      resultLabel = 'Vitória';
+      resultColor = Colors.SUCESSO_TEXT;
+      resultBg = Colors.SUCESSO_BG;
+    } else if (isEmpate) {
+      resultLabel = 'Empate';
+      resultColor = Colors.AVISO_TEXT;
+      resultBg = Colors.AVISO_BG;
+    }
 
-  const toggleTitular = (id: number) => {
-    setTitulares(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(x => x !== id);
-      } else {
-        if (prev.length >= TETO_TITULARES) return prev;
-        return [...prev, id];
-      }
-    });
-  };
+    return (
+      <View style={styles.container}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+          
+          <View style={styles.cardHeader}>
+             <Trophy size={48} color={isVitoria ? Colors.DOURADO_CTA : Colors.GRAY_500_TEXTO2} style={{ marginBottom: 12 }} />
+             <Text style={styles.submittedTitle}>Ficha de Jogo Submetida</Text>
+             <Text style={styles.submittedSub}>Esta ficha está em modo apenas de leitura</Text>
+          </View>
 
-  const isLimitReached = titulares.length >= TETO_TITULARES;
+          <View style={styles.scorePlacard}>
+             <View style={[styles.resultBadge, { backgroundColor: resultBg, borderColor: resultColor }]}>
+                <Text style={[styles.resultBadgeText, { color: resultColor }]}>{resultLabel.toUpperCase()}</Text>
+             </View>
+             
+             <View style={styles.scoreRow}>
+                <View style={styles.scoreNumberBox}>
+                   <Text style={styles.scoreNumberText}>{fichaExistente.golosMarcados}</Text>
+                   <Text style={styles.scoreLabel}>Golos Marcados</Text>
+                </View>
+                
+                <Text style={styles.scoreDivider}>-</Text>
+                
+                <View style={styles.scoreNumberBox}>
+                   <Text style={styles.scoreNumberText}>{fichaExistente.golosSofridos}</Text>
+                   <Text style={styles.scoreLabel}>Golos Sofridos</Text>
+                </View>
+             </View>
+          </View>
 
-  const handleConfirmar = () => {
-    Alert.alert('Submeter Ficha', 'Mock transacional: Confirmar o XI e suplentes (ignorando passo de eventos de jogo por agora)?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Submeter', onPress: async () => {
-         const suplentes = plantel.filter(a => !titulares.includes(a.id)).map(a => a.id);
-         await treinadorService.submeterFichaJogo(eventoId, titulares, suplentes, []);
-         navigation.navigate('Jogos');
-      } }
-    ]);
-  };
+          <View style={styles.section}>
+             <Text style={styles.sectionTitle}>Observações</Text>
+             <View style={styles.observationsContainer}>
+                <Text style={fichaExistente.observacoes ? styles.observationsText : styles.noObservationsText}>
+                  {fichaExistente.observacoes ? `"${fichaExistente.observacoes}"` : 'Sem observações registadas para este jogo.'}
+                </Text>
+             </View>
+          </View>
 
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.btnOutline} onPress={() => navigation.goBack()}>
+             <ArrowLeft size={16} color={Colors.GRAY_900_TEXTO1} style={{ marginRight: 8 }} />
+             <Text style={styles.btnOutlineText}>Voltar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Modo Formulário (Nova Submissão) ────────────────────────
   return (
     <View style={styles.container}>
-      {/* Barra Progresso Global */}
-      <View style={styles.progressBar}>
-         <Text style={[styles.progressStep, { color: '#0F172A', fontWeight: '700' }]}>1 XI Inicial</Text>
-         <Text style={styles.progressDivider}>—</Text>
-         <Text style={[styles.progressStep, { color: Colors.GRAY_200_BORDAS }]}>2 Eventos</Text>
-         <Text style={styles.progressDivider}>—</Text>
-         <Text style={[styles.progressStep, { color: Colors.GRAY_200_BORDAS }]}>3 Rever</Text>
-         
-         <View style={{ flex: 1 }} />
-         <Text style={styles.autoSave}>Guardado — 15:02</Text>
-      </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        
+        <View style={styles.cardHeader}>
+           <ClipboardList size={40} color={Colors.GRAY_900_TEXTO1} style={{ marginBottom: 12 }} />
+           <Text style={styles.submittedTitle}>Preencher Ficha de Jogo</Text>
+           <Text style={styles.submittedSub}>Introduza o resultado final do jogo</Text>
+        </View>
 
-      <View style={{ padding: 16 }}>
-         <Text style={styles.instruction}>Selecione os {TETO_TITULARES} titulares</Text>
-      </View>
+        <View style={styles.formCard}>
+           {/* Golos Marcados */}
+           <View style={styles.stepperRow}>
+              <View style={{ flex: 1 }}>
+                 <Text style={styles.stepperLabel}>Golos Marcados</Text>
+                 <Text style={styles.stepperSublabel}>A nossa equipa</Text>
+              </View>
+              <View style={styles.stepperControls}>
+                 <TouchableOpacity 
+                   style={styles.stepperButton} 
+                   onPress={() => setGolosMarcados(prev => Math.max(0, prev - 1))}
+                 >
+                    <Minus size={18} color={Colors.GRAY_900_TEXTO1} />
+                 </TouchableOpacity>
+                 
+                 <Text style={styles.stepperValue}>{golosMarcados}</Text>
+                 
+                 <TouchableOpacity 
+                   style={styles.stepperButton} 
+                   onPress={() => setGolosMarcados(prev => prev + 1)}
+                 >
+                    <Plus size={18} color={Colors.GRAY_900_TEXTO1} />
+                 </TouchableOpacity>
+              </View>
+           </View>
 
-      {isLimitReached && (
-         <View style={styles.bannerInfo}>
-            <Text style={{ color: '#047857', fontSize: 12 }}>{TETO_TITULARES} titulares selecionados — restantes são suplentes</Text>
-         </View>
-      )}
+           <View style={styles.formDivider} />
 
-      <ScrollView style={styles.list} contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
-         {/* Lista Mista (os titulares ficam checked, os outros ficam unchecked ou suplentes) */}
-         {plantel.map(atleta => {
-           const isTitular = titulares.includes(atleta.id);
-           
-           return (
-             <TouchableOpacity 
-               key={atleta.id} 
-               style={[styles.card, isTitular && styles.cardSelected]}
-               onPress={() => toggleTitular(atleta.id)}
-               disabled={!isTitular && isLimitReached}
-             >
-                <View style={[styles.checkbox, isTitular && styles.checkboxSelected, !isTitular && isLimitReached && { opacity: 0.3 }]}>
-                  {isTitular && <Check size={16} color="#000000" />}
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                   <Text style={[styles.nome, !isTitular && isLimitReached && { color: Colors.GRAY_500_TEXTO2 }]}>{atleta.nome}</Text>
-                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                     <Text style={styles.posicao}>{atleta.posicao}</Text>
-                     <SemaforoBadge estado={atleta.semaforo} size="sm" />
-                   </View>
-                </View>
-             </TouchableOpacity>
-           );
-         })}
+           {/* Golos Sofridos */}
+           <View style={styles.stepperRow}>
+              <View style={{ flex: 1 }}>
+                 <Text style={styles.stepperLabel}>Golos Sofridos</Text>
+                 <Text style={styles.stepperSublabel}>Equipa adversária</Text>
+              </View>
+              <View style={styles.stepperControls}>
+                 <TouchableOpacity 
+                   style={styles.stepperButton} 
+                   onPress={() => setGolosSofridos(prev => Math.max(0, prev - 1))}
+                 >
+                    <Minus size={18} color={Colors.GRAY_900_TEXTO1} />
+                 </TouchableOpacity>
+                 
+                 <Text style={styles.stepperValue}>{golosSofridos}</Text>
+                 
+                 <TouchableOpacity 
+                   style={styles.stepperButton} 
+                   onPress={() => setGolosSofridos(prev => prev + 1)}
+                 >
+                    <Plus size={18} color={Colors.GRAY_900_TEXTO1} />
+                 </TouchableOpacity>
+              </View>
+           </View>
+        </View>
+
+        <View style={styles.section}>
+           <Text style={styles.sectionTitle}>Observações</Text>
+           <TextInput
+             style={styles.textArea}
+             placeholder="Adicione notas tácticas, substituições ou observações gerais sobre o jogo..."
+             placeholderTextColor={Colors.GRAY_500_TEXTO2}
+             multiline
+             numberOfLines={4}
+             value={observacoes}
+             onChangeText={setObservacoes}
+           />
+        </View>
+
       </ScrollView>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity 
-          style={[styles.btnDourado, titulares.length === 0 && { opacity: 0.5 }]} 
-          disabled={titulares.length === 0}
-          onPress={handleConfirmar}
+          style={[styles.btnDourado, loading && { opacity: 0.5 }]} 
+          onPress={handleSubmeter}
+          disabled={loading}
         >
-          <Text style={styles.btnDouradoText}>Confirmar XI e Avançar</Text>
+           <CheckCircle size={18} color="#000000" style={{ marginRight: 8 }} />
+           <Text style={styles.btnDouradoText}>Submeter Ficha de Jogo</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -115,74 +238,119 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.GRAY_50_FUNDO,
   },
-  progressBar: {
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.BRANCO,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.GRAY_200_BORDAS,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: Colors.GRAY_50_FUNDO,
   },
-  progressStep: {
-    fontSize: 12,
-  },
-  progressDivider: {
-    marginHorizontal: 8,
-    color: Colors.GRAY_200_BORDAS,
-  },
-  autoSave: {
-    fontSize: 11,
-    color: Colors.GRAY_500_TEXTO2,
-    fontStyle: 'italic',
-  },
-  instruction: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 14,
     color: Colors.GRAY_500_TEXTO2,
+    fontWeight: '500',
   },
-  bannerInfo: {
-    backgroundColor: '#ECFDF5',
-    padding: 12,
-    paddingHorizontal: 16,
-  },
-  list: {
+  scroll: {
     flex: 1,
   },
-  card: {
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 120,
+  },
+  cardHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  submittedTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.GRAY_900_TEXTO1,
+  },
+  submittedSub: {
+    fontSize: 14,
+    color: Colors.GRAY_500_TEXTO2,
+    marginTop: 4,
+  },
+  scorePlacard: {
+    backgroundColor: Colors.BRANCO,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: Colors.PRETO_PRIMARIO,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  resultBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  resultBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  scoreRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  scoreNumberBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  scoreNumberText: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: Colors.GRAY_900_TEXTO1,
+  },
+  scoreLabel: {
+    fontSize: 12,
+    color: Colors.GRAY_500_TEXTO2,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  scoreDivider: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: Colors.GRAY_200_BORDAS,
+    marginHorizontal: 16,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.GRAY_500_TEXTO2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  observationsContainer: {
     backgroundColor: Colors.BRANCO,
     borderWidth: 1,
     borderColor: Colors.GRAY_200_BORDAS,
     borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    marginBottom: 8,
+    padding: 16,
   },
-  cardSelected: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#F1C40F',
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.GRAY_200_BORDAS,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxSelected: {
-    backgroundColor: '#F1C40F',
-    borderColor: '#F1C40F',
-  },
-  nome: {
+  observationsText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
+    color: Colors.GRAY_900_TEXTO1,
+    fontStyle: 'italic',
+    lineHeight: 20,
   },
-  posicao: {
-    fontSize: 12,
+  noObservationsText: {
+    fontSize: 14,
     color: Colors.GRAY_500_TEXTO2,
+    fontStyle: 'italic',
   },
   footer: {
     position: 'absolute',
@@ -193,6 +361,86 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.GRAY_200_BORDAS,
     padding: 16,
+  },
+  btnOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: Colors.BRANCO,
+  },
+  btnOutlineText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.GRAY_900_TEXTO1,
+  },
+  formCard: {
+    backgroundColor: Colors.BRANCO,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: Colors.PRETO_PRIMARIO,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stepperLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.GRAY_900_TEXTO1,
+  },
+  stepperSublabel: {
+    fontSize: 12,
+    color: Colors.GRAY_500_TEXTO2,
+    marginTop: 2,
+  },
+  stepperControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  stepperButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    backgroundColor: Colors.GRAY_50_FUNDO,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.GRAY_900_TEXTO1,
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  formDivider: {
+    height: 1,
+    backgroundColor: Colors.GRAY_200_BORDAS,
+    marginVertical: 16,
+  },
+  textArea: {
+    backgroundColor: Colors.BRANCO,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 14,
+    color: Colors.GRAY_900_TEXTO1,
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
   btnDourado: {
     flexDirection: 'row',

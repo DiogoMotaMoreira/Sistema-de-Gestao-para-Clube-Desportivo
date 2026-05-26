@@ -36,7 +36,7 @@ export type TreinadorStackParamList = {
   AvaliacaoSessao: { eventoId: number };
   DetalheJogo: { eventoId: number };
   ConvocatoriaFlow: { eventoId: number };
-  FichaJogoFlow: { eventoId: number };
+  FichaJogoFlow: { eventoId: number; adversario?: string };
 };
 
 const Tab = createBottomTabNavigator<TreinadorTabParamList>();

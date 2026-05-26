@@ -89,16 +89,20 @@ interface BackendAuditLog {
   timestamp: string;
   usuarioId?: number;
   usuarioRole?: string;
+  ator?: string;
   acao: string;
   entidade: string;
   entidadeId?: number;
   payloadAntes?: string;
   payloadDepois?: string;
+  detalhes?: string;
+  ipAddress?: string;
 }
 
 function mapToAuditLogEntry(b: BackendAuditLog): AuditLogEntry {
   const roleName = b.usuarioRole ? b.usuarioRole.replace('ROLE_', '') : 'SISTEMA';
-  const ator = b.usuarioId ? `${roleName} (ID: ${b.usuarioId})` : roleName;
+  const calculatedAtor = b.usuarioId ? `${roleName} (ID: ${b.usuarioId})` : roleName;
+  const ator = b.ator || calculatedAtor;
   const timestamp = b.timestamp ? new Date(b.timestamp).toLocaleString() : '';
   return {
     id: b.id,
@@ -106,9 +110,9 @@ function mapToAuditLogEntry(b: BackendAuditLog): AuditLogEntry {
     acao: b.acao,
     entidade: b.entidade,
     entidadeId: b.entidadeId ? b.entidadeId.toString() : '',
-    detalhes: b.payloadDepois || '',
+    detalhes: b.detalhes || b.payloadDepois || '',
     timestamp,
-    ipAddress: '127.0.0.1',
+    ipAddress: b.ipAddress || '127.0.0.1',
   };
 }
 
@@ -229,6 +233,9 @@ export const adminService = {
     if (modulo) params.modulo = modulo;
     if (tipo) params.tipo = tipo;
     const { data } = await api.get<PageResponse<BackendAuditLog>>('/audit-log', { params });
+    if (data && data.content && data.content.length > 0) {
+      console.log('Audit response:', JSON.stringify(data.content[0]));
+    }
     return {
       ...data,
       content: data.content.map(mapToAuditLogEntry),

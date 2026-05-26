@@ -63,6 +63,17 @@ export interface EventoTreinador {
   convocatoriaId?: number;
 }
 
+export interface FichaJogoResponse {
+  id: number;
+  eventoId: number;
+  golosMarcados: number;
+  golosSofridos: number;
+  resultado: string;
+  observacoes: string | null;
+  estadoSubmissao: string;
+  criadoEm: string;
+}
+
 export interface RegistoChamada {
   atletaId: number;
   estado: 'PRESENTE' | 'ATRASADO' | 'AUSENTE' | 'POR_MARCAR';
@@ -191,6 +202,7 @@ export const treinadorService = {
         equipaId: e.equipaId,
         equipaNome: e.equipaNome,
         adversario: e.adversario,
+        estado: e.estado,
         subEstadoJogo: (e.temConvocatoria ? 'FUTURO_PUBLICADA' : 'FUTURO_SEM_CONVOCATORIA') as SubEstadoJogo,
         convocatoriaId: e.convocatoriaId,
       }));
@@ -230,6 +242,11 @@ export const treinadorService = {
         const localNowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         const isPast = `${e.data}T${e.horaInicio}` < localNowStr;
         
+        let subEstado: SubEstadoJogo = isPast ? 'PASSADO_FICHA_PENDENTE' : (e.temConvocatoria ? 'FUTURO_PUBLICADA' : 'FUTURO_SEM_CONVOCATORIA');
+        if (e.estado === 'CONCLUIDO') {
+          subEstado = 'PASSADO_FICHA_SUBMETIDA';
+        }
+
         return {
           id: e.id,
           tipo: 'JOGO' as TipoEvento,
@@ -240,7 +257,8 @@ export const treinadorService = {
           equipaId: e.equipaId,
           equipaNome: e.equipaNome,
           adversario: e.adversario,
-          subEstadoJogo: (isPast ? 'PASSADO_FICHA_PENDENTE' : (e.temConvocatoria ? 'FUTURO_PUBLICADA' : 'FUTURO_SEM_CONVOCATORIA')) as SubEstadoJogo,
+          estado: e.estado,
+          subEstadoJogo: subEstado,
           convocatoriaId: e.convocatoriaId,
         };
       });
@@ -299,10 +317,19 @@ export const treinadorService = {
     return data;
   },
 
-  async submeterFichaJogo(eventoId: number, titulares: number[], suplentes: number[], eventosMatch: any[]): Promise<boolean> {
-    // Ainda não há endpoint backend implementado para ficha de jogo
-    console.log(`Ficha de Jogo submetida para evento ${eventoId}`, titulares, suplentes, eventosMatch);
-    return true;
+  async submeterFichaJogo(eventoId: number, golosMarcados: number, golosSofridos: number, observacoes: string): Promise<FichaJogoResponse> {
+    const { data } = await api.post<FichaJogoResponse>(`/treinador/eventos/${eventoId}/ficha-jogo`, {
+      eventoId,
+      golosMarcados,
+      golosSofridos,
+      observacoes
+    });
+    return data;
+  },
+
+  async getFichaJogo(eventoId: number): Promise<FichaJogoResponse> {
+    const { data } = await api.get<FichaJogoResponse>(`/treinador/eventos/${eventoId}/ficha-jogo`);
+    return data;
   },
 
   downloadConvocatoriaPdf(convocatoriaId: number) {

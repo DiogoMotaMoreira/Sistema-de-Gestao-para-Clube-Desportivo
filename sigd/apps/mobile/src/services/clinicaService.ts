@@ -127,6 +127,14 @@ export const clinicaService = {
   },
 
   /**
+   * Obtém as estatísticas da fila EMD (Pendentes, Aprovados este mês, Rejeitados).
+   */
+  async getFilaEMDStats(): Promise<{ pendentes: number; aprovadosEsteMes: number; rejeitados: number }> {
+    const { data } = await api.get<{ pendentes: number; aprovadosEsteMes: number; rejeitados: number }>('/fila-emd/stats');
+    return data;
+  },
+
+  /**
    * Lista todas as ocorrências de um atleta.
    */
   async getOcorrenciasPorAtleta(atletaId: number): Promise<OcorrenciaResponse[]> {

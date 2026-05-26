@@ -5,9 +5,16 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { CeoFilters, PresetPeriodo } from './components/CeoFilters';
 import { CeoKpiCard } from './components/CeoKpiCard';
 import { Colors } from '@/constants/colors';
+import { useQuery } from '@tanstack/react-query';
+import { ceoService } from '@/services/ceoService';
 
 export function PerformanceDesportivaScreen(): React.JSX.Element {
   const [periodo, setPeriodo] = useState<PresetPeriodo>('Época Ativa');
+
+  const { data: kpisDesportivos, isLoading } = useQuery({
+    queryKey: ['ceoKpisDesportivos'],
+    queryFn: ceoService.getKpisDesportivos,
+  });
 
   return (
     <View style={styles.container}>
@@ -32,15 +39,15 @@ export function PerformanceDesportivaScreen(): React.JSX.Element {
         {/* KPIs Desportivos */}
         <View style={styles.grid4}>
            <CeoKpiCard 
-              label="JOGOS DISPUTADOS"
-              valorFormatado="36"
+              label="JOGOS OFICIAIS"
+              valorFormatado={isLoading ? "..." : (kpisDesportivos?.totalJogos?.toString() ?? "0")}
               subtexto="No período selecionado"
               icon={Trophy}
            />
            <CeoKpiCard 
-              label="DISTRIBUIÇÃO DE RESULTADOS"
-              valorFormatado="—"
-              subtexto="V = Vitória · E = Empate · D = Derrota"
+              label="JOGOS CONCLUÍDOS"
+              valorFormatado={isLoading ? "..." : (kpisDesportivos?.jogosConcluidos?.toString() ?? "0")}
+              subtexto="Resultados oficiais homologados"
               icon={Trophy}
            >
               <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
@@ -50,9 +57,9 @@ export function PerformanceDesportivaScreen(): React.JSX.Element {
               </View>
            </CeoKpiCard>
            <CeoKpiCard 
-              label="MÉDIA DE GOLOS POR JOGO"
-              valorFormatado="—"
-              subtexto="Golos marcados e sofridos por jogo"
+              label="JOGOS AGENDADOS"
+              valorFormatado={isLoading ? "..." : (kpisDesportivos?.jogosAgendados?.toString() ?? "0")}
+              subtexto="Próximos compromissos na época"
               icon={Trophy}
            >
               <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
@@ -61,15 +68,13 @@ export function PerformanceDesportivaScreen(): React.JSX.Element {
               </View>
            </CeoKpiCard>
            <CeoKpiCard 
-              label="FICHAS DE JOGO PENDENTES"
-              valorFormatado="2"
-              valorCor={Colors.AVISO_TEXT}
-              subtexto="Jogos dentro da janela de 24h"
+              label="SESSÕES DE TREINO"
+              valorFormatado={isLoading ? "..." : (kpisDesportivos?.totalSessoesTreino?.toString() ?? "0")}
+              subtexto="Volume de preparação acumulado"
               icon={Trophy}
-              iconColor={Colors.AVISO_TEXT}
            >
-              <View style={[styles.badgePill, { backgroundColor: '#FFFBEB', alignSelf: 'flex-start', marginBottom: 8 }]}>
-                 <Text style={{ color: '#B45309', fontSize: 10, fontWeight: '600' }}>Dados provisórios incluídos nas métricas</Text>
+              <View style={[styles.badgePill, { backgroundColor: '#ECFDF5', alignSelf: 'flex-start', marginBottom: 8 }]}>
+                 <Text style={{ color: '#047857', fontSize: 10, fontWeight: '600' }}>Treinos e avaliações físicas</Text>
               </View>
            </CeoKpiCard>
         </View>

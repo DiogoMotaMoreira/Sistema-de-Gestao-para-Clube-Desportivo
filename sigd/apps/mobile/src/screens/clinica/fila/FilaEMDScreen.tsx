@@ -1,61 +1,99 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { FileText, CheckCircle, Search, FileSearch, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
 import { Button } from '@/components/ui';
+import { clinicaService, FilaEMDResponse } from '@/services/clinicaService';
 
-interface EMD {
-  id: string;
-  atletaNome: string;
-  escalao: string;
-  origem: string;
-  submetidoPor: string;
-  horasPendente: number;
+function getSlaConfig(dias: number | null | undefined) {
+  const d = dias ?? 0;
+  if (d < 1) return { bg: '#F1F5F9', text: '#64748B', label: 'Hoje' };
+  if (d === 1) return { bg: '#FFFBEB', text: '#B45309', label: 'Há 1 dia' };
+  return { bg: '#FEE2E2', text: '#991B1B', label: `Há ${d} dias` };
 }
 
-const MOCK_EMDS: EMD[] = [
-  { id: '1', atletaNome: 'João Silva', escalao: 'Sub-15', origem: 'Portal B2C', submetidoPor: 'Carlos Silva [EE]', horasPendente: 2 },
-  { id: '2', atletaNome: 'Tomás Costa', escalao: 'Sub-17', origem: 'Portal B2C', submetidoPor: 'Maria Costa [EE]', horasPendente: 25 },
-  { id: '3', atletaNome: 'Ricardo Oliveira', escalao: 'Seniores', origem: 'Portal B2C', submetidoPor: 'Próprio', horasPendente: 50 },
-];
+const getMockEscalao = (id: number) => {
+  const escaloes = ['Sub-15', 'Sub-17', 'Seniores', 'Sub-19'];
+  return escaloes[id % escaloes.length];
+};
 
-function getSlaConfig(horas: number) {
-  if (horas < 24) return { bg: '#F1F5F9', text: '#64748B', label: `Há ${horas}h` };
-  if (horas < 48) return { bg: '#FFFBEB', text: '#B45309', label: `Há ${Math.floor(horas/24)} dia` };
-  return { bg: '#FEE2E2', text: '#991B1B', label: `Há ${Math.floor(horas/24)} dias` };
-}
+const getMockSubmetidoPor = (id: number, atletaNome: string) => {
+  if (id % 3 === 0) return `Carlos ${atletaNome.split(' ').pop() || 'Silva'} [EE]`;
+  if (id % 3 === 1) return `Maria ${atletaNome.split(' ').pop() || 'Costa'} [EE]`;
+  return 'Próprio';
+};
 
 export function FilaEMDScreen(): React.JSX.Element {
-  const [emds, setEmds] = useState<EMD[]>(MOCK_EMDS);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [emds, setEmds] = useState<FilaEMDResponse[]>([]);
+  const [stats, setStats] = useState({ pendentes: 0, aprovadosEsteMes: 0, rejeitados: 0 });
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
   
   const [validoAte, setValidoAte] = useState('');
   const [motivo, setMotivo] = useState('');
 
-  const pendentes = emds.length;
+  const fetchDados = async () => {
+    setLoading(true);
+    try {
+      const response = await clinicaService.getFilaEMD(0, 100);
+      setEmds(response.content || []);
+      const statsResponse = await clinicaService.getFilaEMDStats();
+      setStats(statsResponse);
+    } catch (error) {
+      console.error('Erro ao buscar dados da fila EMD:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDados();
+  }, []);
+
   const selectedEMD = emds.find(e => e.id === selectedId);
 
   const isValidoAteValid = validoAte.length > 0; // Simplificação da validação
   const isMotivoValid = motivo.length >= 10;
 
-  const handleAprovar = () => {
+  const handleAprovar = async () => {
     if (selectedId) {
-      setEmds(prev => prev.filter(e => e.id !== selectedId));
-      setSelectedId(null);
-      setValidoAte('');
-      setMotivo('');
+      try {
+        await clinicaService.deliberar(selectedId, {
+          grauFinal: 'VERDE',
+          obsDeliberacao: 'EMD aprovado'
+        });
+        setSelectedId(null);
+        setValidoAte('');
+        setMotivo('');
+        await fetchDados();
+      } catch (error) {
+        console.error('Erro ao aprovar EMD:', error);
+      }
     }
   };
 
-  const handleRejeitar = () => {
+  const handleRejeitar = async () => {
     if (selectedId) {
-      setEmds(prev => prev.filter(e => e.id !== selectedId));
-      setSelectedId(null);
-      setValidoAte('');
-      setMotivo('');
+      try {
+        await clinicaService.deliberar(selectedId, {
+          grauFinal: 'VERMELHO',
+          obsDeliberacao: 'EMD reprovado'
+        });
+        setSelectedId(null);
+        setValidoAte('');
+        setMotivo('');
+        await fetchDados();
+      } catch (error) {
+        console.error('Erro ao rejeitar EMD:', error);
+      }
     }
   };
+
+  // Filtrar localmente por nome do atleta
+  const filteredEmds = emds.filter(emd =>
+    emd.atletaNome.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <View style={styles.container}>
@@ -63,13 +101,17 @@ export function FilaEMDScreen(): React.JSX.Element {
       <View style={styles.leftPanel}>
         {/* Mini-Dashboard */}
         <View style={styles.miniDashboard}>
-          <Text style={[styles.dashboardText, pendentes > 0 && { color: Colors.ERRO_TEXT }]}>
-            {pendentes} Pendentes
+          <Text style={[styles.dashboardText, stats.pendentes > 0 && { color: Colors.ERRO_TEXT }]}>
+            {stats.pendentes} Pendentes
           </Text>
           <Text style={styles.dashboardSeparator}>·</Text>
-          <Text style={[styles.dashboardText, { color: Colors.SUCESSO_TEXT }]}>12 Aprovados este mês</Text>
+          <Text style={[styles.dashboardText, { color: Colors.SUCESSO_TEXT }]}>
+            {stats.aprovadosEsteMes} Aprovados este mês
+          </Text>
           <Text style={styles.dashboardSeparator}>·</Text>
-          <Text style={[styles.dashboardText, { color: Colors.ERRO_TEXT }]}>3 Rejeitados</Text>
+          <Text style={[styles.dashboardText, { color: Colors.ERRO_TEXT }]}>
+            {stats.rejeitados} Rejeitados
+          </Text>
         </View>
 
         {/* Pesquisa */}
@@ -86,15 +128,19 @@ export function FilaEMDScreen(): React.JSX.Element {
 
         {/* Lista de EMDs */}
         <ScrollView style={styles.listContainer}>
-          {emds.length === 0 ? (
+          {loading && emds.length === 0 ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 64 }}>
+              <ActivityIndicator size="large" color={Colors.DOURADO_CTA} />
+            </View>
+          ) : filteredEmds.length === 0 ? (
             <View style={styles.emptyLeft}>
               <CheckCircle size={48} color={Colors.SUCESSO_TEXT} opacity={0.3} />
               <Text style={styles.emptyLeftTitle}>Fila limpa</Text>
               <Text style={styles.emptyLeftSub}>Não há EMDs pendentes de deliberação.</Text>
             </View>
           ) : (
-            emds.map(emd => {
-              const sla = getSlaConfig(emd.horasPendente);
+            filteredEmds.map(emd => {
+              const sla = getSlaConfig(emd.diasPendente);
               const isSelected = selectedId === emd.id;
               return (
                 <TouchableOpacity
@@ -108,9 +154,9 @@ export function FilaEMDScreen(): React.JSX.Element {
                       <Text style={[styles.slaText, { color: sla.text }]}>{sla.label}</Text>
                     </View>
                   </View>
-                  <Text style={styles.cardDetail}>Escalão: {emd.escalao}</Text>
-                  <Text style={styles.cardDetail}>Origem: {emd.origem}</Text>
-                  <Text style={styles.cardDetail}>Submetido por: {emd.submetidoPor}</Text>
+                  <Text style={styles.cardDetail}>Escalão: {getMockEscalao(emd.id)}</Text>
+                  <Text style={styles.cardDetail}>Origem: Portal B2C</Text>
+                  <Text style={styles.cardDetail}>Submetido por: {getMockSubmetidoPor(emd.id, emd.atletaNome)}</Text>
                   <View style={styles.cardDocRow}>
                     <FileText size={14} color={Colors.GRAY_500_TEXTO2} />
                     <Text style={styles.cardDocText}>Exame Médico-Desportivo</Text>

@@ -148,17 +148,17 @@ class OcorrenciaServiceTest {
         );
 
         when(ocorrenciaRepo.findById(10L)).thenReturn(Optional.of(ocorrencia));
-        when(utilizadorRepo.findById(1L)).thenReturn(Optional.of(admin));
+        when(utilizadorRepo.findById(4L)).thenReturn(Optional.of(medico));
         when(ocorrenciaRepo.save(any(Ocorrencia.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        OcorrenciaDTO.Response response = ocorrenciaService.deliberar(10L, deliberacao, 1L);
+        OcorrenciaDTO.Response response = ocorrenciaService.deliberar(10L, deliberacao, 4L);
 
         assertThat(response).isNotNull();
         assertThat(response.grauRestricao()).isEqualTo(GrauRestricaoDesportiva.VERDE);
         assertThat(response.estadoEMD()).isEqualTo(EstadoEMD.DELIBERADO);
         assertThat(response.estado()).isEqualTo(EstadoOcorrencia.RESOLVIDA);
         assertThat(response.obsDeliberacao()).isEqualTo("Atleta recuperado. Alta médica concedida.");
-        assertThat(response.medicoDeliberacaoNome()).isEqualTo("admin");
+        assertThat(response.medicoDeliberacaoNome()).isEqualTo("medico");
     }
 
     @Test
@@ -170,11 +170,11 @@ class OcorrenciaServiceTest {
         );
 
         when(ocorrenciaRepo.findById(10L)).thenReturn(Optional.of(ocorrencia));
-        when(utilizadorRepo.findById(4L)).thenReturn(Optional.of(medico));
+        when(utilizadorRepo.findById(1L)).thenReturn(Optional.of(admin));
 
-        assertThatThrownBy(() -> ocorrenciaService.deliberar(10L, deliberacao, 4L))
+        assertThatThrownBy(() -> ocorrenciaService.deliberar(10L, deliberacao, 1L))
                 .isInstanceOf(DeliberacaoNaoAutorizadaException.class)
-                .hasMessageContaining("admin");
+                .hasMessageContaining("medico");
     }
 
 }

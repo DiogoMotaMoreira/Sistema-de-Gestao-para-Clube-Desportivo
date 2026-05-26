@@ -4,6 +4,7 @@ import { Download, PieChart, BarChart3 } from 'lucide-react-native';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ceoService, DemografiaEscalao } from '@/services/ceoService';
 import { Colors } from '@/constants/colors';
+import { useQuery } from '@tanstack/react-query';
 
 export function BaseAssociativaScreen(): React.JSX.Element {
   const [demografia, setDemografia] = useState<DemografiaEscalao[]>([]);
@@ -11,6 +12,11 @@ export function BaseAssociativaScreen(): React.JSX.Element {
   useEffect(() => {
     ceoService.getDemografia().then(setDemografia);
   }, []);
+
+  const { data: kpis, isLoading: isLoadingKpis } = useQuery({
+    queryKey: ['ceoKpis'],
+    queryFn: ceoService.getKpis,
+  });
 
   return (
     <View style={styles.container}>
@@ -27,18 +33,19 @@ export function BaseAssociativaScreen(): React.JSX.Element {
         {/* Mini-Dashboard de Topo */}
         <View style={styles.topDashboard}>
            <View style={styles.topDashItem}>
-              <Text style={styles.topDashLabel}>SÓCIOS ATIVOS</Text>
-              <Text style={styles.topDashValue}>12.450</Text>
+              <Text style={styles.topDashLabel}>ATLETAS INSCRITOS</Text>
+              <Text style={styles.topDashValue}>{isLoadingKpis ? "..." : (kpis?.totalAtletas ?? "0")}</Text>
+              <Text style={styles.topDashSub}>Em {kpis?.totalEquipas ?? "0"} equipas</Text>
            </View>
            <View style={styles.topDashItem}>
-              <Text style={styles.topDashLabel}>TAXA DE REGULARIDADE</Text>
-              <Text style={[styles.topDashValue, { color: Colors.SUCESSO_TEXT }]}>88%</Text>
-              <Text style={styles.topDashSub}>10.956 em dia</Text>
+              <Text style={styles.topDashLabel}>ATLETAS APTOS (EMD)</Text>
+              <Text style={[styles.topDashValue, { color: Colors.SUCESSO_TEXT }]}>{isLoadingKpis ? "..." : (kpis?.atletasAptos ?? "0")}</Text>
+              <Text style={styles.topDashSub}>Aptidão desportiva válida</Text>
            </View>
            <View style={[styles.topDashItem, { borderRightWidth: 0 }]}>
-              <Text style={styles.topDashLabel}>ATLETAS INSCRITOS</Text>
-              <Text style={styles.topDashValue}>450</Text>
-              <Text style={styles.topDashSub}>Em 18 equipas</Text>
+              <Text style={styles.topDashLabel}>ATLETAS CONDICIONADOS</Text>
+              <Text style={[styles.topDashValue, { color: Colors.AVISO_TEXT }]}>{isLoadingKpis ? "..." : (kpis?.atletasCondicionados ?? "0")}</Text>
+              <Text style={styles.topDashSub}>Requer atenção médica</Text>
            </View>
         </View>
 

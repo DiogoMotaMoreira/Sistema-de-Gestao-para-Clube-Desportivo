@@ -220,6 +220,12 @@ export const diretorDesportivoService = {
   getEventosCalendario: async (): Promise<EventoCalendario[]> => {
     return new Promise(resolve => setTimeout(() => resolve(mockEventos), 300));
   },
+  getEventosEquipa: async (equipaId: number): Promise<any[]> => {
+    const { data } = await api.get<any[]>('/treinador/eventos', {
+      params: { equipaId },
+    });
+    return data;
+  },
 
   // RENDIMENTO E AUDITORIA (ABA 4)
   getKPIsColetivos: async (equipaId?: number): Promise<KPIStats> => {

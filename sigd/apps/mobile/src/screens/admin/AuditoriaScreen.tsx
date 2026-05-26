@@ -13,13 +13,18 @@ export function AuditoriaScreen(): React.JSX.Element {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
+  const [selectedModulo, setSelectedModulo] = useState<string>('');
+  const [selectedTipo, setSelectedTipo] = useState<string>('');
+  const [moduloOpen, setModuloOpen] = useState<boolean>(false);
+  const [tipoOpen, setTipoOpen] = useState<boolean>(false);
+
   useEffect(() => {
-    adminService.getAuditoria(page, 10).then(res => {
+    adminService.getAuditoria(page, 10, selectedModulo || undefined, selectedTipo || undefined).then(res => {
       setEventos(res.content);
       setTotalPages(res.totalPages);
       setTotalElements(res.totalElements);
     });
-  }, [page]);
+  }, [page, selectedModulo, selectedTipo]);
 
   const getAcaoStyle = (acao: string) => {
     if (['BLOQUEAR_ACESSO', 'REVOGAR_ROLE', 'FORÇAR_RESET', 'ELIMINAR'].includes(acao)) {
@@ -54,12 +59,62 @@ export function AuditoriaScreen(): React.JSX.Element {
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         
         {/* Filtros */}
-        <View style={styles.filtersContainer}>
-           <View style={{ flexDirection: 'row', gap: 12, flex: 1, flexWrap: 'wrap' }}>
+        <View style={[styles.filtersContainer, { zIndex: 50 }]}>
+           <View style={{ flexDirection: 'row', gap: 12, flex: 1, flexWrap: 'wrap', zIndex: 50 }}>
               <TextInput style={styles.inputDate} placeholder="De: dd/mm/aaaa" />
               <TextInput style={styles.inputDate} placeholder="Até: dd/mm/aaaa" />
-              <View style={styles.dropdown}><Text style={styles.dropdownText}>Todos os Módulos ▾</Text></View>
-              <View style={styles.dropdown}><Text style={styles.dropdownText}>Todos os Tipos ▾</Text></View>
+              
+              {/* Módulo Filter */}
+              <View style={{ zIndex: 100 }}>
+                 <TouchableOpacity style={styles.dropdown} onPress={() => { setModuloOpen(!moduloOpen); setTipoOpen(false); }}>
+                    <Text style={styles.dropdownText}>
+                       {selectedModulo ? `Módulo: ${selectedModulo}` : 'Todos os Módulos'} ▾
+                    </Text>
+                 </TouchableOpacity>
+                 {moduloOpen && (
+                    <View style={styles.optionsList}>
+                       {['', 'Atleta', 'EncarregadoEducacao', 'Ocorrencia', 'Utilizador', 'SessaoTreino', 'Convocatoria'].map(m => (
+                          <TouchableOpacity 
+                            key={m} 
+                            style={styles.optionItem} 
+                            onPress={() => {
+                              setSelectedModulo(m);
+                              setPage(0);
+                              setModuloOpen(false);
+                            }}
+                          >
+                             <Text style={styles.optionText}>{m || 'Todos os Módulos'}</Text>
+                          </TouchableOpacity>
+                       ))}
+                    </View>
+                 )}
+              </View>
+
+              {/* Tipo Filter */}
+              <View style={{ zIndex: 90 }}>
+                 <TouchableOpacity style={styles.dropdown} onPress={() => { setTipoOpen(!tipoOpen); setModuloOpen(false); }}>
+                    <Text style={styles.dropdownText}>
+                       {selectedTipo ? `Tipo: ${selectedTipo}` : 'Todos os Tipos'} ▾
+                    </Text>
+                 </TouchableOpacity>
+                 {tipoOpen && (
+                    <View style={styles.optionsList}>
+                       {['', 'CRIAR', 'EDITAR', 'ELIMINAR', 'LOGIN'].map(t => (
+                          <TouchableOpacity 
+                            key={t} 
+                            style={styles.optionItem} 
+                            onPress={() => {
+                              setSelectedTipo(t);
+                              setPage(0);
+                              setTipoOpen(false);
+                            }}
+                          >
+                             <Text style={styles.optionText}>{t || 'Todos os Tipos'}</Text>
+                          </TouchableOpacity>
+                       ))}
+                    </View>
+                 )}
+              </View>
               <View style={styles.searchWrapper}>
                  <Search size={16} color={Colors.GRAY_500_TEXTO2} style={{ marginLeft: 12 }} />
                  <TextInput style={styles.searchInput} placeholder="Pesquisar por nome ou ID do ator..." />
@@ -180,5 +235,30 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: '600' },
   btnDetalhe: { borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   btnDetalheText: { fontSize: 12, fontWeight: '500', color: Colors.GRAY_900_TEXTO1 },
-  tableFooter: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: '#E2E8F0' }
+  tableFooter: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: '#E2E8F0' },
+  optionsList: {
+    position: 'absolute',
+    top: 40,
+    left: 0,
+    backgroundColor: Colors.BRANCO,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    borderRadius: 8,
+    width: 200,
+    shadowColor: Colors.PRETO_PRIMARIO,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 9999
+  },
+  optionItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.GRAY_100_HOVER
+  },
+  optionText: {
+    fontSize: 13,
+    color: Colors.GRAY_900_TEXTO1
+  }
 });

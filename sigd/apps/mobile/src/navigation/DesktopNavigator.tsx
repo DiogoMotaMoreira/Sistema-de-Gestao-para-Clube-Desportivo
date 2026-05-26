@@ -313,6 +313,7 @@ export function DesktopNavigator(): React.JSX.Element {
       screenOptions={{
         drawerType: 'permanent',
         headerLeft: () => null,
+        headerShown: false,
         drawerStyle: {
           width: 280,
           backgroundColor: Colors.PRETO_PRIMARIO,

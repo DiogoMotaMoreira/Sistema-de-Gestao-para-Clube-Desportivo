@@ -65,7 +65,7 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
   }, [dependente]);
 
   const filtradas = obrigacoes.filter(o => {
-    if (filtro === 'Pendentes') return o.estado === 'PENDENTE' || o.estado === 'VENCIDO';
+    if (filtro === 'Pendentes') return o.estado === 'PENDENTE' || o.estado === 'VENCIDO' || o.estado === 'EM_ATRASO';
     if (filtro === 'Pagas') return o.estado === 'PAGO';
     return true;
   });
@@ -141,20 +141,20 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
               filtradas.map(o => (
                  <View key={o.id} style={[
                     styles.cardObrigacao, 
-                    { borderLeftColor: o.estado === 'VENCIDO' ? '#991B1B' : o.estado === 'PENDENTE' ? '#B45309' : '#047857' },
+                    { borderLeftColor: (o.estado === 'VENCIDO' || o.estado === 'EM_ATRASO') ? '#991B1B' : o.estado === 'PENDENTE' ? '#B45309' : '#047857' },
                     o.estado === 'PAGO' && { opacity: 0.85 }
                  ]}>
                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>{o.nome}</Text>
                     <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>{o.entidade} · {o.valor.toFixed(2).replace('.', ',')} €</Text>
                     
-                    {o.estado === 'VENCIDO' && (
+                    {(o.estado === 'VENCIDO' || o.estado === 'EM_ATRASO') && (
                        <Text style={{ fontSize: 12, color: '#991B1B', marginBottom: 8 }}>Vencido há alguns dias</Text>
                     )}
                     {o.estado === 'PENDENTE' && (
                        <Text style={{ fontSize: 12, color: '#B45309', marginBottom: 8 }}>Vence a {formatarDataSegura(o.dataVencimento)}</Text>
                     )}
                     {o.estado === 'PAGO' && (
-                       <Text style={{ fontSize: 12, color: '#047857', marginBottom: 8 }}>Pago a {formatarDataSegura(o.dataPagamento)}</Text>
+                       <Text style={{ fontSize: 12, color: '#047857', marginBottom: 8 }}>Pago a {formatarDataSegura(o.dataPagamento || new Date().toISOString())}</Text>
                     )}
 
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

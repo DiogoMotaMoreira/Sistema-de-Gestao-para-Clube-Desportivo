@@ -3,6 +3,7 @@ package com.sigd.clinica.controller;
 import com.sigd.clinica.dto.AltaMedicaDTO;
 import com.sigd.clinica.dto.DeliberacaoDTO;
 import com.sigd.clinica.dto.FilaEMDDTO;
+import com.sigd.clinica.dto.FilaEMDStatsDTO;
 import com.sigd.clinica.dto.OcorrenciaDTO;
 import com.sigd.clinica.service.OcorrenciaService;
 import com.sigd.core.model.Utilizador;
@@ -61,6 +62,18 @@ public class OcorrenciaController {
     }
 
     /**
+     * GET /api/v1/clinica/fila-emd/stats
+     *
+     * Obtém estatísticas da fila de EMD (Pendentes, Aprovados este mês, Rejeitados).
+     * Requer ROLE_MEDICO, ROLE_SECRETARIA ou ROLE_DIRETOR_TECNICO.
+     */
+    @GetMapping("/fila-emd/stats")
+    @PreAuthorize("hasAnyRole('ROLE_MEDICO', 'ROLE_SECRETARIA', 'ROLE_DIRETOR_TECNICO')")
+    public ResponseEntity<FilaEMDStatsDTO> obterFilaEMDStats() {
+        return ResponseEntity.ok(ocorrenciaService.obterFilaEMDStats());
+    }
+
+    /**
      * GET /api/v1/clinica/ocorrencias/atleta/{id}
      *
      * Lista todas as ocorrências de um atleta. Requer ROLE_MEDICO.
@@ -96,15 +109,15 @@ public class OcorrenciaController {
     /**
      * POST /api/v1/clinica/ocorrencias/{id}/deliberar
      *
-     * Regista a deliberação EMD sobre uma ocorrência. Requer ROLE_ADMIN.
+     * Regista a deliberação EMD sobre uma ocorrência. Requer ROLE_MEDICO.
      */
     @PostMapping("/ocorrencias/{id}/deliberar")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_MEDICO')")
     public ResponseEntity<OcorrenciaDTO.Response> deliberar(
             @PathVariable Long id,
             @Valid @RequestBody DeliberacaoDTO deliberacao,
-            @AuthenticationPrincipal Utilizador admin) {
-        OcorrenciaDTO.Response response = ocorrenciaService.deliberar(id, deliberacao, admin.getId());
+            @AuthenticationPrincipal Utilizador medico) {
+        OcorrenciaDTO.Response response = ocorrenciaService.deliberar(id, deliberacao, medico.getId());
         return ResponseEntity.ok(response);
     }
 
