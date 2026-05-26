@@ -18,15 +18,18 @@ public class EventoDesportivoService {
     private final EquipaRepository equipaRepo;
     private final AtletaRepository atletaRepo;
     private final ConvocatoriaRepository convocatoriaRepo;
+    private final com.sigd.tesouraria.service.AtletaService atletaService;
 
     public EventoDesportivoService(EventoDesportivoRepository eventoRepo,
                                    EquipaRepository equipaRepo,
                                    AtletaRepository atletaRepo,
-                                   ConvocatoriaRepository convocatoriaRepo) {
+                                   ConvocatoriaRepository convocatoriaRepo,
+                                   com.sigd.tesouraria.service.AtletaService atletaService) {
         this.eventoRepo = eventoRepo;
         this.equipaRepo = equipaRepo;
         this.atletaRepo = atletaRepo;
         this.convocatoriaRepo = convocatoriaRepo;
+        this.atletaService = atletaService;
     }
 
     @Transactional
@@ -68,12 +71,20 @@ public class EventoDesportivoService {
 
         List<Atleta> atletasConvocados = new ArrayList<>();
         List<String> nomesConvocados = new ArrayList<>();
+        List<String> atletasBloqueados = new ArrayList<>();
 
         for (Long atletaId : request.atletaIds()) {
             Atleta atleta = atletaRepo.findById(atletaId)
                     .orElseThrow(() -> new IllegalArgumentException("Atleta não encontrado: " + atletaId));
             
-            if (atleta.getEstadoElegibilidade() != EstadoElegibilidade.APTO) {
+            com.sigd.tesouraria.dto.AtletaDTO.Elegibilidade eleg = atletaService.obterElegibilidade(atletaId);
+            
+            if (eleg.bloqueadoPorEMD() || eleg.bloqueadoPorLesao()) {
+                atletasBloqueados.add(atleta.getNomeCompleto());
+                continue;
+            }
+
+            if (!eleg.apto() && !eleg.condicionado()) {
                 throw new IllegalStateException("Atleta inativo ou inapto não pode ser convocado: " + atleta.getNomeCompleto());
             }
 
@@ -88,6 +99,7 @@ public class EventoDesportivoService {
                 convocatoria.getId(),
                 evento.getId(),
                 nomesConvocados,
+                atletasBloqueados,
                 convocatoria.getHoraConcentracao(),
                 convocatoria.getLocalConcentracao(),
                 convocatoria.getEstado(),
@@ -108,6 +120,7 @@ public class EventoDesportivoService {
                 convocatoria.getId(),
                 convocatoria.getEvento().getId(),
                 nomesConvocados,
+                new ArrayList<>(), // Bloqueados não são persistidos, apenas devolvidos na publicação
                 convocatoria.getHoraConcentracao(),
                 convocatoria.getLocalConcentracao(),
                 convocatoria.getEstado(),
@@ -116,7 +129,9 @@ public class EventoDesportivoService {
     }
 
     private EventoDesportivoDTO.Response toDto(EventoDesportivo evento) {
-        boolean temConvocatoria = !convocatoriaRepo.findByEventoId(evento.getId()).isEmpty();
+        List<Convocatoria> convs = convocatoriaRepo.findByEventoId(evento.getId());
+        boolean temConvocatoria = !convs.isEmpty();
+        Long convocatoriaId = temConvocatoria ? convs.get(0).getId() : null;
         return new EventoDesportivoDTO.Response(
                 evento.getId(),
                 evento.getEquipa().getId(),
@@ -127,7 +142,8 @@ public class EventoDesportivoService {
                 evento.getAdversario(),
                 evento.getLocal(),
                 evento.getEstado(),
-                temConvocatoria
+                temConvocatoria,
+                convocatoriaId
         );
     }
 }

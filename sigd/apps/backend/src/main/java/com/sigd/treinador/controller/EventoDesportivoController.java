@@ -17,9 +17,12 @@ import java.util.List;
 public class EventoDesportivoController {
 
     private final EventoDesportivoService eventoService;
+    private final com.sigd.treinador.service.PdfConvocatoriaService pdfConvocatoriaService;
 
-    public EventoDesportivoController(EventoDesportivoService eventoService) {
+    public EventoDesportivoController(EventoDesportivoService eventoService,
+                                      com.sigd.treinador.service.PdfConvocatoriaService pdfConvocatoriaService) {
         this.eventoService = eventoService;
+        this.pdfConvocatoriaService = pdfConvocatoriaService;
     }
 
     @PostMapping("/eventos")
@@ -42,5 +45,15 @@ public class EventoDesportivoController {
     @GetMapping("/convocatorias/{id}")
     public ResponseEntity<ConvocatoriaDTO.Response> obterConvocatoria(@PathVariable Long id) {
         return ResponseEntity.ok(eventoService.obterConvocatoria(id));
+    }
+
+    @GetMapping(value = "/convocatorias/{id}/pdf", produces = org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_TREINADOR', 'ROLE_DIRETOR_TECNICO')")
+    public ResponseEntity<byte[]> baixarPdfConvocatoria(@PathVariable Long id) {
+        byte[] pdf = pdfConvocatoriaService.gerarPdfConvocatoria(id);
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "convocatoria_" + id + ".pdf");
+        return new ResponseEntity<>(pdf, headers, org.springframework.http.HttpStatus.OK);
     }
 }

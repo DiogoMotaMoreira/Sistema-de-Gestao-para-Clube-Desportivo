@@ -39,7 +39,6 @@ export function JogosScreen({ navigation }: any): React.JSX.Element {
     if (s === 'FUTURO_RASCUNHO') {
       return (
         <TouchableOpacity key={jogo.id} style={[styles.card, styles.cardFuturo, { borderLeftColor: '#B45309' }]} onPress={() => navigation.navigate('DetalheJogo', { eventoId: jogo.id })}>
-          {/* ... similar to above but with rascunho status ... */}
           <View style={styles.cardHeader}>
             <View style={[styles.badge, { backgroundColor: '#EFF6FF' }]}>
               <Calendar size={12} color="#1D4ED8" />
@@ -52,6 +51,28 @@ export function JogosScreen({ navigation }: any): React.JSX.Element {
           <View style={styles.cardFooter}>
             <Clock size={12} color="#B45309" />
             <Text style={[styles.footerText, { color: '#B45309' }]}>Convocatória: Rascunho guardado</Text>
+            <View style={{ flex: 1 }} />
+            <ChevronRight size={16} color={Colors.GRAY_200_BORDAS} />
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    if (s === 'FUTURO_PUBLICADA') {
+      return (
+        <TouchableOpacity key={jogo.id} style={[styles.card, styles.cardFuturo, { borderLeftColor: '#047857' }]} onPress={() => navigation.navigate('DetalheJogo', { eventoId: jogo.id })}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.badge, { backgroundColor: '#EFF6FF' }]}>
+              <Calendar size={12} color="#1D4ED8" />
+              <Text style={[styles.badgeText, { color: '#1D4ED8' }]}>JOGO FUTURO</Text>
+            </View>
+            <Text style={[styles.cardTime, { color: '#1D4ED8' }]}>{new Date(jogo.dataHora).toLocaleDateString()} {new Date(jogo.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+          </View>
+          <Text style={styles.cardTitle}>{jogo.adversario}</Text>
+          <Text style={styles.cardSub}>{jogo.quadroCompetitivo} · {jogo.local} · {jogo.casaFora}</Text>
+          <View style={styles.cardFooter}>
+            <CheckCircle size={12} color="#047857" />
+            <Text style={[styles.footerText, { color: '#047857' }]}>Convocatória: Publicada</Text>
             <View style={{ flex: 1 }} />
             <ChevronRight size={16} color={Colors.GRAY_200_BORDAS} />
           </View>

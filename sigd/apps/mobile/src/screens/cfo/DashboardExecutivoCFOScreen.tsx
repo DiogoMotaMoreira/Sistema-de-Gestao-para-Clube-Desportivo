@@ -13,10 +13,18 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
   const [showModalDivida, setShowModalDivida] = useState(false);
   const [detalheDivida, setDetalheDivida] = useState<DetalhePassivoCFO[]>([]);
   const [fluxos, setFluxos] = useState<FluxoCaixaCFO[]>([]);
+  const [resumo, setResumo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    cfoService.getDetalhePassivo().then(setDetalheDivida);
-    cfoService.getFluxosUltimos().then(setFluxos);
+    setLoading(true);
+    Promise.all([
+      cfoService.getResumoFinanceiro().then(setResumo),
+      cfoService.getDetalhePassivo().then(setDetalheDivida),
+      cfoService.getFluxosUltimos().then(setFluxos)
+    ])
+    .catch(console.error)
+    .finally(() => setLoading(false));
   }, [periodo]);
 
   return (
@@ -29,6 +37,11 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
         ]}
       />
 
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+           <Text style={{ color: Colors.GRAY_500_TEXTO2 }}>A carregar dados do Data Warehouse (CFO)...</Text>
+        </View>
+      ) : (
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         
         {/* Barra de Filtros */}
@@ -44,7 +57,7 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
         <View style={styles.grid4}>
            <CeoKpiCard 
               label="RECEITA TOTAL"
-              valorFormatado="1.240.500,00 €"
+              valorFormatado={resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.global.receita) : "—"}
               subtexto={`Época 2025/2026 · Atualizado às ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`}
               icon={TrendingUp}
               variacaoTexto="+12,3% face à época anterior"
@@ -52,8 +65,8 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
            />
            <CeoKpiCard 
               label="PASSIVO PENDENTE"
-              valorFormatado="45.200,00 €"
-              subtexto="230 mensalidades em atraso"
+              valorFormatado={resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.global.divida) : "—"}
+              subtexto={`${resumo ? resumo.global.taxaLiquidacao.toFixed(1) : '--'}% de liquidação total`}
               icon={AlertCircle}
               iconColor={Colors.ERRO_TEXT}
               valorCor={Colors.ERRO_TEXT}
@@ -181,6 +194,7 @@ export function DashboardExecutivoCFOScreen(): React.JSX.Element {
         <Text style={styles.footerText}>Dados atualizados às {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} de hoje · Próxima atualização automática: 16:00</Text>
 
       </ScrollView>
+      )}
 
       <ModalDrillDownDividaCFO visible={showModalDivida} onClose={() => setShowModalDivida(false)} dados={detalheDivida} />
 

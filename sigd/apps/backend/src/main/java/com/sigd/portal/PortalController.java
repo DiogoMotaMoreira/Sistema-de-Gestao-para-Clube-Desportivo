@@ -48,7 +48,8 @@ public class PortalController {
             String escalao,
             String equipa,
             String elegibilidade,
-            Integer idade
+            Integer idade,
+            String numeroSocio
     ) {}
 
     public record PortalMeResponse(
@@ -114,7 +115,8 @@ public class PortalController {
                 escalaoNome,
                 equipaNome,
                 elegibilidade,
-                idade
+                idade,
+                atleta.getNumeroSocio()
         );
     }
 }

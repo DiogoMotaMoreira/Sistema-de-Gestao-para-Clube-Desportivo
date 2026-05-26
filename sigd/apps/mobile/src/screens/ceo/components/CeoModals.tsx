@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { X, FileText, Loader, Download } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
-import { DetalheDivida, AuditoriaEvento } from '@/services/ceoService';
+import { DetalheDivida } from '@/services/ceoService';
+import { AuditLogEntry } from '@/services/adminService';
 
 // ── 1. Modal Relatório Executivo ────────────────────────
 
@@ -152,7 +153,7 @@ export function ModalDrillDownDivida({ visible, onClose, dados }: { visible: boo
 
 // ── 3. Modal Detalhe de Auditoria ───────────────────────
 
-export function ModalAuditoria({ visible, onClose, evento }: { visible: boolean, onClose: () => void, evento: AuditoriaEvento | null }) {
+export function ModalAuditoria({ visible, onClose, evento }: { visible: boolean, onClose: () => void, evento: AuditLogEntry | null }) {
   if (!evento) return null;
 
   return (
@@ -167,14 +168,14 @@ export function ModalAuditoria({ visible, onClose, evento }: { visible: boolean,
 
           <View style={styles.metaGrelha}>
              <View style={styles.metaItem}><Text style={styles.metaLabel}>ID do Evento:</Text><Text style={styles.metaValueMono}>{evento.id}</Text></View>
-             <View style={styles.metaItem}><Text style={styles.metaLabel}>Data / Hora:</Text><Text style={styles.metaValue}>{evento.dataHora}</Text></View>
-             <View style={styles.metaItem}><Text style={styles.metaLabel}>Ator:</Text><Text style={styles.metaValue}>{evento.ator} — {evento.role}</Text></View>
-             <View style={styles.metaItem}><Text style={styles.metaLabel}>Módulo:</Text><Text style={styles.metaValue}>{evento.modulo}</Text></View>
-             <View style={styles.metaItem}><Text style={styles.metaLabel}>Endereço IP:</Text><Text style={styles.metaValueMono}>{evento.ip}</Text></View>
+             <View style={styles.metaItem}><Text style={styles.metaLabel}>Data / Hora:</Text><Text style={styles.metaValue}>{evento.timestamp}</Text></View>
+             <View style={styles.metaItem}><Text style={styles.metaLabel}>Ator:</Text><Text style={styles.metaValue}>{evento.ator}</Text></View>
+             <View style={styles.metaItem}><Text style={styles.metaLabel}>Módulo:</Text><Text style={styles.metaValue}>{evento.entidade}</Text></View>
+             <View style={styles.metaItem}><Text style={styles.metaLabel}>Endereço IP:</Text><Text style={styles.metaValueMono}>{evento.ipAddress}</Text></View>
           </View>
 
           <ScrollView style={styles.jsonBlock}>
-             <Text style={styles.jsonText}>{evento.rawJson}</Text>
+             <Text style={styles.jsonText}>{evento.detalhes}</Text>
           </ScrollView>
 
           <View style={[styles.footerRow, { justifyContent: 'flex-end', marginTop: 24 }]}>

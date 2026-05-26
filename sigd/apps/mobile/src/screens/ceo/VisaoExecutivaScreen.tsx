@@ -13,6 +13,7 @@ export function VisaoExecutivaScreen(): React.JSX.Element {
   const [alertas, setAlertas] = useState<AlertaEstrategico[]>([]);
   const [kpiReceita, setKpiReceita] = useState<KpiCardData | null>(null);
   const [kpiPassivo, setKpiPassivo] = useState<KpiCardData | null>(null);
+  const [kpisGerais, setKpisGerais] = useState<any>(null);
   const [showModalPdf, setShowModalPdf] = useState(false);
   const [showModalDivida, setShowModalDivida] = useState(false);
   const [detalheDivida, setDetalheDivida] = useState<DetalheDivida[]>([]);
@@ -28,6 +29,14 @@ export function VisaoExecutivaScreen(): React.JSX.Element {
     setKpiReceita(receita);
     const passivo = await ceoService.getKpiPassivoPendente(periodo);
     setKpiPassivo(passivo);
+    
+    try {
+      const kpis = await ceoService.getKpis();
+      setKpisGerais(kpis);
+    } catch {
+      setKpisGerais(null);
+    }
+
     const detalhe = await ceoService.getDetalheDivida();
     setDetalheDivida(detalhe);
   };
@@ -141,16 +150,15 @@ export function VisaoExecutivaScreen(): React.JSX.Element {
 
            <CeoKpiCard 
               label="ATLETAS BLOQUEADOS"
-              valorFormatado="31"
+              valorFormatado={kpisGerais?.atletasInaptos?.toString() || "31"}
               valorCor={Colors.ERRO_TEXT}
               subtexto="Atletas inaptos para treino ou convocatória"
               icon={UserX}
               iconColor={Colors.ERRO_TEXT}
            >
               <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                 <View style={[styles.badgePill, { backgroundColor: '#FEE2E2' }]}><Text style={{ color: '#991B1B', fontSize: 11, fontWeight: '600' }}>Doc: 12</Text></View>
-                 <View style={[styles.badgePill, { backgroundColor: '#FFFBEB' }]}><Text style={{ color: '#B45309', fontSize: 11, fontWeight: '600' }}>Cli: 5</Text></View>
-                 <View style={[styles.badgePill, { backgroundColor: '#FEE2E2' }]}><Text style={{ color: '#991B1B', fontSize: 11, fontWeight: '600' }}>Fin: 14</Text></View>
+                 <View style={[styles.badgePill, { backgroundColor: '#FEE2E2' }]}><Text style={{ color: '#991B1B', fontSize: 11, fontWeight: '600' }}>{kpisGerais ? kpisGerais.atletasInaptos : '31'}</Text></View>
+                 <View style={[styles.badgePill, { backgroundColor: '#FFFBEB' }]}><Text style={{ color: '#B45309', fontSize: 11, fontWeight: '600' }}>Cond: {kpisGerais ? kpisGerais.atletasCondicionados : '5'}</Text></View>
               </View>
            </CeoKpiCard>
         </View>
@@ -160,7 +168,7 @@ export function VisaoExecutivaScreen(): React.JSX.Element {
         <View style={styles.grid3}>
            <CeoKpiCard 
               label="SÓCIOS ATIVOS"
-              valorFormatado="12.450"
+              valorFormatado={kpisGerais?.totalSocios?.toString() || "12.450"}
               subtexto="Vínculo associativo ativo e regularizado"
               icon={Users}
               variacaoTexto="+2,1% vs. época anterior"
@@ -168,8 +176,8 @@ export function VisaoExecutivaScreen(): React.JSX.Element {
            />
            <CeoKpiCard 
               label="ATLETAS FEDERADOS"
-              valorFormatado="450"
-              subtexto="Distribuídos por 18 equipas ativas"
+              valorFormatado={kpisGerais?.totalAtletas?.toString() || "450"}
+              subtexto={`Distribuídos por ${kpisGerais?.totalEquipas || 18} equipas ativas`}
               icon={ShieldCheck}
               variacaoTexto="+4,0% vs. época anterior"
               variacaoPositiva={true}

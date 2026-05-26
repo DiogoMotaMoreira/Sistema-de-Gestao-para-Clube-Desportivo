@@ -28,13 +28,16 @@ public class AtletaService {
     private final AtletaRepository atletaRepo;
     private final EncarregadoEducacaoRepository encarregadoRepo;
     private final EquipaRepository equipaRepo;
+    private final com.sigd.core.repository.OcorrenciaRepository ocorrenciaRepo;
 
     public AtletaService(AtletaRepository atletaRepo,
                          EncarregadoEducacaoRepository encarregadoRepo,
-                         EquipaRepository equipaRepo) {
+                         EquipaRepository equipaRepo,
+                         com.sigd.core.repository.OcorrenciaRepository ocorrenciaRepo) {
         this.atletaRepo = atletaRepo;
         this.encarregadoRepo = encarregadoRepo;
         this.equipaRepo = equipaRepo;
+        this.ocorrenciaRepo = ocorrenciaRepo;
     }
 
     /**
@@ -141,6 +144,38 @@ public class AtletaService {
         atleta.setEquipa(novaEquipa);
         atleta = atletaRepo.save(atleta);
         return toResponse(atleta);
+    }
+
+    /**
+     * Obtém a elegibilidade de um atleta.
+     */
+    @Transactional(readOnly = true)
+    public AtletaDTO.Elegibilidade obterElegibilidade(Long id) {
+        Atleta atleta = atletaRepo.findById(id)
+                .orElseThrow(() -> new AtletaNotFoundException(id));
+
+        boolean bloqueadoPorEMD = atleta.getEstadoElegibilidade() == com.sigd.core.model.EstadoElegibilidade.PENDENTE_EMD;
+        
+        java.util.List<com.sigd.core.model.Ocorrencia> ocorrencias = ocorrenciaRepo.findByAtletaId(id);
+        boolean bloqueadoPorLesao = ocorrencias.stream()
+                .anyMatch(o -> o.getEstado() == com.sigd.core.model.EstadoOcorrencia.ATIVA && 
+                               o.getGrauRestricao() == com.sigd.core.model.GrauRestricaoDesportiva.VERMELHO);
+                               
+        boolean condicionado = ocorrencias.stream()
+                .anyMatch(o -> o.getEstado() == com.sigd.core.model.EstadoOcorrencia.ATIVA && 
+                               o.getGrauRestricao() == com.sigd.core.model.GrauRestricaoDesportiva.AMARELO);
+
+        boolean apto = atleta.getEstadoElegibilidade() == com.sigd.core.model.EstadoElegibilidade.APTO && !bloqueadoPorLesao;
+
+        return new AtletaDTO.Elegibilidade(
+                atleta.getId(),
+                atleta.getNomeCompleto(),
+                atleta.getEstadoElegibilidade().name(),
+                bloqueadoPorEMD,
+                bloqueadoPorLesao,
+                condicionado,
+                apto
+        );
     }
 
     // === Helpers privados ===

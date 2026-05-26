@@ -16,6 +16,7 @@ public class RegistoAssiduidadeDTO {
             Long atletaId,
             String atletaNome,
             EstadoAssiduidade estado,
-            LocalDateTime registadoEm
+            LocalDateTime registadoEm,
+            Boolean condicionado
     ) {}
 }

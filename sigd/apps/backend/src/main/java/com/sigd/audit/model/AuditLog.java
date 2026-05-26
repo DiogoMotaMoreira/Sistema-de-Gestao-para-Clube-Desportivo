@@ -33,6 +33,9 @@ public class AuditLog {
     @Column(name = "usuario_id")
     private Long usuarioId;
 
+    @Column(name = "ator", length = 100)
+    private String ator;
+
     @Column(name = "usuario_role", length = 50)
     private String usuarioRole;
 
@@ -54,5 +57,11 @@ public class AuditLog {
     @Lob
     @Column(name = "payload_depois", columnDefinition = "LONGTEXT")
     private String payloadDepois;
+
+    @Column(name = "detalhes")
+    private String detalhes;
+
+    @Column(name = "ip_address", length = 45)
+    private String ipAddress;
 
 }

@@ -20,10 +20,14 @@ public class UtilizadorAdminService {
 
     private final UtilizadorRepository utilizadorRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.sigd.auth.service.PasswordValidator passwordValidator;
 
-    public UtilizadorAdminService(UtilizadorRepository utilizadorRepository, PasswordEncoder passwordEncoder) {
+    public UtilizadorAdminService(UtilizadorRepository utilizadorRepository, 
+                                  PasswordEncoder passwordEncoder,
+                                  com.sigd.auth.service.PasswordValidator passwordValidator) {
         this.utilizadorRepository = utilizadorRepository;
         this.passwordEncoder = passwordEncoder;
+        this.passwordValidator = passwordValidator;
     }
 
     @Transactional(readOnly = true)
@@ -49,6 +53,8 @@ public class UtilizadorAdminService {
         String rawPassword = (request.passwordHash() != null && !request.passwordHash().isBlank())
                 ? request.passwordHash()
                 : "Sigd@2025";
+                
+        passwordValidator.validarPassword(rawPassword);
 
         Utilizador novo = new Utilizador();
         novo.setUsername(request.username());

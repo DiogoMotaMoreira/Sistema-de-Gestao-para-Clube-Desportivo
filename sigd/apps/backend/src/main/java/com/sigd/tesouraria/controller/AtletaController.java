@@ -55,6 +55,17 @@ public class AtletaController {
     }
 
     /**
+     * GET /api/v1/tesouraria/atletas/{id}/elegibilidade
+     *
+     * Obtém a elegibilidade de um atleta para RF-15.
+     */
+    @GetMapping("/{id}/elegibilidade")
+    @PreAuthorize("hasAnyRole('ROLE_SECRETARIA', 'ROLE_MEDICO', 'ROLE_TREINADOR', 'ROLE_DIRETOR_TECNICO')")
+    public ResponseEntity<AtletaDTO.Elegibilidade> obterElegibilidade(@PathVariable Long id) {
+        return ResponseEntity.ok(atletaService.obterElegibilidade(id));
+    }
+
+    /**
      * POST /api/v1/tesouraria/atletas
      *
      * Cria um novo atleta.

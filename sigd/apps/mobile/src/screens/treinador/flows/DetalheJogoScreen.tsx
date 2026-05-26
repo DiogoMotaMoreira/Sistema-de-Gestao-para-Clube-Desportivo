@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Colors } from '@/constants/colors';
 import { treinadorService, EventoTreinador } from '@/services/treinadorService';
 import { Users, ClipboardList } from 'lucide-react-native';
+import { useAuthStore } from '@/stores/authStore';
+import { Alert } from 'react-native';
 
 export function DetalheJogoScreen({ route, navigation }: any): React.JSX.Element {
   const { eventoId } = route.params;
@@ -21,6 +23,24 @@ export function DetalheJogoScreen({ route, navigation }: any): React.JSX.Element
   if (!jogo) return <View style={styles.container} />;
 
   const s = jogo.subEstadoJogo;
+
+  async function downloadPdf(convocatoriaId: number) {
+    try {
+      const token = useAuthStore.getState().token;
+      const response = await fetch(
+        `http://localhost:8080/api/v1/treinador/convocatorias/${convocatoriaId}/pdf`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      if (!response.ok) throw new Error('Erro ao gerar PDF');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível gerar o PDF');
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -41,7 +61,7 @@ export function DetalheJogoScreen({ route, navigation }: any): React.JSX.Element
         {s === 'FUTURO_SEM_CONVOCATORIA' && (
           <TouchableOpacity 
             style={styles.btnDourado} 
-            onPress={() => navigation.navigate('ConvocatoriaFlow', { eventoId: jogo.id })}
+            onPress={() => navigation.navigate('ConvocatoriaFlow', { eventoId: jogo.id, equipaId: jogo.equipaId || 1 })}
           >
             <Users size={18} color="#000000" style={{ marginRight: 8 }} />
             <Text style={styles.btnDouradoText}>Criar Convocatória</Text>
@@ -55,11 +75,21 @@ export function DetalheJogoScreen({ route, navigation }: any): React.JSX.Element
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.btnDourado, { flex: 1, height: 48 }]}
-              onPress={() => navigation.navigate('ConvocatoriaFlow', { eventoId: jogo.id })}
+              onPress={() => navigation.navigate('ConvocatoriaFlow', { eventoId: jogo.id, equipaId: jogo.equipaId || 1 })}
             >
                <Text style={styles.btnDouradoText}>Continuar Rascunho</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {s === 'FUTURO_PUBLICADA' && jogo.convocatoriaId && (
+          <TouchableOpacity 
+            style={styles.btnDourado} 
+            onPress={() => downloadPdf(jogo.convocatoriaId!)}
+          >
+            <ClipboardList size={18} color="#000000" style={{ marginRight: 8 }} />
+            <Text style={styles.btnDouradoText}>Descarregar PDF</Text>
+          </TouchableOpacity>
         )}
 
         {s === 'PASSADO_FICHA_PENDENTE' && (

@@ -56,11 +56,58 @@ export interface RubricaFinanceiraCFO {
   taxaLiq: number;
 }
 
+export interface CfoResumoFinanceiro {
+  clube: { receita: number; divida: number; totalObrigacoes: number };
+  sad: { receita: number; divida: number; totalObrigacoes: number };
+  global: { receita: number; divida: number; taxaLiquidacao: number };
+}
+
+export interface CfoObrigacao {
+  id: number;
+  valor: number;
+  dataVencimento: string;
+  tipo: string;
+  estado: string;
+  entidadeJuridica: string;
+  dataPagamento: string | null;
+  encarregadoId: number | null;
+  encarregadoNome: string | null;
+  atletaId: number | null;
+  atletaNome: string | null;
+}
+
+export interface PageCfoObrigacao {
+  content: CfoObrigacao[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+}
+
 // ── Serviço Mock ──────────────────────────────────────
+
+import { useAuthStore } from '@/stores/authStore';
+import axios from 'axios';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const cfoService = {
+  getResumoFinanceiro: async (): Promise<CfoResumoFinanceiro> => {
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.get<CfoResumoFinanceiro>('http://localhost:8080/api/v1/cfo/resumo-financeiro', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data;
+  },
+
+  getObrigacoes: async (estado?: string, entidade?: string, page: number = 0, size: number = 20): Promise<PageCfoObrigacao> => {
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.get<PageCfoObrigacao>(`http://localhost:8080/api/v1/cfo/obrigacoes`, {
+      params: { estado, entidade, page, size },
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data;
+  },
+
   getFluxosUltimos: async (): Promise<FluxoCaixaCFO[]> => {
     await delay(300);
     return [

@@ -3,16 +3,23 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import { ShieldCheck, Download } from 'lucide-react-native';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ModalAuditoria } from './components/CeoModals';
-import { ceoService, AuditoriaEvento } from '@/services/ceoService';
+import { adminService, AuditLogEntry } from '@/services/adminService';
 import { Colors } from '@/constants/colors';
 
 export function AuditoriaCEOScreen(): React.JSX.Element {
-  const [eventos, setEventos] = useState<AuditoriaEvento[]>([]);
-  const [eventoSelecionado, setEventoSelecionado] = useState<AuditoriaEvento | null>(null);
+  const [eventos, setEventos] = useState<AuditLogEntry[]>([]);
+  const [eventoSelecionado, setEventoSelecionado] = useState<AuditLogEntry | null>(null);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   useEffect(() => {
-    ceoService.getAuditoria().then(setEventos);
-  }, []);
+    adminService.getAuditoria(page, 10).then(res => {
+      setEventos(res.content);
+      setTotalPages(res.totalPages);
+      setTotalElements(res.totalElements);
+    });
+  }, [page]);
 
   return (
     <View style={styles.container}>
@@ -62,30 +69,29 @@ export function AuditoriaCEOScreen(): React.JSX.Element {
               // Lógica de cor do badge
               let badgeBg = '#F1F5F9';
               let badgeColor = '#64748B';
-              if (e.acao.includes('SEGURANÇA') || e.acao.includes('BLOQUEAR')) {
+              if (e.acao.includes('BLOQUEAR') || e.acao.includes('REVOGAR') || e.acao.includes('ELIMINAR')) {
                  badgeBg = '#FEE2E2'; badgeColor = '#991B1B';
-              } else if (e.acao.includes('CRIAÇÃO')) {
+              } else if (e.acao.startsWith('CREATE_')) {
                  badgeBg = '#ECFDF5'; badgeColor = '#047857';
-              } else if (e.acao.includes('EDIÇÃO') || e.acao.includes('LIQUIDAÇÃO') || e.acao.includes('GERAÇÃO')) {
+              } else if (e.acao.startsWith('UPDATE_') || e.acao.startsWith('EDITAR_')) {
                  badgeBg = '#EFF6FF'; badgeColor = '#1D4ED8';
-              } else if (e.acao.includes('VALIDAÇÃO') || e.acao.includes('CLÍNICA')) {
+              } else if (e.acao.includes('LOGIN')) {
                  badgeBg = '#FFFBEB'; badgeColor = '#B45309';
               }
 
               return (
                  <View key={e.id} style={styles.tableRow}>
-                    <Text style={[styles.td, { flex: 1.5 }]}>{e.dataHora}</Text>
+                    <Text style={[styles.td, { flex: 1.5 }]}>{e.timestamp}</Text>
                     <View style={{ flex: 2 }}>
                        <Text style={[styles.td, { fontWeight: '600' }]}>{e.ator}</Text>
-                       <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>{e.role}</Text>
                     </View>
                     <View style={{ flex: 2, alignItems: 'flex-start' }}>
                        <View style={[styles.badgeAcao, { backgroundColor: badgeBg }]}>
                           <Text style={[styles.badgeAcaoText, { color: badgeColor }]}>{e.acao}</Text>
                        </View>
                     </View>
-                    <Text style={[styles.td, { flex: 1.5 }]}>{e.modulo}</Text>
-                    <Text style={[styles.td, { flex: 1.5, fontFamily: 'monospace', color: Colors.GRAY_500_TEXTO2 }]}>{e.ip}</Text>
+                    <Text style={[styles.td, { flex: 1.5 }]}>{e.entidade}</Text>
+                    <Text style={[styles.td, { flex: 1.5, fontFamily: 'monospace', color: Colors.GRAY_500_TEXTO2 }]}>{e.ipAddress}</Text>
                     <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
                        <TouchableOpacity style={styles.btnDetalhe} onPress={() => setEventoSelecionado(e)}>
                           <Text style={styles.btnDetalheText}>Ver Detalhe</Text>
@@ -95,7 +101,37 @@ export function AuditoriaCEOScreen(): React.JSX.Element {
               );
            })}
            <View style={styles.tableFooter}>
-              <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>A mostrar 1–3 de 158 eventos</Text>
+              <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2 }}>
+                 A mostrar {page * 10 + 1}–{Math.min((page + 1) * 10, totalElements)} de {totalElements} eventos
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 16 }}>
+                 <TouchableOpacity
+                    onPress={() => setPage(p => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: page === 0 ? '#E5E7EB' : '#1B2B5E',
+                      opacity: page === 0 ? 0.5 : 1,
+                    }}
+                 >
+                    <Text style={{ color: page === 0 ? '#9CA3AF' : '#FFFFFF', fontWeight: '600' }}>← Anterior</Text>
+                 </TouchableOpacity>
+                 <TouchableOpacity
+                    onPress={() => setPage(p => p + 1)}
+                    disabled={page >= totalPages - 1}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: page >= totalPages - 1 ? '#E5E7EB' : '#1B2B5E',
+                      opacity: page >= totalPages - 1 ? 0.5 : 1,
+                    }}
+                 >
+                    <Text style={{ color: page >= totalPages - 1 ? '#9CA3AF' : '#FFFFFF', fontWeight: '600' }}>Próxima →</Text>
+                 </TouchableOpacity>
+              </View>
            </View>
         </View>
 
@@ -129,5 +165,5 @@ const styles = StyleSheet.create({
   badgeAcaoText: { fontSize: 11, fontWeight: '600' },
   btnDetalhe: { borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   btnDetalheText: { fontSize: 12, fontWeight: '500', color: Colors.GRAY_900_TEXTO1 },
-  tableFooter: { padding: 12, backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: '#E2E8F0' }
+  tableFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: '#E2E8F0' }
 });

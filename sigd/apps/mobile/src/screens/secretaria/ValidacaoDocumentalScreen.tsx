@@ -1,14 +1,299 @@
-import React from 'react';
-import { FileCheck } from 'lucide-react-native';
-import { PlaceholderScreen } from '../../components/ui/PlaceholderScreen';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+} from 'react-native';
+import { FileCheck, Search, CheckCircle, AlertTriangle, XCircle, User } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
+import { secretariaService, AtletaResponse } from '../../services/secretariaService';
+import { useQuery } from '@tanstack/react-query';
+import { PageHeader } from '../../components/ui/PageHeader';
+
+// ── Tipos de estado documental ──────────────────────────
+
+type EstadoDocumental = 'COMPLETO' | 'INCOMPLETO' | 'EM_FALTA';
+
+function calcularEstadoDocumental(atleta: AtletaResponse): EstadoDocumental {
+  if (atleta.estadoElegibilidade === 'PENDENTE_EMD') return 'EM_FALTA';
+  if (atleta.numeroSocio) return 'COMPLETO';
+  return 'INCOMPLETO';
+}
+
+function getBadgeConfig(estado: EstadoDocumental) {
+  switch (estado) {
+    case 'COMPLETO':
+      return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', label: 'Completo' };
+    case 'INCOMPLETO':
+      return { bg: '#FEF3C7', text: '#B45309', border: '#FDE68A', label: 'Incompleto' };
+    case 'EM_FALTA':
+      return { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA', label: 'Em Falta' };
+  }
+}
+
+// ── Componente ──────────────────────────────────────────
 
 export function ValidacaoDocumentalScreen(): React.JSX.Element {
+  const [pesquisa, setPesquisa] = useState('');
+
+  const { data: pageData, isLoading, isError } = useQuery({
+    queryKey: ['atletasValidacao'],
+    queryFn: () => secretariaService.getAtletas(undefined, undefined, 0, 200),
+  });
+
+  const atletas = pageData?.content ?? [];
+
+  const atletasFiltrados = pesquisa.trim()
+    ? atletas.filter(a =>
+        a.nomeCompleto.toLowerCase().includes(pesquisa.toLowerCase())
+      )
+    : atletas;
+
+  // Contadores para o resumo
+  const completos = atletas.filter(a => calcularEstadoDocumental(a) === 'COMPLETO').length;
+  const incompletos = atletas.filter(a => calcularEstadoDocumental(a) === 'INCOMPLETO').length;
+  const emFalta = atletas.filter(a => calcularEstadoDocumental(a) === 'EM_FALTA').length;
+
+  const handleMarcarValidado = (atleta: AtletaResponse) => {
+    Alert.alert(
+      'Confirmar Validação',
+      `Confirmar que a documentação de ${atleta.nomeCompleto} está validada?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: () =>
+            Alert.alert('Sucesso', 'Documentação validada com sucesso.'),
+        },
+      ]
+    );
+  };
+
   return (
-    <PlaceholderScreen
-      title="Validação Documental"
-      subtitle="Fila de aprovação de documentos civis e EMDs."
-      icon={<FileCheck size={64} color={Colors.GRAY_200_BORDAS} />}
-    />
+    <View style={styles.container}>
+      <PageHeader
+        title="Validação Documental"
+        breadcrumbs={[{ label: 'Secretaria' }, { label: 'Validação Documental' }]}
+      />
+
+      {/* Resumo por estado */}
+      <View style={styles.summaryRow}>
+        <View style={[styles.summaryCard, { borderColor: '#A7F3D0' }]}>
+          <CheckCircle size={20} color="#047857" />
+          <Text style={[styles.summaryCount, { color: '#047857' }]}>{completos}</Text>
+          <Text style={styles.summaryLabel}>Completos</Text>
+        </View>
+        <View style={[styles.summaryCard, { borderColor: '#FDE68A' }]}>
+          <AlertTriangle size={20} color="#B45309" />
+          <Text style={[styles.summaryCount, { color: '#B45309' }]}>{incompletos}</Text>
+          <Text style={styles.summaryLabel}>Incompletos</Text>
+        </View>
+        <View style={[styles.summaryCard, { borderColor: '#FECACA' }]}>
+          <XCircle size={20} color="#991B1B" />
+          <Text style={[styles.summaryCount, { color: '#991B1B' }]}>{emFalta}</Text>
+          <Text style={styles.summaryLabel}>Em Falta</Text>
+        </View>
+      </View>
+
+      {/* Pesquisa */}
+      <View style={styles.searchWrapper}>
+        <Search size={18} color={Colors.GRAY_500_TEXTO2} style={{ marginLeft: 12 }} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Pesquisar atleta por nome..."
+          value={pesquisa}
+          onChangeText={setPesquisa}
+        />
+      </View>
+
+      {/* Lista */}
+      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+        {isLoading ? (
+          <ActivityIndicator size="large" color={Colors.GRAY_900_TEXTO1} style={{ marginTop: 48 }} />
+        ) : isError ? (
+          <View style={styles.emptyState}>
+            <XCircle size={48} color={Colors.GRAY_200_BORDAS} />
+            <Text style={styles.emptyTitle}>Erro ao carregar atletas</Text>
+          </View>
+        ) : atletasFiltrados.length === 0 ? (
+          <View style={styles.emptyState}>
+            <FileCheck size={48} color={Colors.GRAY_200_BORDAS} />
+            <Text style={styles.emptyTitle}>Nenhum atleta encontrado</Text>
+            <Text style={styles.emptySubtitle}>Experimente ajustar a pesquisa.</Text>
+          </View>
+        ) : (
+          atletasFiltrados.map(atleta => {
+            const estado = calcularEstadoDocumental(atleta);
+            const badge = getBadgeConfig(estado);
+
+            return (
+              <View key={atleta.id} style={styles.card}>
+                {/* Cabeçalho do card */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.avatarMini}>
+                    <User size={16} color={Colors.GRAY_500_TEXTO2} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.atletaNome}>{atleta.nomeCompleto}</Text>
+                    <Text style={styles.atletaMeta}>
+                      {atleta.equipaNome ?? 'Sem equipa'}
+                      {atleta.numeroSocio ? ` · Sócio nº ${atleta.numeroSocio}` : ' · Sem nº de sócio'}
+                    </Text>
+                  </View>
+                  <View style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
+                    <Text style={[styles.badgeText, { color: badge.text }]}>{badge.label}</Text>
+                  </View>
+                </View>
+
+                {/* Documentos esperados */}
+                <View style={styles.docsRow}>
+                  <DocItem label="Cartão de Cidadão" ok={!!atleta.nif} />
+                  <DocItem label="Fotografia" ok={!!atleta.numeroSocio} />
+                  <DocItem label="Comprovativo Morada" ok={estado === 'COMPLETO'} />
+                </View>
+
+                {/* Rodapé */}
+                {estado !== 'COMPLETO' && (
+                  <TouchableOpacity
+                    style={styles.btnValidar}
+                    onPress={() => handleMarcarValidado(atleta)}
+                  >
+                    <CheckCircle size={16} color={Colors.BRANCO} />
+                    <Text style={styles.btnValidarText}>Marcar como Validado</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+    </View>
   );
 }
+
+// ── Sub-componente: item de documento ───────────────────
+
+function DocItem({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <View style={docItemStyles.row}>
+      {ok ? (
+        <CheckCircle size={14} color="#047857" />
+      ) : (
+        <XCircle size={14} color="#991B1B" />
+      )}
+      <Text style={[docItemStyles.label, { color: ok ? '#047857' : '#991B1B' }]}>{label}</Text>
+    </View>
+  );
+}
+
+const docItemStyles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 16 },
+  label: { fontSize: 12, fontWeight: '500' },
+});
+
+// ── Estilos ─────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.GRAY_50_FUNDO },
+
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: Colors.BRANCO,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.GRAY_200_BORDAS,
+  },
+  summaryCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+    backgroundColor: Colors.GRAY_50_FUNDO,
+  },
+  summaryCount: { fontSize: 22, fontWeight: '700' },
+  summaryLabel: { fontSize: 11, color: Colors.GRAY_500_TEXTO2, fontWeight: '500' },
+
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 16,
+    backgroundColor: Colors.BRANCO,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+  },
+  searchInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 15,
+    color: Colors.GRAY_900_TEXTO1,
+    outlineStyle: 'none' as any,
+  },
+
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 80 },
+
+  card: {
+    backgroundColor: Colors.BRANCO,
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+  },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  avatarMini: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  atletaNome: { fontSize: 15, fontWeight: '700', color: Colors.GRAY_900_TEXTO1 },
+  atletaMeta: { fontSize: 13, color: Colors.GRAY_500_TEXTO2, marginTop: 2 },
+
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginLeft: 8,
+    alignSelf: 'flex-start',
+  },
+  badgeText: { fontSize: 11, fontWeight: '700' },
+
+  docsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.GRAY_200_BORDAS,
+    marginBottom: 12,
+  },
+
+  btnValidar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1B2B5E',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  btnValidarText: { color: Colors.BRANCO, fontWeight: '600', fontSize: 14 },
+
+  emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 64 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: Colors.GRAY_900_TEXTO1, marginTop: 16 },
+  emptySubtitle: { fontSize: 14, color: Colors.GRAY_500_TEXTO2, marginTop: 8 },
+});

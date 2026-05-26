@@ -60,6 +60,7 @@ export interface EventoTreinador {
   quadroCompetitivo?: string;
   casaFora?: 'Casa' | 'Fora' | 'Neutro';
   convocados?: number;
+  convocatoriaId?: number;
 }
 
 export interface RegistoChamada {
@@ -110,10 +111,15 @@ export const treinadorService = {
    * Obtém o plantel de uma equipa com dados consolidados.
    */
   async getPlantel(equipaId: number): Promise<AtletaPlantel[]> {
-    const { data } = await api.get<any>('/tesouraria/atletas', {
-      params: { equipaId, size: 1000 },
-    });
-    const atletas = data.content || [];
+    const [atletasRes, semaforoRes] = await Promise.all([
+      api.get<any>('/tesouraria/atletas', { params: { equipaId, size: 1000 } }),
+      api.get<SemaforoAtletaDTO[]>(`/treinador/plantel/${equipaId}/semaforo`).catch(() => ({ data: [] }))
+    ]);
+    
+    const atletas = atletasRes.data.content || [];
+    const semaforos = semaforoRes.data || [];
+    const semaforoMap = new Map(semaforos.map(s => [s.atletaId, s]));
+
     return atletas.map((a: any) => {
       let idade = 0;
       if (a.dataNascimento) {
@@ -125,12 +131,23 @@ export const treinadorService = {
           idade--;
         }
       }
+      
+      let mappedSemaforo = 'APTO';
+      const s = semaforoMap.get(a.id);
+      if (s) {
+          if (s.semaforo === 'VERMELHO' || s.semaforo === 'BLOQUEADO') {
+              mappedSemaforo = (s.motivo || '').includes('EMD') ? 'INAPTO_EMD' : 'INAPTO_LESAO';
+          } else if (s.semaforo === 'AMARELO') {
+              mappedSemaforo = 'CONDICIONADO';
+          }
+      }
+
       return {
         id: a.id,
         nome: a.nomeCompleto,
         posicao: a.posicao || '-',
         idade,
-        semaforo: 'APTO',
+        semaforo: mappedSemaforo as SemaforoClinico,
         assiduidade: null,
         mediaAvaliacao: null,
         minutosEpoca: null,
@@ -175,6 +192,7 @@ export const treinadorService = {
         equipaNome: e.equipaNome,
         adversario: e.adversario,
         subEstadoJogo: (e.temConvocatoria ? 'FUTURO_PUBLICADA' : 'FUTURO_SEM_CONVOCATORIA') as SubEstadoJogo,
+        convocatoriaId: e.convocatoriaId,
       }));
       
     const sessoesHoje = sessoesRes.data
@@ -223,6 +241,7 @@ export const treinadorService = {
           equipaNome: e.equipaNome,
           adversario: e.adversario,
           subEstadoJogo: (isPast ? 'PASSADO_FICHA_PENDENTE' : (e.temConvocatoria ? 'FUTURO_PUBLICADA' : 'FUTURO_SEM_CONVOCATORIA')) as SubEstadoJogo,
+          convocatoriaId: e.convocatoriaId,
         };
       });
   },
@@ -284,5 +303,9 @@ export const treinadorService = {
     // Ainda não há endpoint backend implementado para ficha de jogo
     console.log(`Ficha de Jogo submetida para evento ${eventoId}`, titulares, suplentes, eventosMatch);
     return true;
+  },
+
+  downloadConvocatoriaPdf(convocatoriaId: number) {
+    window.open(`http://localhost:8080/api/v1/treinador/convocatorias/${convocatoriaId}/pdf`, '_blank');
   }
 };

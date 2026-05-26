@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import { useAuthStore } from '@/stores/authStore';
 export interface AlertaEstrategico {
   id: string;
   texto: string;
@@ -62,6 +62,17 @@ export interface AuditoriaEvento {
   rawJson: string;
 }
 
+export interface CeoKpisDTO {
+  totalAtletas: number;
+  totalEquipas: number;
+  totalSocios: number;
+  receitaTotal: number;
+  dividaTotal: number;
+  atletasAptos: number;
+  atletasCondicionados: number;
+  atletasInaptos: number;
+}
+
 const mockAlertas: AlertaEstrategico[] = [
   { id: '1', texto: '3 escalões com fichas de jogo em incumprimento', severidade: 'Crítico' },
   { id: '2', texto: 'Taxa de regularidade de sócios desceu 8% este mês', severidade: 'Aviso' },
@@ -69,28 +80,59 @@ const mockAlertas: AlertaEstrategico[] = [
 ];
 
 export const ceoService = {
+  getKpis: async (): Promise<CeoKpisDTO> => {
+    // We add the authorization headers
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.get<CeoKpisDTO>('http://localhost:8080/api/v1/ceo/kpis', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data;
+  },
+
   getAlertas: async (periodo: string): Promise<AlertaEstrategico[]> => {
     return new Promise(resolve => setTimeout(() => resolve(mockAlertas), 300));
   },
   
   getKpiReceitaTotal: async (periodo: string): Promise<KpiCardData> => {
-    return new Promise(resolve => setTimeout(() => resolve({
-      valorOriginal: 1240500,
-      valorFormatado: '1.240.500,00 €',
-      variacaoTexto: '+12,3% vs. época anterior',
-      variacaoPositiva: true,
-      subtexto: 'Época 2025/2026'
-    }), 300));
+    try {
+      const data = await ceoService.getKpis();
+      return {
+        valorOriginal: data.receitaTotal,
+        valorFormatado: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(data.receitaTotal),
+        variacaoTexto: '+12,3% vs. época anterior',
+        variacaoPositiva: true,
+        subtexto: 'Época 2025/2026'
+      };
+    } catch {
+      return {
+        valorOriginal: 1240500,
+        valorFormatado: '1.240.500,00 €',
+        variacaoTexto: '+12,3% vs. época anterior',
+        variacaoPositiva: true,
+        subtexto: 'Época 2025/2026'
+      };
+    }
   },
 
   getKpiPassivoPendente: async (periodo: string): Promise<KpiCardData> => {
-    return new Promise(resolve => setTimeout(() => resolve({
-      valorOriginal: 45200,
-      valorFormatado: '45.200,00 €',
-      variacaoTexto: '-8,2% vs. mês anterior',
-      variacaoPositiva: true, // Redução de passivo = positivo
-      subtexto: '230 mensalidades em atraso'
-    }), 300));
+    try {
+      const data = await ceoService.getKpis();
+      return {
+        valorOriginal: data.dividaTotal,
+        valorFormatado: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(data.dividaTotal),
+        variacaoTexto: '-8,2% vs. mês anterior',
+        variacaoPositiva: true,
+        subtexto: 'Pagamentos em atraso'
+      };
+    } catch {
+      return {
+        valorOriginal: 45200,
+        valorFormatado: '45.200,00 €',
+        variacaoTexto: '-8,2% vs. mês anterior',
+        variacaoPositiva: true,
+        subtexto: '230 mensalidades em atraso'
+      };
+    }
   },
 
   getDemografia: async (escalaoFiltro?: string): Promise<DemografiaEscalao[]> => {

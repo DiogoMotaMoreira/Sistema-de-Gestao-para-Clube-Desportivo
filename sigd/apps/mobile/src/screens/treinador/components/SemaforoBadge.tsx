@@ -19,10 +19,10 @@ export function SemaforoBadge({ estado, size = 'md' }: Props) {
       config = { bg: '#FFFBEB', text: '#B45309', label: 'Condicionado', icon: AlertTriangle };
       break;
     case 'INAPTO_LESAO':
-      config = { bg: '#FEE2E2', text: '#991B1B', label: 'Inapto — Clínico', icon: XCircle };
+      config = { bg: '#FEE2E2', text: '#991B1B', label: 'Baixa Médica', icon: XCircle };
       break;
     case 'INAPTO_EMD':
-      config = { bg: '#FEF3C7', text: '#92400E', label: 'Inapto — Documental', icon: Clock };
+      config = { bg: '#FEE2E2', text: '#991B1B', label: 'EMD em falta', icon: XCircle };
       break;
   }
 

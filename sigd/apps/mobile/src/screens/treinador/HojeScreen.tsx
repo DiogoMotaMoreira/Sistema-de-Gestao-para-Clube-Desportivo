@@ -43,7 +43,7 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
     }
   }, [activeEquipa]);
 
-  const temConvocatoriaPendente = eventos.some(e => e.tipo === 'JOGO' && (e.subEstadoJogo === 'FUTURO_SEM_CONVOCATORIA' || e.subEstadoJogo === 'FUTURO_RASCUNHO'));
+  const eventoPendente = eventos.find(e => e.tipo === 'JOGO' && (e.subEstadoJogo === 'FUTURO_SEM_CONVOCATORIA' || e.subEstadoJogo === 'FUTURO_RASCUNHO'));
 
   const handleTreinoAction = (evento: EventoTreinador) => {
     if (evento.subEstadoTreino === 'CHAMADA_PENDENTE' || evento.subEstadoTreino === 'CHAMADA_CURSO') {
@@ -142,12 +142,12 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
       </ScrollView>
 
       {/* Alerta Persistente */}
-      {temConvocatoriaPendente && (
+      {eventoPendente && (
         <TouchableOpacity style={styles.alertaConvocatoria} onPress={() => navigation.navigate('Jogos')}>
           <AlertTriangle size={16} color="#B45309" />
           <View style={styles.alertaContent}>
             <Text style={styles.alertaTitle}>Convocatória por publicar</Text>
-            <Text style={styles.alertaSubTitle}>FC Rival — Sábado às 15:00</Text>
+            <Text style={styles.alertaSubTitle}>{eventoPendente.adversario || 'Adversário por definir'} — Hoje às {eventoPendente.hora || 'por definir'}</Text>
           </View>
           <ChevronRight size={16} color="#B45309" />
         </TouchableOpacity>
@@ -159,7 +159,6 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
           <View style={styles.emptyState}>
             <CalendarCheck size={48} color={Colors.GRAY_200_BORDAS} />
             <Text style={styles.emptyTitle}>Sem eventos para hoje</Text>
-            <Text style={styles.emptySub}>Próximo evento: Jogo — Sábado, 15/06</Text>
           </View>
         ) : (
           eventos.map(renderEventCard)

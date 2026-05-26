@@ -29,6 +29,7 @@ public class EventoDesportivoDTO {
             String adversario,
             String local,
             EstadoEvento estado,
-            Boolean temConvocatoria
+            Boolean temConvocatoria,
+            Long convocatoriaId
     ) {}
 }

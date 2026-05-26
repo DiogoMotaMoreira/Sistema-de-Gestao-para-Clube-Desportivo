@@ -143,6 +143,14 @@ export const clinicaService = {
   },
 
   /**
+   * Obtém todas as ocorrências ativas (para o MonitorizacaoScreen).
+   */
+  async getOcorrenciasAtivas(): Promise<OcorrenciaResponse[]> {
+    const { data } = await api.get<OcorrenciaResponse[]>('/ocorrencias/ativas');
+    return data;
+  },
+
+  /**
    * Regista uma nova ocorrência clínica.
    */
   async registarOcorrencia(payload: OcorrenciaRequest): Promise<OcorrenciaResponse> {

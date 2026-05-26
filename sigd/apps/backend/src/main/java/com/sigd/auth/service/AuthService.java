@@ -24,6 +24,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
+    private static final java.util.Map<String, Integer> tentativasFalhadas = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Map<String, java.time.LocalDateTime> bloqueadoAte = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final UtilizadorRepository utilizadorRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
@@ -46,8 +49,21 @@ public class AuthService {
      * @throws IllegalStateException se a conta está desativada
      */
     public LoginResponse login(LoginRequest request) {
+        String username = request.username();
+
+        // 0. Verificar se username está bloqueado
+        if (bloqueadoAte.containsKey(username)) {
+            java.time.LocalDateTime limit = bloqueadoAte.get(username);
+            if (java.time.LocalDateTime.now().isBefore(limit)) {
+                throw new IllegalStateException("Conta bloqueada por 15 minutos");
+            } else {
+                bloqueadoAte.remove(username);
+                tentativasFalhadas.remove(username);
+            }
+        }
+
         // 1. Buscar utilizador pelo username
-        Utilizador user = utilizadorRepository.findByUsername(request.username())
+        Utilizador user = utilizadorRepository.findByUsername(username)
                 .orElseThrow(() -> new BadCredentialsException("Credenciais inválidas"));
 
         // 2. Verificar se a conta está ativa
@@ -57,8 +73,18 @@ public class AuthService {
 
         // 3. Validar password com BCrypt
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Credenciais inválidas");
+            int attempts = tentativasFalhadas.getOrDefault(username, 0) + 1;
+            tentativasFalhadas.put(username, attempts);
+            if (attempts >= 5) {
+                bloqueadoAte.put(username, java.time.LocalDateTime.now().plusMinutes(15));
+                throw new BadCredentialsException("Credenciais inválidas (5/5 tentativas)");
+            }
+            throw new BadCredentialsException("Credenciais inválidas (" + attempts + "/5 tentativas)");
         }
+
+        // Sucesso: limpar tentativas e bloqueios
+        tentativasFalhadas.remove(username);
+        bloqueadoAte.remove(username);
 
         // 4. Gerar tokens
         String accessToken = jwtService.generateAccessToken(user);

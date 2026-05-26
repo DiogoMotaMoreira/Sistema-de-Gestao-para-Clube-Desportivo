@@ -122,6 +122,16 @@ public class OcorrenciaService {
     }
 
     /**
+     * Lista todas as ocorrências ativas no sistema.
+     */
+    @Transactional(readOnly = true)
+    public List<OcorrenciaDTO.Response> listarOcorrenciasAtivas() {
+        return ocorrenciaRepo.findByEstado(EstadoOcorrencia.ATIVA).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
      * Regista a deliberação EMD sobre uma ocorrência.
      *
      * Atualiza o grau de restrição final, muda o estadoEMD para DELIBERADO,

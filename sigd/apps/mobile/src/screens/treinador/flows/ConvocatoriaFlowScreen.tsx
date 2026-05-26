@@ -1,52 +1,171 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { treinadorService, AtletaPlantel } from '@/services/treinadorService';
 import { SemaforoBadge } from '../components/SemaforoBadge';
-import { ChevronRight, Check } from 'lucide-react-native';
+import { ChevronRight, ChevronLeft, Check, AlertTriangle } from 'lucide-react-native';
 
 export function ConvocatoriaFlowScreen({ route, navigation }: any): React.JSX.Element {
-  const { eventoId } = route.params;
+  console.log('ConvocatoriaFlow params:', route?.params);
+  const eventoId = route?.params?.eventoId ?? null;
+  const equipaId = route?.params?.equipaId ?? null;
+  
+  const [step, setStep] = useState<1 | 2>(1);
   const [plantel, setPlantel] = useState<AtletaPlantel[]>([]);
   const [selecionados, setSelecionados] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  const [horaConcentracao, setHoraConcentracao] = useState('14:00');
+  const [localConcentracao, setLocalConcentracao] = useState('');
   
   const TETO = 18;
 
   useEffect(() => {
     navigation.setOptions({ title: 'Convocatória' });
-    treinadorService.getPlantel(1).then(setPlantel);
-  }, [navigation]);
+    if (!eventoId || !equipaId) {
+       setErrorMsg('Erro: parâmetros em falta.');
+       setIsLoading(false);
+       return;
+    }
+    
+    treinadorService.getPlantel(equipaId)
+      .then(data => {
+         setPlantel(data);
+      })
+      .catch(e => {
+         console.error('Erro ao carregar plantel', e);
+         setErrorMsg('Não foi possível carregar o plantel.');
+      })
+      .finally(() => {
+         setIsLoading(false);
+      });
+  }, [navigation, eventoId]);
 
-  const toggleAtleta = (id: number) => {
+  const toggleAtleta = (atleta: AtletaPlantel) => {
+    const semaforo = atleta.semaforo ?? 'APTO';
+    
+    if (semaforo.startsWith('INAPTO') || (semaforo as string) === 'BLOQUEADO' || (semaforo as string) === 'PENDENTE_EMD') {
+      return;
+    }
+    
+    if (semaforo === 'CONDICIONADO') {
+      Alert.alert(
+        'Atleta Condicionado',
+        `${atleta.nome} tem restrições médicas. Confirmas a convocatória?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Confirmar', onPress: () => {
+            setSelecionados(prev => {
+              const next = new Set(prev);
+              if (next.has(atleta.id)) next.delete(atleta.id);
+              else {
+                if (next.size < TETO) next.add(atleta.id);
+              }
+              return Array.from(next);
+            });
+          }}
+        ]
+      );
+      return;
+    }
+    
     setSelecionados(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(x => x !== id);
-      } else {
-        if (prev.length >= TETO) return prev;
-        return [...prev, id];
+      const next = new Set(prev);
+      if (next.has(atleta.id)) next.delete(atleta.id);
+      else {
+        if (next.size < TETO) next.add(atleta.id);
       }
+      return Array.from(next);
     });
   };
 
   const isLimitReached = selecionados.length >= TETO;
 
-  const handleConfirmar = () => {
-    // Na realidade abriria Bottom Sheet de logística (Local, Hora).
-    // Para simplificar no mock transacional:
-    Alert.alert('Detalhes Logísticos', 'Confirma a publicação desta convocatória?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Publicar', onPress: async () => {
-         await treinadorService.guardarConvocatoria(eventoId, selecionados, true, 'Balneários', '14:00');
-         navigation.navigate('Jogos');
-      } }
-    ]);
+  const handlePublicar = async () => {
+     try {
+       setIsLoading(true);
+       await treinadorService.guardarConvocatoria(eventoId, selecionados, true, localConcentracao || 'Balneários', horaConcentracao || '14:00');
+       Alert.alert('Sucesso', 'Convocatória publicada!');
+       navigation.goBack();
+     } catch (e) {
+       console.error('Erro ao guardar convocatória', e);
+       Alert.alert('Erro', 'Ocorreu um erro ao guardar a convocatória.');
+     } finally {
+       setIsLoading(false);
+     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+         <ActivityIndicator size="large" color="#0F172A" />
+      </View>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+         <AlertTriangle size={48} color="#991B1B" style={{ marginBottom: 16 }} />
+         <Text style={{ fontSize: 16, color: '#991B1B', textAlign: 'center' }}>{errorMsg}</Text>
+      </View>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.contextBar}>
+          <Text style={styles.contextText}>Logística</Text>
+        </View>
+
+        <View style={{ padding: 16 }}>
+          <Text style={styles.label}>Hora de concentração</Text>
+          <TextInput 
+            style={styles.input} 
+            value={horaConcentracao}
+            onChangeText={setHoraConcentracao}
+            placeholder="HH:MM"
+          />
+          
+          <Text style={[styles.label, { marginTop: 16 }]}>Local de concentração</Text>
+          <TextInput 
+            style={styles.input} 
+            value={localConcentracao}
+            onChangeText={setLocalConcentracao}
+            placeholder="Ex: Balneário Principal"
+          />
+        </View>
+
+        <View style={styles.footer}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity 
+              style={[styles.btnSecundario, { flex: 1 }]} 
+              onPress={() => setStep(1)}
+            >
+              <ChevronLeft size={18} color={Colors.GRAY_900_TEXTO1} />
+              <Text style={styles.btnSecundarioText}>Voltar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.btnDourado, { flex: 2 }]} 
+              onPress={handlePublicar}
+            >
+              <Text style={styles.btnDouradoText}>Publicar Convocatória</Text>
+              <Check size={18} color="#000000" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       {/* Barra Contexto */}
       <View style={styles.contextBar}>
-        <Text style={styles.contextText}>FC Rival · Sábado 15:00</Text>
+        <Text style={styles.contextText}>Nova Convocatória</Text>
       </View>
 
       {/* Contador */}
@@ -59,7 +178,7 @@ export function ConvocatoriaFlowScreen({ route, navigation }: any): React.JSX.El
       <ScrollView style={styles.list} contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
         {plantel.map(atleta => {
           const isSelected = selecionados.includes(atleta.id);
-          const isInapto = atleta.semaforo.startsWith('INAPTO');
+          const isInapto = atleta.semaforo !== 'APTO' && !atleta.semaforo.startsWith('CONDICIONADO');
 
           if (isInapto) {
             return (
@@ -78,7 +197,7 @@ export function ConvocatoriaFlowScreen({ route, navigation }: any): React.JSX.El
             <TouchableOpacity 
               key={atleta.id} 
               style={[styles.card, isSelected && styles.cardSelected]}
-              onPress={() => toggleAtleta(atleta.id)}
+              onPress={() => toggleAtleta(atleta)}
             >
                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                  {isSelected && <Check size={16} color="#000000" />}
@@ -101,9 +220,9 @@ export function ConvocatoriaFlowScreen({ route, navigation }: any): React.JSX.El
         <TouchableOpacity 
           style={[styles.btnDourado, selecionados.length === 0 && { opacity: 0.5 }]} 
           disabled={selecionados.length === 0}
-          onPress={handleConfirmar}
+          onPress={() => setStep(2)}
         >
-          <Text style={styles.btnDouradoText}>Confirmar Seleção</Text>
+          <Text style={styles.btnDouradoText}>Continuar</Text>
           <ChevronRight size={18} color="#000000" />
         </TouchableOpacity>
       </View>
@@ -215,4 +334,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
+  label: { fontSize: 13, color: Colors.GRAY_900_TEXTO1, fontWeight: '600', marginBottom: 8 },
+  input: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 8, padding: 12, fontSize: 15 },
+  btnSecundario: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', 
+    backgroundColor: '#F1F5F9', height: 52, borderRadius: 12, gap: 8
+  },
+  btnSecundarioText: { fontSize: 15, fontWeight: '600', color: Colors.GRAY_900_TEXTO1 }
 });

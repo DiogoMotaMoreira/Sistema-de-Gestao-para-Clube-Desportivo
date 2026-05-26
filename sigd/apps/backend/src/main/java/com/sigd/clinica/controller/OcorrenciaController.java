@@ -55,7 +55,7 @@ public class OcorrenciaController {
      * Requer ROLE_MEDICO.
      */
     @GetMapping("/fila-emd")
-    @PreAuthorize("hasAnyRole('ROLE_MEDICO', 'ROLE_DIRETOR_TECNICO')")
+    @PreAuthorize("hasAnyRole('ROLE_MEDICO', 'ROLE_SECRETARIA', 'ROLE_DIRETOR_TECNICO')")
     public ResponseEntity<Page<FilaEMDDTO>> listarFilaEMD(Pageable pageable) {
         return ResponseEntity.ok(ocorrenciaService.listarFilaEMD(pageable));
     }
@@ -69,6 +69,17 @@ public class OcorrenciaController {
     @PreAuthorize("hasAnyRole('ROLE_MEDICO', 'ROLE_DIRETOR_TECNICO')")
     public ResponseEntity<List<OcorrenciaDTO.Response>> listarPorAtleta(@PathVariable Long id) {
         return ResponseEntity.ok(ocorrenciaService.listarPorAtleta(id));
+    }
+
+    /**
+     * GET /api/v1/clinica/ocorrencias/ativas
+     *
+     * Lista todas as ocorrências com estado ATIVA. Requer ROLE_MEDICO ou DIRETOR_TECNICO.
+     */
+    @GetMapping("/ocorrencias/ativas")
+    @PreAuthorize("hasAnyRole('ROLE_MEDICO', 'ROLE_DIRETOR_TECNICO')")
+    public ResponseEntity<List<OcorrenciaDTO.Response>> listarOcorrenciasAtivas() {
+        return ResponseEntity.ok(ocorrenciaService.listarOcorrenciasAtivas());
     }
 
     /**

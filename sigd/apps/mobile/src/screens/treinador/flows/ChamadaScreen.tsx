@@ -90,21 +90,28 @@ export function ChamadaScreen({ route, navigation }: any): React.JSX.Element {
           const isInapto = atleta.semaforo.startsWith('INAPTO');
           
           if (isInapto) {
+            const isEmd = atleta.semaforo === 'INAPTO_EMD';
+            const badgeLabel = isEmd ? 'EMD em Falta' : 'Baixa Médica';
+
             return (
-              <View key={atleta.id} style={[styles.card, styles.cardInapto]}>
+              <View key={atleta.id} style={[styles.card, styles.cardInapto, { backgroundColor: '#F8FAFC' }]}>
                 <View style={{ flex: 1 }}>
                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                     <Text style={styles.nome}>{atleta.nome}</Text>
+                     <View style={styles.avatarMini}><Text style={styles.avatarMiniText}>{atleta.nome.charAt(0)}</Text></View>
+                     <Text style={[styles.nome, { color: Colors.GRAY_500_TEXTO2 }]}>{atleta.nome}</Text>
                    </View>
                    <View style={{ flexDirection: 'row', marginTop: 8 }}>
-                     <SemaforoBadge estado={atleta.semaforo} size="sm" />
+                     <View style={[styles.badge, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
+                       <Ban size={10} color="#991B1B" />
+                       <Text style={[styles.badgeText, { color: '#991B1B', marginLeft: 4 }]}>{badgeLabel}</Text>
+                     </View>
                    </View>
-                   <Text style={{ fontSize: 11, color: Colors.GRAY_500_TEXTO2, fontStyle: 'italic', marginTop: 4 }}>Não pode ser registado nesta sessão</Text>
                 </View>
-                <View style={styles.chipsContainer}>
+                <View style={[styles.chipsContainer, { opacity: 0.5 }]}>
                   <View style={[styles.chip, styles.chipDisabled]}><Text style={styles.chipTextDisabled}>P</Text></View>
                   <View style={[styles.chip, styles.chipDisabled]}><Text style={styles.chipTextDisabled}>A</Text></View>
                   <View style={[styles.chip, styles.chipDisabled]}><Text style={styles.chipTextDisabled}>F</Text></View>
+                  <Lock size={16} color={Colors.GRAY_500_TEXTO2} style={{ marginLeft: 8 }} />
                 </View>
               </View>
             );
@@ -225,6 +232,18 @@ const styles = StyleSheet.create({
   posicao: {
     fontSize: 12,
     color: Colors.GRAY_500_TEXTO2,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   chipsContainer: {
     flexDirection: 'row',

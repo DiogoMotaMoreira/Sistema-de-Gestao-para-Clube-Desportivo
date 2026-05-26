@@ -15,6 +15,8 @@ public interface OcorrenciaRepository extends JpaRepository<Ocorrencia, Long> {
 
     List<Ocorrencia> findByAtletaId(Long atletaId);
 
+    List<Ocorrencia> findByEstado(EstadoOcorrencia estado);
+
     List<Ocorrencia> findByEstadoEMD(EstadoEMD estado);
 
     List<Ocorrencia> findByEstadoEMDAndEstado(EstadoEMD estadoEMD, EstadoOcorrencia estado);

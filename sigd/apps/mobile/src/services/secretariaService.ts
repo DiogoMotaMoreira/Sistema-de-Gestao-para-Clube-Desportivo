@@ -8,6 +8,7 @@
 import axios, { AxiosError } from 'axios';
 import { Endpoints } from '@/constants/endpoints';
 import { useAuthStore } from '@/stores/authStore';
+import { clinicaService, FilaEMDResponse, DeliberacaoRequest } from './clinicaService';
 
 // ── Tipos ──────────────────────────────────────────────
 
@@ -153,6 +154,30 @@ export const secretariaService = {
   async getEncarregadoSituacaoFinanceira(id: number): Promise<SituacaoFinanceiraResponse> {
     const { data } = await api.get<SituacaoFinanceiraResponse>(`/ee/${id}/situacao-financeira`);
     return data;
+  },
+
+  async getObrigacoesEncarregado(id: number): Promise<ObrigacaoResponse[]> {
+    const { data } = await api.get<ObrigacaoResponse[]>(`/ee/${id}/obrigacoes`);
+    return data;
+  },
+
+  async registarPagamento(obrigacaoId: number): Promise<ObrigacaoResponse> {
+    const { data } = await api.post<ObrigacaoResponse>(`/pagamentos/${obrigacaoId}/registar`);
+    return data;
+  },
+
+  async gerarProvisoes(epocaId: number): Promise<void> {
+    await api.post(`/provisoes/gerar?epocaId=${epocaId}`);
+  },
+
+  // ── Clínica ─────────────────────────────────────────
+
+  async getDocumentosPendentes(page = 0, size = 20) {
+    return clinicaService.getFilaEMD(page, size);
+  },
+
+  async deliberarDocumento(id: number, payload: DeliberacaoRequest) {
+    return clinicaService.deliberar(id, payload);
   },
 
   // ── Atletas ─────────────────────────────────────────

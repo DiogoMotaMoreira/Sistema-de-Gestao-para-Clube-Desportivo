@@ -19,17 +19,20 @@ public class SessaoTreinoService {
     private final AtletaRepository atletaRepo;
     private final RegistoAssiduidadeRepository registoAssiduidadeRepo;
     private final AvaliacaoRendimentoRepository avaliacaoRendimentoRepo;
+    private final com.sigd.tesouraria.service.AtletaService atletaService;
 
     public SessaoTreinoService(SessaoTreinoRepository sessaoTreinoRepo,
                                EquipaRepository equipaRepo,
                                AtletaRepository atletaRepo,
                                RegistoAssiduidadeRepository registoAssiduidadeRepo,
-                               AvaliacaoRendimentoRepository avaliacaoRendimentoRepo) {
+                               AvaliacaoRendimentoRepository avaliacaoRendimentoRepo,
+                               com.sigd.tesouraria.service.AtletaService atletaService) {
         this.sessaoTreinoRepo = sessaoTreinoRepo;
         this.equipaRepo = equipaRepo;
         this.atletaRepo = atletaRepo;
         this.registoAssiduidadeRepo = registoAssiduidadeRepo;
         this.avaliacaoRendimentoRepo = avaliacaoRendimentoRepo;
+        this.atletaService = atletaService;
     }
 
     @Transactional
@@ -83,6 +86,19 @@ public class SessaoTreinoService {
             registo.setEstado(regReq.estado());
             registo.setRegistadoEm(LocalDateTime.now());
 
+            Boolean isCondicionado = false;
+
+            if (regReq.estado() == EstadoAssiduidade.PRESENTE) {
+                com.sigd.tesouraria.dto.AtletaDTO.Elegibilidade eleg = atletaService.obterElegibilidade(atleta.getId());
+                if (eleg.bloqueadoPorEMD()) {
+                    throw new IllegalStateException("Atleta " + atleta.getNomeCompleto() + " não pode ser marcado presente: EMD em falta");
+                }
+                if (eleg.bloqueadoPorLesao()) {
+                    throw new IllegalStateException("Atleta " + atleta.getNomeCompleto() + " não pode ser marcado presente: baixa médica activa");
+                }
+                isCondicionado = eleg.condicionado();
+            }
+
             registo = registoAssiduidadeRepo.save(registo);
 
             if (regReq.estado() == EstadoAssiduidade.PRESENTE) presentes++;
@@ -90,7 +106,7 @@ public class SessaoTreinoService {
             else if (regReq.estado() == EstadoAssiduidade.ATRASADO) atrasados++;
 
             registosResponse.add(new RegistoAssiduidadeDTO.Response(
-                    atleta.getId(), atleta.getNomeCompleto(), registo.getEstado(), registo.getRegistadoEm()
+                    atleta.getId(), atleta.getNomeCompleto(), registo.getEstado(), registo.getRegistadoEm(), isCondicionado
             ));
         }
 

@@ -23,6 +23,14 @@ interface BackendAdminUser {
   atualizadoEm: string;
 }
 
+export interface EpocaDesportiva {
+  id: number;
+  nome: string;
+  dataInicio: string;
+  dataFim: string;
+  estado: string;
+}
+
 function mapToAdminUser(b: BackendAdminUser): AdminUser {
   return {
     id: b.id.toString(),
@@ -156,9 +164,43 @@ export const adminService = {
     };
   },
 
-  createUser: async (payload: AdminUserRequest): Promise<AdminUser> => {
-    const { data } = await api.post<BackendAdminUser>('/utilizadores', payload);
+  createUser: async (req: AdminUserRequest): Promise<AdminUser> => {
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.post<BackendAdminUser>(`http://localhost:8080/api/v1/admin/utilizadores`, req, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     return mapToAdminUser(data);
+  },
+
+  getEpocas: async (): Promise<EpocaDesportiva[]> => {
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.get<EpocaDesportiva[]>(`http://localhost:8080/api/v1/admin/epocas`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    
+    // Deduplicar épocas pelo nome para remover dados de mock ou seeds duplicados
+    const seen = new Set();
+    return data.filter(e => {
+       if (seen.has(e.nome)) return false;
+       seen.add(e.nome);
+       return true;
+    });
+  },
+
+  criarEpoca: async (nome: string, dataInicio: string, dataFim: string): Promise<EpocaDesportiva> => {
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.post<EpocaDesportiva>(`http://localhost:8080/api/v1/admin/epocas`, { nome, dataInicio, dataFim }, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data;
+  },
+
+  ativarEpoca: async (id: number): Promise<EpocaDesportiva> => {
+    const token = useAuthStore.getState().token;
+    const { data } = await axios.put<EpocaDesportiva>(`http://localhost:8080/api/v1/admin/epocas/${id}/ativar`, {}, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data;
   },
 
   bloquearUser: async (id: string): Promise<AdminUser> => {

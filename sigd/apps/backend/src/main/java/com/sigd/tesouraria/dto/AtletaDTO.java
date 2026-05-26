@@ -52,4 +52,17 @@ public final class AtletaDTO {
         LocalDateTime atualizadoEm
     ) {}
 
+    /**
+     * Elegibilidade — dados de estado médico/administrativo.
+     */
+    public record Elegibilidade(
+        Long atletaId,
+        String nome,
+        String estadoElegibilidade,
+        boolean bloqueadoPorEMD,
+        boolean bloqueadoPorLesao,
+        boolean condicionado,
+        boolean apto
+    ) {}
+
 }

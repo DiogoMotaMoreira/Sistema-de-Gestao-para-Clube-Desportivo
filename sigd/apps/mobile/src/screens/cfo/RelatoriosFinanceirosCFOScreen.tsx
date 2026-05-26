@@ -11,10 +11,16 @@ export function RelatoriosFinanceirosCFOScreen(): React.JSX.Element {
   
   const [rubricasClube, setRubricasClube] = useState<RubricaFinanceiraCFO[]>([]);
   const [rubricasSad, setRubricasSad] = useState<RubricaFinanceiraCFO[]>([]);
+  const [resumo, setResumo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    cfoService.getRubricas('Clube').then(setRubricasClube);
-    cfoService.getRubricas('SAD').then(setRubricasSad);
+    setLoading(true);
+    Promise.all([
+      cfoService.getRubricas('Clube').then(setRubricasClube),
+      cfoService.getRubricas('SAD').then(setRubricasSad),
+      cfoService.getResumoFinanceiro().then(setResumo)
+    ]).finally(() => setLoading(false));
   }, []);
 
   return (
@@ -27,6 +33,11 @@ export function RelatoriosFinanceirosCFOScreen(): React.JSX.Element {
         ]}
       />
 
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+           <Text style={{ color: Colors.GRAY_500_TEXTO2 }}>A carregar dados financeiros reais...</Text>
+        </View>
+      ) : (
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         
         {/* Barra de Filtros */}
@@ -49,9 +60,9 @@ export function RelatoriosFinanceirosCFOScreen(): React.JSX.Element {
               <View style={[styles.badgePanel, { backgroundColor: Colors.PRETO_PRIMARIO }]}><Text style={{ color: Colors.BRANCO, fontSize: 12, fontWeight: '600' }}>ASSOCIAÇÃO / CLUBE</Text></View>
               
               <View style={styles.kpiInlineRow}>
-                 <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>RECEITA CAPTADA</Text><Text style={styles.kpiInlineValue}>820.300,00 €</Text></View>
-                 <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>DÍVIDA VENCIDA</Text><Text style={[styles.kpiInlineValue, { color: Colors.ERRO_TEXT }]}>28.500,00 €</Text></View>
-                 <View style={[styles.kpiInlineItem, { borderRightWidth: 0 }]}><Text style={styles.kpiInlineLabel}>RÁCIO EFICIÊNCIA</Text><Text style={[styles.kpiInlineValue, { color: Colors.SUCESSO_TEXT }]}>96,6%</Text></View>
+                 <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>RECEITA CAPTADA</Text><Text style={styles.kpiInlineValue}>{resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.clube.receita) : "—"}</Text></View>
+                 <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>DÍVIDA VENCIDA</Text><Text style={[styles.kpiInlineValue, { color: Colors.ERRO_TEXT }]}>{resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.clube.divida) : "—"}</Text></View>
+                 <View style={[styles.kpiInlineItem, { borderRightWidth: 0 }]}><Text style={styles.kpiInlineLabel}>OBRIGAÇÕES</Text><Text style={[styles.kpiInlineValue, { color: Colors.SUCESSO_TEXT }]}>{resumo ? resumo.clube.totalObrigacoes : "—"}</Text></View>
               </View>
 
               <View style={styles.chartMockAreaMini}>
@@ -86,9 +97,9 @@ export function RelatoriosFinanceirosCFOScreen(): React.JSX.Element {
               <View style={[styles.badgePanel, { backgroundColor: '#FFFBEB' }]}><Text style={{ color: '#B45309', fontSize: 12, fontWeight: '600' }}>SAD / FORMAÇÃO</Text></View>
               
               <View style={styles.kpiInlineRow}>
-                 <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>RECEITA CAPTADA</Text><Text style={styles.kpiInlineValue}>420.200,00 €</Text></View>
-                 <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>DÍVIDA VENCIDA</Text><Text style={[styles.kpiInlineValue, { color: Colors.ERRO_TEXT }]}>16.700,00 €</Text></View>
-                 <View style={[styles.kpiInlineItem, { borderRightWidth: 0 }]}><Text style={styles.kpiInlineLabel}>RÁCIO EFICIÊNCIA</Text><Text style={[styles.kpiInlineValue, { color: Colors.SUCESSO_TEXT }]}>96,1%</Text></View>
+                 <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>RECEITA CAPTADA</Text><Text style={styles.kpiInlineValue}>{resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.sad.receita) : "—"}</Text></View>
+                 <View style={styles.kpiInlineItem}><Text style={styles.kpiInlineLabel}>DÍVIDA VENCIDA</Text><Text style={[styles.kpiInlineValue, { color: Colors.ERRO_TEXT }]}>{resumo ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(resumo.sad.divida) : "—"}</Text></View>
+                 <View style={[styles.kpiInlineItem, { borderRightWidth: 0 }]}><Text style={styles.kpiInlineLabel}>OBRIGAÇÕES</Text><Text style={[styles.kpiInlineValue, { color: Colors.SUCESSO_TEXT }]}>{resumo ? resumo.sad.totalObrigacoes : "—"}</Text></View>
               </View>
 
               <View style={styles.chartMockAreaMini}>
@@ -121,6 +132,7 @@ export function RelatoriosFinanceirosCFOScreen(): React.JSX.Element {
         </View>
 
       </ScrollView>
+      )}
     </View>
   );
 }

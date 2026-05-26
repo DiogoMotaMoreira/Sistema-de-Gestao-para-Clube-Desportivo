@@ -11,6 +11,7 @@ export interface Dependente {
   equipa: string;
   elegibilidade: 'APTO' | 'BLOQUEADO' | 'VINCULO_ENCERRADO';
   idade: number;
+  numeroSocio?: string;
 }
 
 export interface AlertaPortal {
@@ -196,6 +197,11 @@ export const portalService = {
   },
 
   getPerfilEE: async (): Promise<PerfilEE> => {
+    const { data } = await api.get<PerfilEE>('/portal/me');
+    return data;
+  },
+
+  getEstadoCartao: async (): Promise<PerfilEE> => {
     const { data } = await api.get<PerfilEE>('/portal/me');
     return data;
   },

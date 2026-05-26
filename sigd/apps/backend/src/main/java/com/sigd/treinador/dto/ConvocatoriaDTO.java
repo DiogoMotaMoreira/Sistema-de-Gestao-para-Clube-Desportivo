@@ -22,6 +22,7 @@ public class ConvocatoriaDTO {
             Long id,
             Long eventoId,
             List<String> atletasConvocados,
+            List<String> atletasBloqueados,
             LocalTime horaConcentracao,
             String localConcentracao,
             EstadoConvocatoria estado,

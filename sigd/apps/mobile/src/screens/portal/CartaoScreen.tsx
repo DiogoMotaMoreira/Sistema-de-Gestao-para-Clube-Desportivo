@@ -3,27 +3,143 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { Wifi, Lock, CreditCard, Upload, Archive, User } from 'lucide-react-native';
 import { portalService, Dependente } from '@/services/portalService';
 import { PortalHeader } from './components/PortalHeader';
+import { useAuthStore } from '@/stores/authStore';
+import { ActivityIndicator } from 'react-native';
+import { Svg, Rect } from 'react-native-svg';
+
+function QRCodeSVG({ seed }: { seed: number }) {
+  const SIZE = 21;
+  const CELL = 8;
+  const modules: boolean[][] = Array.from({ length: SIZE }, () =>
+    Array(SIZE).fill(false)
+  );
+
+  const drawFinder = (row: number, col: number) => {
+    for (let r = 0; r < 7; r++) {
+      for (let c = 0; c < 7; c++) {
+        const isOuter = r === 0 || r === 6 || c === 0 || c === 6;
+        const isInner = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+        modules[row + r][col + c] = isOuter || isInner;
+      }
+    }
+  };
+  drawFinder(0, 0);
+  drawFinder(0, SIZE - 7);
+  drawFinder(SIZE - 7, 0);
+
+  for (let i = 8; i < SIZE - 8; i++) {
+    modules[6][i] = i % 2 === 0;
+    modules[i][6] = i % 2 === 0;
+  }
+
+  const rng = (n: number) => {
+    const x = Math.sin(n + seed) * 10000;
+    return x - Math.floor(x);
+  };
+  
+  let idx = 0;
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const inFinder =
+        (r < 8 && c < 8) ||
+        (r < 8 && c >= SIZE - 8) ||
+        (r >= SIZE - 8 && c < 8);
+      const inTiming = r === 6 || c === 6;
+      if (!inFinder && !inTiming) {
+        if (!modules[r][c]) modules[r][c] = rng(idx++) > 0.5;
+      }
+    }
+  }
+
+  const totalSize = SIZE * CELL;
+
+  return (
+    <Svg width={totalSize} height={totalSize} viewBox={`0 0 ${totalSize} ${totalSize}`}>
+      <Rect width={totalSize} height={totalSize} fill="white" />
+      {modules.flatMap((row, r) =>
+        row.map((on, c) =>
+          on ? (
+            <Rect
+              key={`${r}-${c}`}
+              x={c * CELL + 1}
+              y={r * CELL + 1}
+              width={CELL - 1}
+              height={CELL - 1}
+              fill="#0F172A"
+            />
+          ) : null
+        )
+      )}
+    </Svg>
+  );
+}
 
 export function CartaoScreen({ navigation }: any): React.JSX.Element {
-  const [dependente, setDependente] = useState<Dependente | null>(null);
+  const { user } = useAuthStore();
+  
+  const [atletaCartao, setAtletaCartao] = useState<{id?: number, nome: string, numeroSocio: string | null, elegibilidade: string, equipa: string}>({
+    id: 1,
+    nome: user?.name || 'A carregar...',
+    numeroSocio: null,
+    elegibilidade: 'BLOQUEADO',
+    equipa: '-'
+  });
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(60);
 
   useEffect(() => {
+    portalService.getPerfilEE().then(perfil => {
+      if (perfil.dependentes && perfil.dependentes.length > 0) {
+        const atleta = perfil.dependentes[0];
+        setAtletaCartao({
+          id: atleta.id,
+          nome: atleta.nome,
+          numeroSocio: atleta.numeroSocio || null,
+          elegibilidade: atleta.elegibilidade,
+          equipa: atleta.equipa || '-'
+        });
+      } else {
+        setAtletaCartao({
+          nome: user?.name || 'Sócio Boavista',
+          numeroSocio: null,
+          elegibilidade: 'BLOQUEADO',
+          equipa: '-'
+        });
+        setErrorMsg('Nenhum dependente associado.');
+      }
+    }).catch(e => {
+      console.log('Erro ao carregar atleta', e);
+      setAtletaCartao({
+        nome: user?.name || 'Sócio Boavista',
+        numeroSocio: null,
+        elegibilidade: 'BLOQUEADO',
+        equipa: '-'
+      });
+      setErrorMsg('Não foi possível carregar os dados reais.');
+    }).finally(() => {
+      setIsLoading(false);
+    });
+  }, [user?.name]);
+
+  useEffect(() => {
     // Simulador de Regeneração do QR Code
-    if (dependente?.elegibilidade === 'APTO') {
+    if (atletaCartao?.elegibilidade === 'APTO') {
       const interval = setInterval(() => {
         setCountdown(c => (c > 0 ? c - 1 : 60));
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [dependente]);
+  }, [atletaCartao]);
 
-  // Se não temos dependente, não mostramos nada
-  if (!dependente) return (
-     <View style={[styles.container, { paddingTop: 50 }]}>
-        <PortalHeader onDependenteChange={setDependente} />
-     </View>
-  );
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#0F172A" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -32,63 +148,70 @@ export function CartaoScreen({ navigation }: any): React.JSX.Element {
           mas para mudar de dependente vou mostrar o header de forma simplificada no topo ou 
           apenas renderizar a identificação central. */}
       
-      {/* Identificação Superior */}
       <View style={styles.headerArea}>
          <Text style={styles.logoText}>Boavista Futebol Clube</Text>
       </View>
+      
+      {errorMsg && (
+         <View style={{ backgroundColor: '#FEF2F2', padding: 12, marginHorizontal: 20, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#FECACA' }}>
+            <Text style={{ color: '#991B1B', fontSize: 13, textAlign: 'center' }}>{errorMsg}</Text>
+         </View>
+      )}
 
       <View style={styles.identificacaoArea}>
          <View style={styles.avatarGrande}>
             <User size={48} color="#64748B" />
          </View>
-         <Text style={styles.nomeAtleta}>{dependente.nome}</Text>
-         <Text style={styles.escalaoAtleta}>{dependente.equipa}</Text>
-         <Text style={styles.socioAtleta}>N.º de Sócio: {dependente.id * 10}</Text>
+         <Text style={styles.nomeAtleta}>{atletaCartao.nome}</Text>
+         <Text style={styles.escalaoAtleta}>{atletaCartao.equipa}</Text>
+         <Text style={styles.socioAtleta}>N.º de Sócio: {atletaCartao.numeroSocio ? atletaCartao.numeroSocio : 'Não associado'}</Text>
       </View>
 
       <View style={styles.separador} />
 
-      {/* Áreas por Elegibilidade */}
-      {dependente.elegibilidade === 'APTO' && (
-         <View style={styles.conteudoCentral}>
-            <View style={styles.qrArea}>
-               {/* Mock do QR Code */}
-               <View style={styles.qrMockPlaceholder}>
-                  <Text style={{ fontSize: 10, color: '#64748B' }}>[ QR CODE ]</Text>
-               </View>
-            </View>
+      {/* Áreas por Elegibilidade Unificadas */}
+      <View style={styles.conteudoCentral}>
+         {/* QR Code Placeholder (Pedido pelo utilizador) */}
+         <View style={{ width: 168, height: 168, alignItems: 'center', justifyContent: 'center', marginVertical: 16 }}>
+            <QRCodeSVG seed={atletaCartao.id ?? 1} />
+         </View>
 
-            <View style={styles.countdownContainer}>
-               {/* Arco simulado */}
-               <View style={styles.countdownCircle}>
-                  <Text style={styles.countdownText}>{countdown}s</Text>
-               </View>
-            </View>
-
-            <View style={styles.badgeAtivo}>
-               <Wifi size={16} color="#047857" style={{ marginRight: 8 }} />
-               <Text style={styles.badgeAtivoText}>ATIVO</Text>
+         {/* Contador de validade (Pedido pelo utilizador) */}
+         <View style={styles.countdownContainer}>
+            <View style={styles.countdownCircle}>
+               <Text style={styles.countdownText}>{countdown}s</Text>
             </View>
          </View>
-      )}
 
-      {dependente.elegibilidade === 'BLOQUEADO' && (
-         <View style={styles.conteudoCentral}>
-            <View style={[styles.qrArea, { borderColor: '#E2E8F0', borderStyle: 'dashed' }]}>
-               <Lock size={48} color="#991B1B" style={{ marginBottom: 16 }} />
-               <Text style={styles.bloqueadoTitle}>ACESSO</Text>
-               <Text style={styles.bloqueadoTitle}>BLOQUEADO</Text>
-            </View>
+         {/* Badge de estado (Pedido pelo utilizador) */}
+         <View style={[
+            styles.badgeAtivo, 
+            atletaCartao.elegibilidade === 'APTO' ? { backgroundColor: '#ECFDF5' } : 
+            atletaCartao.elegibilidade === 'CONDICIONADO' ? { backgroundColor: '#FEF3C7' } : 
+            { backgroundColor: '#FEF2F2' }
+         ]}>
+            {atletaCartao.elegibilidade === 'APTO' && <Wifi size={16} color="#047857" style={{ marginRight: 8 }} />}
+            {atletaCartao.elegibilidade === 'CONDICIONADO' && <Lock size={16} color="#B45309" style={{ marginRight: 8 }} />}
+            {(atletaCartao.elegibilidade !== 'APTO' && atletaCartao.elegibilidade !== 'CONDICIONADO') && <Lock size={16} color="#991B1B" style={{ marginRight: 8 }} />}
+            
+            <Text style={[
+               styles.badgeAtivoText,
+               atletaCartao.elegibilidade === 'APTO' ? { color: '#047857' } : 
+               atletaCartao.elegibilidade === 'CONDICIONADO' ? { color: '#B45309' } : 
+               { color: '#991B1B' }
+            ]}>
+               {atletaCartao.elegibilidade === 'APTO' ? 'ATIVO' : 
+                atletaCartao.elegibilidade === 'CONDICIONADO' ? 'CONDICIONADO' : 'BLOQUEADO'}
+            </Text>
+         </View>
 
+         {/* Causas de Bloqueio (mantém funcionalidade original) */}
+         {(atletaCartao.elegibilidade !== 'APTO' && atletaCartao.elegibilidade !== 'CONDICIONADO') && (
             <View style={styles.causasArea}>
                <Text style={styles.causasLabel}>POR RESOLVER:</Text>
                <View style={styles.causaItem}>
                   <View style={styles.causaPonto} />
-                  <Text style={styles.causaTexto}>2 mensalidades vencidas há mais de 30 dias</Text>
-               </View>
-               <View style={styles.causaItem}>
-                  <View style={styles.causaPonto} />
-                  <Text style={styles.causaTexto}>EMD caducado</Text>
+                  <Text style={styles.causaTexto}>Pendências associadas à inscrição/mensalidades ou EMD</Text>
                </View>
                
                <View style={{ marginTop: 24, gap: 12 }}>
@@ -102,24 +225,10 @@ export function CartaoScreen({ navigation }: any): React.JSX.Element {
                   </TouchableOpacity>
                </View>
             </View>
-         </View>
-      )}
+         )}
+      </View>
 
-      {dependente.elegibilidade === 'VINCULO_ENCERRADO' && (
-         <View style={styles.conteudoCentral}>
-            <View style={[styles.qrArea, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderStyle: 'dashed' }]}>
-               <Archive size={48} color="#64748B" style={{ marginBottom: 16 }} />
-               <Text style={[styles.bloqueadoTitle, { color: '#64748B' }]}>VÍNCULO</Text>
-               <Text style={[styles.bloqueadoTitle, { color: '#64748B' }]}>ENCERRADO</Text>
-               <Text style={{ fontSize: 12, color: '#64748B', marginTop: 16 }}>Válido até: 01/01/2026</Text>
-            </View>
-            <View style={styles.badgeEncerrado}>
-               <Text style={styles.badgeEncerradoText}>Vínculo Encerrado</Text>
-            </View>
-         </View>
-      )}
-
-      {dependente.elegibilidade === 'APTO' && (
+      {atletaCartao.elegibilidade === 'APTO' && (
          <View style={styles.footer}>
             <Text style={styles.footerText}>QR renovado automaticamente · Válido por 60 segundos</Text>
          </View>

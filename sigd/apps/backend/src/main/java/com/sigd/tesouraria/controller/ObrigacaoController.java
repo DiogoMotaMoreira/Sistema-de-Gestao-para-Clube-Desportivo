@@ -21,9 +21,12 @@ import java.util.List;
 public class ObrigacaoController {
 
     private final ObrigacaoFinanceiraService obrigacaoService;
+    private final com.sigd.tesouraria.service.ProvisaoService provisaoService;
 
-    public ObrigacaoController(ObrigacaoFinanceiraService obrigacaoService) {
+    public ObrigacaoController(ObrigacaoFinanceiraService obrigacaoService,
+                               com.sigd.tesouraria.service.ProvisaoService provisaoService) {
         this.obrigacaoService = obrigacaoService;
+        this.provisaoService = provisaoService;
     }
 
     /**
@@ -48,6 +51,18 @@ public class ObrigacaoController {
     public ResponseEntity<List<ObrigacaoFinanceiraDTO.Response>> listarPorEncarregado(
             @PathVariable Long id) {
         return ResponseEntity.ok(obrigacaoService.listarPorEncarregado(id));
+    }
+
+    /**
+     * POST /api/v1/tesouraria/provisoes/gerar?epocaId={id}
+     *
+     * Gera obrigações financeiras para a época corrente.
+     */
+    @PostMapping("/provisoes/gerar")
+    @PreAuthorize("hasAnyRole('ROLE_SECRETARIA', 'ROLE_ADMIN')")
+    public ResponseEntity<Void> gerarProvisaoEpoca(@RequestParam Long epocaId) {
+        provisaoService.gerarProvisaoEpoca(epocaId);
+        return ResponseEntity.ok().build();
     }
 
 }
