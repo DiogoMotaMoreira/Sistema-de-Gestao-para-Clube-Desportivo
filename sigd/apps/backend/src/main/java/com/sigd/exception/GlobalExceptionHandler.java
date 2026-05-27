@@ -10,8 +10,11 @@ import com.sigd.core.exception.OcorrenciaNotFoundException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -63,6 +66,12 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(com.sigd.core.exception.EventoNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleEventoNotFound(
+            com.sigd.core.exception.EventoNotFoundException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(DeliberacaoNaoAutorizadaException.class)
     public ResponseEntity<Map<String, Object>> handleDeliberacaoNaoAutorizada(
             DeliberacaoNaoAutorizadaException ex, WebRequest request) {
@@ -75,7 +84,52 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(com.sigd.core.exception.FichaJogoDuplicadaException.class)
+    public ResponseEntity<Map<String, Object>> handleFichaJogoDuplicada(
+            com.sigd.core.exception.FichaJogoDuplicadaException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request);
+    }
+
     // === Exceções de validação e segurança ===
+
+    // BUG-023: JSON malformado
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidJson(
+            HttpMessageNotReadableException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("erro", "Formato JSON inválido ou corpo do pedido em falta");
+        error.put("codigo", "400");
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    // BUG-015: Conta desactivada/bloqueada
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<Map<String, String>> handleContaBloqueada(
+            DisabledException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("erro", "Conta bloqueada. Contacte o administrador.");
+        error.put("codigo", "403");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    // BUG-015: Garantir que LockedException também é tratada
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<Map<String, String>> handleContaLocked(
+            LockedException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("erro", "Conta bloqueada. Contacte o administrador.");
+        error.put("codigo", "403");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalState(
+            IllegalStateException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("erro", ex.getMessage());
+        error.put("codigo", "403");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(
@@ -113,6 +167,16 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex, WebRequest request) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request",
                 ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(NullPointerException.class)
+    public ResponseEntity<Map<String, String>> handleNPE(
+            NullPointerException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("erro", "Erro interno de processamento");
+        error.put("codigo", "500");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(error);
     }
 
     @ExceptionHandler(RuntimeException.class)

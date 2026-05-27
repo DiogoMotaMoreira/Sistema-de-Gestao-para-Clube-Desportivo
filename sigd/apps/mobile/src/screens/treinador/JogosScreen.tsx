@@ -1,15 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Calendar, ChevronRight, XCircle, Clock, CheckCircle, AlertCircle, CalendarX, Ban } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
 import { treinadorService, EventoTreinador, SubEstadoJogo } from '@/services/treinadorService';
+import { useFocusEffect } from '@react-navigation/native';
 
 export function JogosScreen({ navigation }: any): React.JSX.Element {
   const [jogos, setJogos] = useState<EventoTreinador[]>([]);
 
-  useEffect(() => {
-    treinadorService.getJogos(1).then(setJogos);
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      treinadorService.getEquipas().then(eq => {
+        const teamId = eq.length > 0 ? eq[0].id : 1;
+        return treinadorService.getJogos(teamId);
+      }).then(setJogos).catch(console.error);
+    }, [])
+  );
 
   const agora = new Date();
   const pad = (n: number) => n.toString().padStart(2, '0');

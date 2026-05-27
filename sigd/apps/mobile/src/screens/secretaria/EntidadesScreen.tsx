@@ -28,10 +28,15 @@ import {
   Mail,
   Hash,
   Trophy,
+  Plus,
 } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
+import { AtletaForm } from './atletas/AtletaCreateEditScreen';
+import { EncarregadoForm } from './encarregados/EncarregadoCreateEditScreen';
 import {
   secretariaService,
   type AtletaResponse,
@@ -96,6 +101,7 @@ function TabAtletas(): React.JSX.Element {
   const [page, setPage] = useState(0);
   const [estadoFilter, setEstadoFilter] = useState<string>('Todos');
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearch = useCallback((query: string) => {
@@ -145,6 +151,21 @@ function TabAtletas(): React.JSX.Element {
 
   return (
     <View style={s.tabContent}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 24, marginBottom: 16 }}>
+        <View>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.GRAY_900_TEXTO1 }}>Atletas Registados</Text>
+          <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2, marginTop: 2 }}>
+            {data ? `${data.totalElements} atleta(s) no total` : 'A carregar...'}
+          </Text>
+        </View>
+        <Button
+          label="Novo Atleta"
+          onPress={() => setShowCreateModal(true)}
+          variant="primary"
+          icon={<Plus size={16} color={Colors.PRETO_PRIMARIO} />}
+        />
+      </View>
+
       <SearchBar
         placeholder="Pesquisar atleta por nome..."
         value={pesquisa}
@@ -264,6 +285,20 @@ function TabAtletas(): React.JSX.Element {
           )}
         </ScrollView>
       )}
+
+      <Modal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Novo Atleta"
+      >
+        <AtletaForm
+          onSuccess={() => {
+            setShowCreateModal(false);
+            void refetch();
+          }}
+          onCancel={() => setShowCreateModal(false)}
+        />
+      </Modal>
     </View>
   );
 }
@@ -274,6 +309,7 @@ function TabEncarregados(): React.JSX.Element {
   const [pesquisa, setPesquisa] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [page, setPage] = useState(0);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearch = useCallback((query: string) => {
@@ -296,6 +332,21 @@ function TabEncarregados(): React.JSX.Element {
 
   return (
     <View style={s.tabContent}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 24, marginBottom: 16 }}>
+        <View>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.GRAY_900_TEXTO1 }}>Encarregados de Educação</Text>
+          <Text style={{ fontSize: 12, color: Colors.GRAY_500_TEXTO2, marginTop: 2 }}>
+            {data ? `${data.totalElements} encarregado(s) no total` : 'A carregar...'}
+          </Text>
+        </View>
+        <Button
+          label="Novo EE"
+          onPress={() => setShowCreateModal(true)}
+          variant="primary"
+          icon={<Plus size={16} color={Colors.PRETO_PRIMARIO} />}
+        />
+      </View>
+
       <SearchBar
         placeholder="Pesquisar por nome ou NIF..."
         value={pesquisa}
@@ -391,6 +442,20 @@ function TabEncarregados(): React.JSX.Element {
           )}
         </ScrollView>
       )}
+
+      <Modal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Novo Encarregado de Educação"
+      >
+        <EncarregadoForm
+          onSuccess={() => {
+            setShowCreateModal(false);
+            void refetch();
+          }}
+          onCancel={() => setShowCreateModal(false)}
+        />
+      </Modal>
     </View>
   );
 }

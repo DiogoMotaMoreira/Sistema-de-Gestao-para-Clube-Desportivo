@@ -63,15 +63,15 @@ public class SemaforoService {
             String semaforo;
             String motivo;
 
-            if (temVermelho) {
+            if (atleta.getEstadoElegibilidade() == EstadoElegibilidade.PENDENTE_EMD) {
+                semaforo = "VERMELHO";
+                motivo = "Exame pendente";
+            } else if (temVermelho) {
                 semaforo = "BLOQUEADO";
                 motivo = "Lesão activa";
             } else if (temAmarelo) {
                 semaforo = "AMARELO";
                 motivo = "Condicionado";
-            } else if (atleta.getEstadoElegibilidade() == EstadoElegibilidade.PENDENTE_EMD) {
-                semaforo = "VERMELHO";
-                motivo = "Exame pendente";
             } else {
                 semaforo = "VERDE";
                 motivo = "Apto";

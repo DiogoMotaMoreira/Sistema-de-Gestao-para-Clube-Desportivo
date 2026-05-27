@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { Wifi, Lock, CreditCard, Upload, Archive, User } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
+import { Wifi, Lock, CreditCard, Upload, User } from 'lucide-react-native';
 import { portalService, Dependente } from '@/services/portalService';
 import { PortalHeader } from './components/PortalHeader';
-import { useAuthStore } from '@/stores/authStore';
-import { ActivityIndicator } from 'react-native';
 import { Svg, Rect } from 'react-native-svg';
 
 function QRCodeSVG({ seed }: { seed: number }) {
@@ -75,88 +73,45 @@ function QRCodeSVG({ seed }: { seed: number }) {
 }
 
 export function CartaoScreen({ navigation }: any): React.JSX.Element {
-  const { user } = useAuthStore();
-  
-  const [atletaCartao, setAtletaCartao] = useState<{id?: number, nome: string, numeroSocio: string | null, elegibilidade: string, equipa: string}>({
-    id: 1,
-    nome: user?.name || 'A carregar...',
-    numeroSocio: null,
-    elegibilidade: 'BLOQUEADO',
-    equipa: '-'
-  });
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [dependente, setDependente] = useState<Dependente | null>(null);
   const [countdown, setCountdown] = useState(60);
 
   useEffect(() => {
-    portalService.getPerfilEE().then(perfil => {
-      if (perfil.dependentes && perfil.dependentes.length > 0) {
-        const atleta = perfil.dependentes[0];
-        setAtletaCartao({
-          id: atleta.id,
-          nome: atleta.nome,
-          numeroSocio: atleta.numeroSocio || null,
-          elegibilidade: atleta.elegibilidade,
-          equipa: atleta.equipa || '-'
-        });
-      } else {
-        setAtletaCartao({
-          nome: user?.name || 'Sócio Boavista',
-          numeroSocio: null,
-          elegibilidade: 'BLOQUEADO',
-          equipa: '-'
-        });
-        setErrorMsg('Nenhum dependente associado.');
-      }
-    }).catch(e => {
-
-      setAtletaCartao({
-        nome: user?.name || 'Sócio Boavista',
-        numeroSocio: null,
-        elegibilidade: 'BLOQUEADO',
-        equipa: '-'
-      });
-      setErrorMsg('Não foi possível carregar os dados reais.');
-    }).finally(() => {
-      setIsLoading(false);
-    });
-  }, [user?.name]);
-
-  useEffect(() => {
     // Simulador de Regeneração do QR Code
-    if (atletaCartao?.elegibilidade === 'APTO') {
+    if (dependente?.elegibilidade === 'APTO') {
+      setCountdown(60);
       const interval = setInterval(() => {
         setCountdown(c => (c > 0 ? c - 1 : 60));
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [atletaCartao]);
+  }, [dependente]);
 
-  if (isLoading) {
+  // Map Dependente -> display data (with fallback for null during first load)
+  const atletaCartao = dependente
+    ? {
+        id: dependente.id,
+        nome: dependente.nome,
+        numeroSocio: dependente.numeroSocio || null,
+        elegibilidade: dependente.elegibilidade,
+        equipa: dependente.equipa || '-',
+      }
+    : null;
+
+  if (!atletaCartao) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#0F172A" />
+      <View style={styles.container}>
+        <PortalHeader onDependenteChange={setDependente} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color="#0F172A" />
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header escondido para dar imersão, mas precisamos do switcher de dependente!
-          Como PORTAL.md diz "Top App Bar: Ausente", podemos ter a UI full screen, 
-          mas para mudar de dependente vou mostrar o header de forma simplificada no topo ou 
-          apenas renderizar a identificação central. */}
-      
-      <View style={styles.headerArea}>
-         <Text style={styles.logoText}>Boavista Futebol Clube</Text>
-      </View>
-      
-      {errorMsg && (
-         <View style={{ backgroundColor: '#FEF2F2', padding: 12, marginHorizontal: 20, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#FECACA' }}>
-            <Text style={{ color: '#991B1B', fontSize: 13, textAlign: 'center' }}>{errorMsg}</Text>
-         </View>
-      )}
+      <PortalHeader onDependenteChange={setDependente} />
 
       <View style={styles.identificacaoArea}>
          <View style={styles.avatarGrande}>
@@ -239,8 +194,6 @@ export function CartaoScreen({ navigation }: any): React.JSX.Element {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  headerArea: { paddingTop: 60, paddingBottom: 20, alignItems: 'center' },
-  logoText: { fontSize: 13, color: '#64748B', fontWeight: '600' },
   identificacaoArea: { alignItems: 'center', paddingHorizontal: 20 },
   avatarGrande: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 4 },
   nomeAtleta: { fontSize: 22, fontWeight: '700', color: '#0F172A', marginBottom: 4 },

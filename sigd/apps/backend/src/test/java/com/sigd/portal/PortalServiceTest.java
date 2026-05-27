@@ -15,6 +15,7 @@ import com.sigd.core.repository.EventoDesportivoRepository;
 import com.sigd.core.repository.OcorrenciaRepository;
 import com.sigd.core.repository.UtilizadorRepository;
 import com.sigd.tesouraria.dto.ObrigacaoFinanceiraDTO;
+import com.sigd.tesouraria.dto.SituacaoFinanceiraDTO;
 import com.sigd.tesouraria.service.EncarregadoService;
 import com.sigd.tesouraria.service.ObrigacaoFinanceiraService;
 import org.junit.jupiter.api.AfterEach;
@@ -62,6 +63,8 @@ public class PortalServiceTest {
     private EventoDesportivoRepository eventoDesportivoRepository;
     @Mock
     private OcorrenciaRepository ocorrenciaRepository;
+    @Mock
+    private com.sigd.core.repository.ConvocatoriaRepository convocatoriaRepository;
 
     @InjectMocks
     private PortalController portalController;
@@ -140,7 +143,7 @@ public class PortalServiceTest {
         when(obrigacaoFinanceiraService.listarPorEncarregado(eeMock.getId())).thenReturn(List.of(obDto));
         atletaMock.setEstadoElegibilidade(EstadoElegibilidade.INAPTO);
 
-        ResponseEntity<List<PortalController.AlertaPortalDTO>> response = portalController.getAlertas();
+        ResponseEntity<List<PortalController.AlertaPortalDTO>> response = portalController.getAlertas(null);
         assertEquals(2, response.getBody().size());
         assertTrue(response.getBody().stream().anyMatch(a -> a.tipo().equals("MENSALIDADE")));
         assertTrue(response.getBody().stream().anyMatch(a -> a.tipo().equals("SAUDE")));
@@ -171,7 +174,19 @@ public class PortalServiceTest {
 
     @Test
     void deve_retornar_convocatoria_quando_atleta_esta_convocado() {
-        Assertions.fail("BUG: PortalController tem o isConvocado=true hardcoded e não verifica na BD.");
+        EventoDesportivo ev = new EventoDesportivo();
+        ev.setId(3L);
+        ev.setData(LocalDate.now().plusDays(3));
+        ev.setHoraInicio(java.time.LocalTime.NOON);
+        ev.setTipo(TipoEvento.JOGO_OFICIAL);
+
+        when(eventoDesportivoRepository.findByEquipaIdOrderByDataAsc(100L)).thenReturn(List.of(ev));
+        when(convocatoriaRepository.existsByEventoIdAndAtletas_Id(3L, 10L)).thenReturn(true);
+
+        ResponseEntity<List<PortalController.EventoPortalDTO>> response = portalController.getAgenda();
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertTrue(response.getBody().get(0).isConvocado());
     }
 
     @Test
@@ -189,18 +204,39 @@ public class PortalServiceTest {
                 "CLUBE", null, 1L, "EE", 10L, "Atleta"
         );
         when(obrigacaoFinanceiraService.listarPorEncarregado(eeMock.getId())).thenReturn(List.of(obDto));
-        ResponseEntity<List<ObrigacaoFinanceiraDTO.Response>> response = portalController.obrigacoes();
+        ResponseEntity<List<ObrigacaoFinanceiraDTO.Response>> response = portalController.obrigacoes(null);
         assertEquals(1, response.getBody().size());
     }
 
     @Test
     void deve_filtrar_obrigacoes_por_estado_pendente() {
-        Assertions.fail("BUG: PortalController.obrigacoes() não permite filtrar por estado (retorna todas).");
+        ObrigacaoFinanceiraDTO.Response ob1 = new ObrigacaoFinanceiraDTO.Response(
+                1L, new BigDecimal("50.00"), LocalDate.now(), "MENSALIDADE", "PENDENTE",
+                "CLUBE", null, 1L, "EE", 10L, "Atleta"
+        );
+        ObrigacaoFinanceiraDTO.Response ob2 = new ObrigacaoFinanceiraDTO.Response(
+                2L, new BigDecimal("50.00"), LocalDate.now(), "MENSALIDADE", "PAGO",
+                "CLUBE", null, 1L, "EE", 10L, "Atleta"
+        );
+        when(obrigacaoFinanceiraService.listarPorEncarregado(eeMock.getId())).thenReturn(List.of(ob1, ob2));
+
+        ResponseEntity<List<ObrigacaoFinanceiraDTO.Response>> response = portalController.obrigacoes("PENDENTE");
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals("PENDENTE", response.getBody().get(0).estado());
     }
 
     @Test
     void deve_retornar_total_em_divida_correctamente() {
-        Assertions.fail("BUG: A soma de dívidas é delegada para EncarregadoService e não é filtrada pelo controller.");
+        SituacaoFinanceiraDTO sfDto = new SituacaoFinanceiraDTO(
+                new BigDecimal("100.00"), new BigDecimal("50.00"), List.of()
+        );
+        when(encarregadoService.obterSituacaoFinanceira(eeMock.getId())).thenReturn(sfDto);
+
+        ResponseEntity<SituacaoFinanceiraDTO> response = portalController.situacaoFinanceira();
+        assertNotNull(response.getBody());
+        assertEquals(new BigDecimal("100.00"), response.getBody().totalDivida());
+        assertEquals(new BigDecimal("50.00"), response.getBody().totalPago());
     }
 
     // GRUPO 4 — Documentos e cartão

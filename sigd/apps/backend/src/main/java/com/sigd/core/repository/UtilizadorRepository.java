@@ -29,4 +29,6 @@ public interface UtilizadorRepository extends JpaRepository<Utilizador, Long> {
 
     Optional<Utilizador> findByUsernameAndRole(String username, String role);
 
+    long countByRoleAndAtivo(String role, boolean ativo);
+
 }

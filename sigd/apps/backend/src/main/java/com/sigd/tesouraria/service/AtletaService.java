@@ -10,6 +10,7 @@ import com.sigd.core.repository.AtletaRepository;
 import com.sigd.core.repository.EncarregadoEducacaoRepository;
 import com.sigd.core.repository.EquipaRepository;
 import com.sigd.tesouraria.dto.AtletaDTO;
+import com.sigd.util.SanitizadorHtml;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -81,7 +82,7 @@ public class AtletaService {
         }
 
         Atleta atleta = new Atleta();
-        atleta.setNomeCompleto(request.nomeCompleto());
+        atleta.setNomeCompleto(SanitizadorHtml.sanitizar(request.nomeCompleto()));
         atleta.setDataNascimento(request.dataNascimento());
         atleta.setNif(request.nif());
         atleta.setNumeroSocio(request.numeroSocio());
@@ -116,7 +117,7 @@ public class AtletaService {
                             "Equipa não encontrada com ID: " + request.equipaId()));
         }
 
-        atleta.setNomeCompleto(request.nomeCompleto());
+        atleta.setNomeCompleto(SanitizadorHtml.sanitizar(request.nomeCompleto()));
         atleta.setDataNascimento(request.dataNascimento());
         atleta.setNif(request.nif());
         atleta.setNumeroSocio(request.numeroSocio());
@@ -142,6 +143,24 @@ public class AtletaService {
                         "Equipa não encontrada com ID: " + novaEquipaId));
 
         atleta.setEquipa(novaEquipa);
+        atleta = atletaRepo.save(atleta);
+        return toResponse(atleta);
+    }
+
+    /**
+     * Valida os documentos de um atleta, alterando a sua elegibilidade para APTO.
+     * Atribui também um número de sócio se estiver em falta.
+     */
+    public AtletaDTO.Response validarDocumentos(Long id) {
+        Atleta atleta = atletaRepo.findById(id)
+                .orElseThrow(() -> new AtletaNotFoundException(id));
+
+        atleta.setEstadoElegibilidade(com.sigd.core.model.EstadoElegibilidade.APTO);
+
+        if (atleta.getNumeroSocio() == null || atleta.getNumeroSocio().trim().isEmpty()) {
+            atleta.setNumeroSocio("SOC-" + atleta.getId());
+        }
+
         atleta = atletaRepo.save(atleta);
         return toResponse(atleta);
     }

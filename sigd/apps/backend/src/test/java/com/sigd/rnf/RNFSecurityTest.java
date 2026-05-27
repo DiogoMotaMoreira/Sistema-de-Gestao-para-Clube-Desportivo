@@ -122,9 +122,10 @@ public class RNFSecurityTest {
     @Test
     @WithMockUser(roles = "TREINADOR")
     public void rnf09_t2_treinadorNaoCriaOcorrencias() throws Exception {
+        String payload = "{\"atletaId\":1, \"dataOcorrencia\":\"2026-05-27\", \"tipo\":\"LESAO\", \"diagnostico\":\"Mialgia\", \"grauRestricao\":\"AMARELO\"}";
         mockMvc.perform(post("/api/v1/clinica/ocorrencias")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
+                .content(payload))
                .andExpect(status().isForbidden());
     }
 

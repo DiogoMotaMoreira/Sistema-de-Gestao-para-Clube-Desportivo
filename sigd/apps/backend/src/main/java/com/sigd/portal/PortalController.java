@@ -7,6 +7,7 @@ import com.sigd.core.repository.EncarregadoEducacaoRepository;
 import com.sigd.core.repository.UtilizadorRepository;
 import com.sigd.core.repository.EventoDesportivoRepository;
 import com.sigd.core.repository.OcorrenciaRepository;
+import com.sigd.core.repository.ConvocatoriaRepository;
 import com.sigd.core.model.EventoDesportivo;
 import com.sigd.core.model.Ocorrencia;
 import com.sigd.core.model.EstadoEMD;
@@ -39,19 +40,22 @@ public class PortalController {
     private final ObrigacaoFinanceiraService obrigacaoFinanceiraService;
     private final EventoDesportivoRepository eventoDesportivoRepository;
     private final OcorrenciaRepository ocorrenciaRepository;
+    private final ConvocatoriaRepository convocatoriaRepository;
 
     public PortalController(UtilizadorRepository utilizadorRepository,
                             EncarregadoEducacaoRepository encarregadoEducacaoRepository,
                             EncarregadoService encarregadoService,
                             ObrigacaoFinanceiraService obrigacaoFinanceiraService,
                             EventoDesportivoRepository eventoDesportivoRepository,
-                            OcorrenciaRepository ocorrenciaRepository) {
+                            OcorrenciaRepository ocorrenciaRepository,
+                            ConvocatoriaRepository convocatoriaRepository) {
         this.utilizadorRepository = utilizadorRepository;
         this.encarregadoEducacaoRepository = encarregadoEducacaoRepository;
         this.encarregadoService = encarregadoService;
         this.obrigacaoFinanceiraService = obrigacaoFinanceiraService;
         this.eventoDesportivoRepository = eventoDesportivoRepository;
         this.ocorrenciaRepository = ocorrenciaRepository;
+        this.convocatoriaRepository = convocatoriaRepository;
     }
 
     public record DependenteDTO(
@@ -121,9 +125,16 @@ public class PortalController {
     }
 
     @GetMapping("/obrigacoes")
-    public ResponseEntity<List<ObrigacaoFinanceiraDTO.Response>> obrigacoes() {
+    public ResponseEntity<List<ObrigacaoFinanceiraDTO.Response>> obrigacoes(
+            @RequestParam(required = false) String estado) {
         EncarregadoEducacao ee = obterEncarregadoLogado();
-        return ResponseEntity.ok(obrigacaoFinanceiraService.listarPorEncarregado(ee.getId()));
+        List<ObrigacaoFinanceiraDTO.Response> obrigacoes = obrigacaoFinanceiraService.listarPorEncarregado(ee.getId());
+        if (estado != null && !estado.isBlank()) {
+            obrigacoes = obrigacoes.stream()
+                    .filter(o -> o.estado() != null && o.estado().equals(estado))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        return ResponseEntity.ok(obrigacoes);
     }
 
     @GetMapping("/situacao-financeira")
@@ -133,7 +144,8 @@ public class PortalController {
     }
 
     @GetMapping("/alertas")
-    public ResponseEntity<List<AlertaPortalDTO>> getAlertas() {
+    public ResponseEntity<List<AlertaPortalDTO>> getAlertas(
+            @RequestParam(required = false) Long atletaId) {
         EncarregadoEducacao ee = obterEncarregadoLogado();
         List<ObrigacaoFinanceiraDTO.Response> obrigacoes = obrigacaoFinanceiraService.listarPorEncarregado(ee.getId());
         List<AlertaPortalDTO> alertas = new java.util.ArrayList<>();
@@ -141,6 +153,9 @@ public class PortalController {
         java.time.LocalDate hoje = java.time.LocalDate.now();
 
         for (ObrigacaoFinanceiraDTO.Response ob : obrigacoes) {
+            if (atletaId != null && !atletaId.equals(ob.atletaId())) {
+                continue;
+            }
             if (("PENDENTE".equals(ob.estado()) || "EM_ATRASO".equals(ob.estado()) || "VENCIDO".equals(ob.estado())) 
                     && ob.dataVencimento().isBefore(hoje)) {
                 alertas.add(new AlertaPortalDTO(
@@ -154,6 +169,9 @@ public class PortalController {
         }
 
         for (Atleta atleta : ee.getAtletas()) {
+            if (atletaId != null && !atletaId.equals(atleta.getId())) {
+                continue;
+            }
             if (atleta.getEstadoElegibilidade() == com.sigd.core.model.EstadoElegibilidade.INAPTO) {
                 alertas.add(new AlertaPortalDTO(
                         alertaId++,
@@ -188,9 +206,26 @@ public class PortalController {
 
         for (Long equipaId : equipaIds) {
             List<EventoDesportivo> eventos = eventoDesportivoRepository.findByEquipaIdOrderByDataAsc(equipaId);
+            // BUG-031: filter by date programmatically (only events with date >= LocalDate.now())
+            eventos = eventos.stream()
+                    .filter(e -> !e.getData().isBefore(java.time.LocalDate.now()))
+                    .collect(java.util.stream.Collectors.toList());
+
             for (EventoDesportivo ev : eventos) {
                 String tipo = ev.getTipo() == com.sigd.core.model.TipoEvento.TREINO ? "TREINO" : "JOGO";
                 String dataHora = java.time.LocalDateTime.of(ev.getData(), ev.getHoraInicio()).toString();
+                
+                // BUG-032: isConvocado real em vez de hardcoded
+                boolean isConvocado = false;
+                for (Atleta atleta : ee.getAtletas()) {
+                    if (atleta.getEquipa() != null && atleta.getEquipa().getId().equals(equipaId)) {
+                        if (convocatoriaRepository.existsByEventoIdAndAtletas_Id(ev.getId(), atleta.getId())) {
+                            isConvocado = true;
+                            break;
+                        }
+                    }
+                }
+
                 result.add(new EventoPortalDTO(
                         ev.getId(),
                         tipo,
@@ -203,7 +238,7 @@ public class PortalController {
                         "CASA",
                         ev.getHoraInicio().toString(),
                         ev.getLocal(),
-                        true
+                        isConvocado
                 ));
             }
         }

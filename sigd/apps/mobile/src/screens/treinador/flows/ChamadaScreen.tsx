@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { CheckSquare, Lock, Ban } from 'lucide-react-native';
 import { Colors } from '@/constants/colors';
 import { treinadorService, AtletaPlantel } from '@/services/treinadorService';
@@ -11,10 +11,11 @@ export function ChamadaScreen({ route, navigation }: any): React.JSX.Element {
   const { eventoId } = route.params;
   const [plantel, setPlantel] = useState<AtletaPlantel[]>([]);
   const [estados, setEstados] = useState<Record<number, EstadoChamada>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     navigation.setOptions({
-      title: 'Chamada — 17:00',
+      title: 'Chamada',
       headerRight: () => (
         <TouchableOpacity style={{ marginRight: 16 }} onPress={handleMarcarTodos}>
           <CheckSquare size={24} color={Colors.DOURADO_CTA} />
@@ -22,18 +23,31 @@ export function ChamadaScreen({ route, navigation }: any): React.JSX.Element {
       )
     });
 
-    treinadorService.getPlantel(1).then(p => {
-      setPlantel(p);
-      const est: Record<number, EstadoChamada> = {};
-      p.forEach(a => {
-        if (a.semaforo.startsWith('INAPTO')) {
-           est[a.id] = 'AUSENTE'; // Ou POR_MARCAR e lidar no bloqueio
-        } else {
-           est[a.id] = 'POR_MARCAR';
-        }
+    setIsLoading(true);
+    treinadorService.getSessao(eventoId)
+      .then(sessao => {
+        navigation.setOptions({ title: `Chamada — ${sessao.horaInicio.substring(0, 5)}` });
+        return treinadorService.getPlantel(sessao.equipaId);
+      })
+      .then(p => {
+        setPlantel(p);
+        const est: Record<number, EstadoChamada> = {};
+        p.forEach(a => {
+          if (a.semaforo.startsWith('INAPTO')) {
+             est[a.id] = 'AUSENTE'; // Ou POR_MARCAR e lidar no bloqueio
+          } else {
+             est[a.id] = 'POR_MARCAR';
+          }
+        });
+        setEstados(est);
+      })
+      .catch(e => {
+        console.error('Erro ao carregar chamada', e);
+        Alert.alert('Erro', 'Não foi possível carregar a sessão de treino.');
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      setEstados(est);
-    });
   }, [eventoId, navigation]);
 
   const handleMarcarTodos = () => {
@@ -61,6 +75,14 @@ export function ChamadaScreen({ route, navigation }: any): React.JSX.Element {
   const countM = Object.values(estados).filter(e => e === 'POR_MARCAR').length;
 
   const isReady = countM === 0;
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+         <ActivityIndicator size="large" color="#0F172A" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

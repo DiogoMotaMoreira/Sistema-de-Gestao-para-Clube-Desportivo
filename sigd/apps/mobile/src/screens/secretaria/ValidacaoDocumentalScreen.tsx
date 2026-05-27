@@ -48,7 +48,7 @@ export function ValidacaoDocumentalScreen(): React.JSX.Element {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const { data: pageData, isLoading, isError } = useQuery({
+  const { data: pageData, isLoading, isError, refetch } = useQuery({
     queryKey: ['atletasValidacao'],
     queryFn: () => secretariaService.getAtletas(undefined, undefined, 0, 200),
   });
@@ -74,7 +74,15 @@ export function ValidacaoDocumentalScreen(): React.JSX.Element {
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Confirmar',
-          onPress: () => showToast('Documentação validada com sucesso!'),
+          onPress: async () => {
+            try {
+              await secretariaService.validarDocumentos(atleta.id);
+              showToast('Documentação validada com sucesso!');
+              void refetch();
+            } catch (err) {
+              showToast('Erro ao validar documentação do atleta.', 'error');
+            }
+          },
         },
       ]
     );

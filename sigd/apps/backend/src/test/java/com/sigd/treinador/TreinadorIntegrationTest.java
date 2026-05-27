@@ -199,14 +199,14 @@ public class TreinadorIntegrationTest extends BaseIntegrationTest {
     @WithMockUser(username = "treinador", roles = {"TREINADOR"})
     void listar_sessoes_por_equipa_deve_retornar_200() throws Exception {
         mockMvc.perform(get("/api/v1/treinador/sessoes?equipaId=1"))
-            .andExpect(status().is5xxServerError());
+            .andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(username = "treinador", roles = {"TREINADOR"})
     void listar_eventos_por_equipa_deve_retornar_200() throws Exception {
         mockMvc.perform(get("/api/v1/treinador/eventos?equipaId=1"))
-            .andExpect(status().is5xxServerError());
+            .andExpect(status().isOk());
     }
 
     @Test
@@ -219,7 +219,7 @@ public class TreinadorIntegrationTest extends BaseIntegrationTest {
     @Test
     @WithMockUser(username = "secretaria", roles = {"SECRETARIA"})
     void listar_encarregados_deve_retornar_200() throws Exception {
-        mockMvc.perform(get("/api/v1/tesouraria/encarregados?page=0&size=10"))
+        mockMvc.perform(get("/api/v1/tesouraria/ee?page=0&size=10"))
             .andExpect(status().isOk());
     }
 
@@ -234,13 +234,13 @@ public class TreinadorIntegrationTest extends BaseIntegrationTest {
     @WithMockUser(username = "ceo", roles = {"CEO"})
     void ceo_kpis_deve_retornar_200() throws Exception {
         mockMvc.perform(get("/api/v1/ceo/kpis"))
-            .andExpect(status().is5xxServerError());
+            .andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(username = "cfo", roles = {"CFO"})
     void cfo_resumo_deve_retornar_200() throws Exception {
-        mockMvc.perform(get("/api/v1/cfo/resumo"))
-            .andExpect(status().is5xxServerError());
+        mockMvc.perform(get("/api/v1/cfo/resumo-financeiro"))
+            .andExpect(status().isOk());
     }
 }

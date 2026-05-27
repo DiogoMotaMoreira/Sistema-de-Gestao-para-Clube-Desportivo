@@ -43,6 +43,18 @@ public class UtilizadorAdminService {
 
     @Transactional
     public UtilizadorAdminDTO.Response criar(UtilizadorAdminDTO.Request request) {
+        if (request.username() == null || request.username().isBlank()) {
+            throw new IllegalArgumentException("Username não pode estar vazio");
+        }
+        java.util.List<String> rolesValidos = java.util.List.of(
+            "ROLE_ADMIN","ROLE_MEDICO","ROLE_TREINADOR",
+            "ROLE_SECRETARIA","ROLE_EE","ROLE_CEO","ROLE_CFO",
+            "ROLE_DIRETOR_TECNICO"
+        );
+        if (!rolesValidos.contains(request.role())) {
+            throw new IllegalArgumentException("Role inválido: " + request.role());
+        }
+
         if (utilizadorRepository.existsByUsername(request.username())) {
             throw new UtilizadorJaExisteException("Já existe um utilizador com o username: " + request.username());
         }
@@ -75,6 +87,11 @@ public class UtilizadorAdminService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName().equals(utilizador.getUsername())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é permitido bloquear a própria conta.");
+        }
+
+        long adminsActivos = utilizadorRepository.countByRoleAndAtivo("ROLE_ADMIN", true);
+        if (adminsActivos <= 1 && utilizador.getRole().equals("ROLE_ADMIN")) {
+            throw new IllegalStateException("Não é possível bloquear o único administrador activo");
         }
 
         utilizador.setAtivo(false);

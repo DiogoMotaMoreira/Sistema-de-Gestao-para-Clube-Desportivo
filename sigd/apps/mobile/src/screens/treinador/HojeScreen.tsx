@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronRight, Dumbbell, Activity, Trophy, Clock, CheckCi
 import { Colors } from '@/constants/colors';
 import { useAuthStore } from '@/stores/authStore';
 import { treinadorService, EventoTreinador, EquipaTreinador } from '@/services/treinadorService';
+import { useFocusEffect } from '@react-navigation/native';
 
 const formatarData = (dataStr?: string) => {
   if (!dataStr) return '';
@@ -18,6 +19,8 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
   const [equipas, setEquipas] = useState<EquipaTreinador[]>([]);
   const [activeEquipa, setActiveEquipa] = useState<EquipaTreinador | null>(null);
   const [eventos, setEventos] = useState<EventoTreinador[]>([]);
+  const [activeTab, setActiveTab] = useState<'hoje' | 'passadas'>('hoje');
+  const [sessoesPassadas, setSessoesPassadas] = useState<any[]>([]);
 
   useEffect(() => {
     // Top Bar Customization
@@ -37,11 +40,20 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
     });
   }, [navigation, user]);
 
-  useEffect(() => {
-    if (activeEquipa) {
-      treinadorService.getEventosHoje(activeEquipa.id).then(setEventos);
-    }
-  }, [activeEquipa]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (activeEquipa) {
+        Promise.all([
+          treinadorService.getEventosHoje(activeEquipa.id),
+          treinadorService.getSessoesDaEquipa(activeEquipa.id)
+        ]).then(([hojeRes, sessoesRes]) => {
+          setEventos(hojeRes);
+          const passadas = sessoesRes.filter((s: any) => s.estado === 'CONCLUIDA');
+          setSessoesPassadas(passadas);
+        }).catch(console.error);
+      }
+    }, [activeEquipa])
+  );
 
   const eventoPendente = eventos.find(e => e.tipo === 'JOGO' && (e.subEstadoJogo === 'FUTURO_SEM_CONVOCATORIA' || e.subEstadoJogo === 'FUTURO_RASCUNHO'));
 
@@ -51,6 +63,30 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
     } else if (evento.subEstadoTreino === 'AVALIACAO_PENDENTE') {
       navigation.navigate('AvaliacaoSessao', { eventoId: evento.id });
     }
+  };
+
+  const renderSessaoPassadaCard = (sessao: any) => {
+    return (
+      <TouchableOpacity 
+        key={sessao.id} 
+        style={[styles.card, { borderLeftColor: '#64748B' }]} 
+        onPress={() => navigation.navigate('DetalheSessao', { sessaoId: sessao.id })}
+      >
+        <View style={styles.cardHeaderRow}>
+          <View style={[styles.badgePill, { backgroundColor: '#F1F5F9' }]}>
+            <Dumbbell size={12} color="#64748B" />
+            <Text style={[styles.badgeText, { color: '#64748B' }]}>TREINO CONCLUÍDO</Text>
+          </View>
+          <Text style={[styles.cardTime, { color: '#64748B' }]}>{sessao.horaInicio.substring(0, 5)}</Text>
+        </View>
+        <Text style={styles.cardTitle}>{sessao.tipo === 'FISICO' ? 'Treino Físico' : sessao.tipo === 'TACTICO' ? 'Treino Táctico' : 'Treino Técnico'}</Text>
+        <Text style={styles.cardSubTitle}>Data: {formatarData(sessao.data)} · {sessao.equipaNome}</Text>
+        <View style={styles.btnOutlineDetail}>
+          <ClipboardCheck size={16} color="#000000" style={{ marginRight: 6 }} />
+          <Text style={styles.btnOutlineDetailText}>Ver Presenças & Avaliação</Text>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   const renderEventCard = (evento: EventoTreinador) => {
@@ -141,29 +177,61 @@ export function HojeScreen({ navigation }: any): React.JSX.Element {
         ))}
       </ScrollView>
 
-      {/* Alerta Persistente */}
-      {eventoPendente && (
-        <TouchableOpacity style={styles.alertaConvocatoria} onPress={() => navigation.navigate('Jogos')}>
-          <AlertTriangle size={16} color="#B45309" />
-          <View style={styles.alertaContent}>
-            <Text style={styles.alertaTitle}>Convocatória por publicar</Text>
-            <Text style={styles.alertaSubTitle}>{eventoPendente.adversario || 'Adversário por definir'} — Hoje às {eventoPendente.hora || 'por definir'}</Text>
-          </View>
-          <ChevronRight size={16} color="#B45309" />
+      {/* Abas Segmentadas Premium */}
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity 
+          style={[styles.tabBtn, activeTab === 'hoje' && styles.tabBtnActive]} 
+          onPress={() => setActiveTab('hoje')}
+        >
+          <Text style={[styles.tabBtnText, activeTab === 'hoje' && styles.tabBtnTextActive]}>Hoje</Text>
         </TouchableOpacity>
-      )}
-
-      {/* Cartões */}
-      <View style={styles.cardsContainer}>
-        {eventos.length === 0 ? (
-          <View style={styles.emptyState}>
-            <CalendarCheck size={48} color={Colors.GRAY_200_BORDAS} />
-            <Text style={styles.emptyTitle}>Sem eventos para hoje</Text>
-          </View>
-        ) : (
-          eventos.map(renderEventCard)
-        )}
+        <TouchableOpacity 
+          style={[styles.tabBtn, activeTab === 'passadas' && styles.tabBtnActive]} 
+          onPress={() => setActiveTab('passadas')}
+        >
+          <Text style={[styles.tabBtnText, activeTab === 'passadas' && styles.tabBtnTextActive]}>Sessões Passadas</Text>
+        </TouchableOpacity>
       </View>
+
+      {activeTab === 'hoje' ? (
+        <>
+          {/* Alerta Persistente */}
+          {eventoPendente && (
+            <TouchableOpacity style={styles.alertaConvocatoria} onPress={() => navigation.navigate('Jogos')}>
+              <AlertTriangle size={16} color="#B45309" />
+              <View style={styles.alertaContent}>
+                <Text style={styles.alertaTitle}>Convocatória por publicar</Text>
+                <Text style={styles.alertaSubTitle}>{eventoPendente.adversario || 'Adversário por definir'} — Hoje às {eventoPendente.hora || 'por definir'}</Text>
+              </View>
+              <ChevronRight size={16} color="#B45309" />
+            </TouchableOpacity>
+          )}
+
+          {/* Cartões Hoje */}
+          <View style={styles.cardsContainer}>
+            {eventos.length === 0 ? (
+              <View style={styles.emptyState}>
+                <CalendarCheck size={48} color={Colors.GRAY_200_BORDAS} />
+                <Text style={styles.emptyTitle}>Sem eventos para hoje</Text>
+              </View>
+            ) : (
+              eventos.map(renderEventCard)
+            )}
+          </View>
+        </>
+      ) : (
+        /* Cartões Sessões Passadas */
+        <View style={styles.cardsContainer}>
+          {sessoesPassadas.length === 0 ? (
+            <View style={styles.emptyState}>
+              <CalendarCheck size={48} color={Colors.GRAY_200_BORDAS} />
+              <Text style={styles.emptyTitle}>Sem treinos finalizados</Text>
+            </View>
+          ) : (
+            sessoesPassadas.map(renderSessaoPassadaCard)
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -338,5 +406,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.GRAY_500_TEXTO2,
     marginTop: 4,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  tabBtnActive: {
+    backgroundColor: Colors.BRANCO,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.GRAY_500_TEXTO2,
+  },
+  tabBtnTextActive: {
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  btnOutlineDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.GRAY_200_BORDAS,
+    borderRadius: 8,
+    paddingVertical: 10,
+    marginTop: 12,
+    gap: 6,
+  },
+  btnOutlineDetailText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
   },
 });

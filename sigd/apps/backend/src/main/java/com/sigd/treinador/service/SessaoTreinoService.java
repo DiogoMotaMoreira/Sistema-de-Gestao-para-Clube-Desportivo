@@ -165,6 +165,43 @@ public class SessaoTreinoService {
         return new AvaliacaoPosSessionDTO.Response(sessaoId, avaliacoesResponse.size(), avaliacoesResponse);
     }
 
+    @Transactional(readOnly = true)
+    public SessaoTreinoDTO.DetalheResponse obterDetalhe(Long id) {
+        SessaoTreino sessao = sessaoTreinoRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Sessão de treino não encontrada"));
+
+        List<RegistoAssiduidade> registos = registoAssiduidadeRepo.findBySessaoId(id);
+        List<AvaliacaoRendimento> avaliacoes = avaliacaoRendimentoRepo.findBySessaoId(id);
+
+        java.util.Map<Long, java.math.BigDecimal> avaliacaoMap = avaliacoes.stream()
+                .collect(Collectors.toMap(
+                        a -> a.getAtleta().getId(),
+                        AvaliacaoRendimento::getNota,
+                        (nota1, nota2) -> nota1
+                ));
+
+        List<SessaoTreinoDTO.DetalheAtleta> detalhes = registos.stream()
+                .map(r -> new SessaoTreinoDTO.DetalheAtleta(
+                        r.getAtleta().getId(),
+                        r.getAtleta().getNomeCompleto(),
+                        r.getEstado().name(),
+                        avaliacaoMap.get(r.getAtleta().getId())
+                ))
+                .collect(Collectors.toList());
+
+        return new SessaoTreinoDTO.DetalheResponse(
+                sessao.getId(),
+                sessao.getEquipa().getId(),
+                sessao.getEquipa().getNome(),
+                sessao.getData(),
+                sessao.getHoraInicio(),
+                sessao.getHoraFim(),
+                sessao.getTipo(),
+                sessao.getEstado(),
+                detalhes
+        );
+    }
+
     private SessaoTreinoDTO.Response toDto(SessaoTreino sessao) {
         int totalAtletas = registoAssiduidadeRepo.findBySessaoId(sessao.getId()).size();
         return new SessaoTreinoDTO.Response(

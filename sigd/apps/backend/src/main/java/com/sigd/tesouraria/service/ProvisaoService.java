@@ -13,6 +13,7 @@ import java.util.List;
 
 @Service
 @Transactional
+@lombok.extern.slf4j.Slf4j
 public class ProvisaoService {
 
     private final EpocaDesportivaRepository epocaRepo;
@@ -34,8 +35,16 @@ public class ProvisaoService {
 
         // 2. Carrega todos os atletas activos (estado_elegibilidade != arquivado -> na verdade, todos)
         List<Atleta> atletas = atletaRepo.findAll();
+        if (atletas == null || atletas.isEmpty()) {
+            throw new IllegalStateException("Equipa não tem atletas registados");
+        }
 
         for (Atleta atleta : atletas) {
+            if (atleta.getEncarregado() == null) {
+                log.warn("Atleta ID {} não tem Encarregado de Educação. Ignorando geração.", atleta.getId());
+                continue;
+            }
+
             // Verifica se o atleta tem escalão associado
             if (atleta.getEquipa() == null || atleta.getEquipa().getEscalao() == null) {
                 continue;

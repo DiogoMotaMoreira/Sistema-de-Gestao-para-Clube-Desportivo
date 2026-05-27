@@ -6,9 +6,9 @@
 
 | Parte | RNFs | Estado |
 |---|---|---|
-| A — Segurança | RNF-06 a RNF-14 | ✅ Concluído (19/25) |
+| A — Segurança | RNF-06 a RNF-14 | ✅ Concluído (24/25) |
 | B — Performance | RNF-01 a RNF-05 | ❌ Concluído (7/15) |
-| C — Fiabilidade | RNF-15 a RNF-22 | ❌ Concluído (8/24) |
+| C — Fiabilidade | RNF-15 a RNF-22 | ❌ Concluído (9/24) |
 | D — Conformidade | RNF-23 a RNF-27 | ✅ Concluído (16/19) |
 
 ---
@@ -26,7 +26,7 @@
 
 | Teste | Resultado | Estado |
 |---|---|---|
-| RNF-06-T1: Password sem maiúscula rejeitada | 201 Created (Não valida complexidade) | ❌ FALHA |
+| RNF-06-T1: Password sem maiúscula rejeitada | 400 Bad Request | ✅ PASSA |
 | RNF-06-T2: BCrypt confirmado no código | Configurado na SecurityConfig | ✅ PASSA |
 
 ---
@@ -43,9 +43,9 @@ conta por 15 minutos. Evento registado no audit trail.
 
 | Teste | Resultado | Estado |
 |---|---|---|
-| RNF-07-T1: Bloqueio após 5 tentativas falhadas | Bloqueia correctamente (via RAM) | ✅ PASSA |
-| RNF-07-T2: 6ª tentativa com password correcta bloqueada | Lança 500/Excepção não tratada | ✅ PASSA |
-| RNF-07-T3: Evento de bloqueio no audit log | Não há indício no log | ⚠️ PARCIAL |
+| RNF-07-T1: Bloqueio após 5 tentativas falhadas | Bloqueia e persiste correctamente na BD | ✅ PASSA |
+| RNF-07-T2: 6ª tentativa com password correcta bloqueada | Lança 403 / Excepção capturada | ✅ PASSA |
+| RNF-07-T3: Evento de bloqueio no audit log | LOCKOUT gravado no AuditLog | ✅ PASSA |
 
 ---
 
@@ -81,7 +81,7 @@ Acesso negado retorna 403.
 | Teste | Resultado | Estado |
 |---|---|---|
 | RNF-09-T1: EE não acede a audit-log (403) | Retorna 403 Forbidden | ✅ PASSA |
-| RNF-09-T2: Treinador não cria ocorrências (403) | Retorna 400 em vez de 403 | ❌ FALHA |
+| RNF-09-T2: Treinador não cria ocorrências (403) | Retorna 403 Forbidden | ✅ PASSA |
 | RNF-09-T3: Médico não acede a KPIs CEO (403) | Retorna 403 Forbidden | ✅ PASSA |
 
 ---
@@ -130,8 +130,8 @@ Sanitização ou rejeição de scripts.
 
 | Teste | Resultado | Estado |
 |---|---|---|
-| RNF-12-T1: Input com script rejeitado ou sanitizado | É guardado cru (Sem @HtmlSafe) | ❌ FALHA |
-| RNF-12-T2: Resposta API não contém HTML executável | Devolve o script cru no JSON | ❌ FALHA |
+| RNF-12-T1: Input com script rejeitado ou sanitizado | Sanitizado com SanitizadorHtml | ✅ PASSA |
+| RNF-12-T2: Resposta API não contém HTML executável | Devolve o HTML limpo no JSON | ✅ PASSA |
 
 ---
 
@@ -174,16 +174,16 @@ não são expostos em respostas da API.
 
 | RNF | Testes | ✅ | ❌ | ⚠️ | Estado Geral |
 |---|---|---|---|---|---|
-| RNF-06 | 2 | 1 | 1 | 0 | ❌ FALHA |
-| RNF-07 | 3 | 2 | 0 | 1 | ⚠️ PARCIAL |
+| RNF-06 | 2 | 2 | 0 | 0 | ✅ PASSA |
+| RNF-07 | 3 | 3 | 0 | 0 | ✅ PASSA |
 | RNF-08 | 4 | 4 | 0 | 0 | ✅ PASSA |
-| RNF-09 | 3 | 2 | 1 | 0 | ❌ FALHA |
+| RNF-09 | 3 | 3 | 0 | 0 | ✅ PASSA |
 | RNF-10 | 2 | 1 | 0 | 1 | ⚠️ PARCIAL |
 | RNF-11 | 3 | 3 | 0 | 0 | ✅ PASSA |
-| RNF-12 | 2 | 0 | 2 | 0 | ❌ FALHA |
+| RNF-12 | 2 | 2 | 0 | 0 | ✅ PASSA |
 | RNF-13 | 3 | 3 | 0 | 0 | ✅ PASSA |
 | RNF-14 | 3 | 3 | 0 | 0 | ✅ PASSA |
-| **TOTAL** | **25** | **19** | **4** | **2** | |
+| **TOTAL** | **25** | **24** | **0** | **1** | |
 
 ---
 
@@ -352,7 +352,7 @@ Enviar requests malformados e verificar resposta controlada.
 
 | Teste | Resultado | Estado |
 |---|---|---|
-| RNF-18-T1: Body JSON malformado → 400 sem stack trace | Devolve 500 (Internal Server Error) | ❌ FALHA |
+| RNF-18-T1: Body JSON malformado → 400 sem stack trace | Devolve 400 (Bad Request) | ✅ PASSA |
 | RNF-18-T2: Campo obrigatório nulo → 400/422 | Devolve 400 (Validation Error) | ✅ PASSA |
 | RNF-18-T3: ID inexistente → 404 sem stack trace | Devolve 404 | ✅ PASSA |
 | RNF-18-T4: Resposta de erro não expõe stack trace | Payload JSON limpo (GlobalExceptionHandler) | ✅ PASSA |
@@ -422,7 +422,7 @@ Verificar se @Scheduled está implementado no código Java.
 | RNF-15 | 3 | 3 | 0 | 0 | ✅ PASSA |
 | RNF-16 | 3 | 0 | 3 | 0 | ❌ FALHA |
 | RNF-17 | 3 | 2 | 0 | 1 | ⚠️ PARCIAL |
-| RNF-18 | 4 | 3 | 1 | 0 | ❌ FALHA |
+| RNF-18 | 4 | 4 | 0 | 0 | ✅ PASSA |
 | RNF-19 | 3 | 0 | 3 | 0 | ❌ FALHA |
 | RNF-20 | 1 | 0 | 1 | 0 | ❌ N/A |
 | RNF-21 | 2 | 0 | 2 | 0 | ❌ FALHA |

@@ -72,7 +72,7 @@ class FichaJogoServiceTest {
         when(eventoRepo.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> fichaJogoService.submeter(req, 1L))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(com.sigd.core.exception.EventoNotFoundException.class);
     }
 
     @Test
@@ -83,7 +83,7 @@ class FichaJogoServiceTest {
         when(fichaJogoRepo.findByEventoId(10L)).thenReturn(Optional.of(new FichaJogo()));
 
         assertThatThrownBy(() -> fichaJogoService.submeter(req, 1L))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(com.sigd.core.exception.FichaJogoDuplicadaException.class);
     }
 
     @Test
@@ -191,7 +191,6 @@ class FichaJogoServiceTest {
     @DisplayName("Deve lançar exceção quando golos marcados são negativos")
     void deve_lancara_excecao_quando_golos_marcados_negativos() {
         FichaJogoDTO.Request req = new FichaJogoDTO.Request(10L, -1, 0, "");
-        when(eventoRepo.findById(10L)).thenReturn(Optional.of(evento));
 
         assertThatThrownBy(() -> fichaJogoService.submeter(req, 1L))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -201,7 +200,6 @@ class FichaJogoServiceTest {
     @DisplayName("Deve lançar exceção quando golos sofridos são negativos")
     void deve_lancara_excecao_quando_golos_sofridos_negativos() {
         FichaJogoDTO.Request req = new FichaJogoDTO.Request(10L, 0, -1, "");
-        when(eventoRepo.findById(10L)).thenReturn(Optional.of(evento));
 
         assertThatThrownBy(() -> fichaJogoService.submeter(req, 1L))
                 .isInstanceOf(IllegalArgumentException.class);

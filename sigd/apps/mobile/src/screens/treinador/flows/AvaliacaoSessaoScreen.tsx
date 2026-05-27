@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { treinadorService, AtletaPlantel } from '@/services/treinadorService';
 import { Check, Lock } from 'lucide-react-native';
@@ -8,27 +8,64 @@ export function AvaliacaoSessaoScreen({ route, navigation }: any): React.JSX.Ele
   const { eventoId } = route.params;
   const [plantel, setPlantel] = useState<AtletaPlantel[]>([]);
   const [notas, setNotas] = useState<Record<number, number | null>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     navigation.setOptions({
-      title: 'Avaliação — 17:00',
-      headerRight: () => (
-        <View style={{ marginRight: 16 }}>
-           <Text style={{ fontSize: 12, color: '#047857', fontWeight: '700' }}>4h 30m</Text>
-        </View>
-      )
+      title: 'Avaliação',
     });
 
-    treinadorService.getPlantel(1).then(p => {
-      // Mock: Assumir que só os aptos/condicionados estiveram presentes na chamada
-      const presentes = p.filter(a => !a.semaforo.startsWith('INAPTO'));
-      setPlantel(presentes);
-      
-      const n: Record<number, number> = {};
-      presentes.forEach(a => n[a.id] = 3.0);
-      setNotas(n);
-    });
+    setIsLoading(true);
+    treinadorService.getSessao(eventoId)
+      .then(sessao => {
+        navigation.setOptions({
+          title: `Avaliação — ${sessao.horaInicio.substring(0, 5)}`,
+          headerRight: () => (
+            <View style={{ marginRight: 16 }}>
+               <Text style={{ fontSize: 12, color: '#047857', fontWeight: '700' }}>Ativo</Text>
+            </View>
+          )
+        });
+
+        return Promise.all([
+          treinadorService.getPlantel(sessao.equipaId),
+          treinadorService.getSessaoDetalhe(eventoId).catch(() => null)
+        ]);
+      })
+      .then(([plantelData, detalheData]) => {
+        let presentes: AtletaPlantel[] = [];
+        if (detalheData && detalheData.detalhes && detalheData.detalhes.length > 0) {
+          const presentIds = new Set(
+            detalheData.detalhes
+              .filter((d: any) => d.estado === 'PRESENTE' || d.estado === 'ATRASADO')
+              .map((d: any) => d.atletaId)
+          );
+          presentes = plantelData.filter(a => presentIds.has(a.id));
+        } else {
+          presentes = plantelData.filter(a => !a.semaforo.startsWith('INAPTO'));
+        }
+        setPlantel(presentes);
+        
+        const n: Record<number, number | null> = {};
+        presentes.forEach(a => n[a.id] = 3.0);
+        setNotas(n);
+      })
+      .catch(e => {
+        console.error('Erro ao carregar dados da chamada ou plantel', e);
+        Alert.alert('Erro', 'Não foi possível carregar os atletas presentes.');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [eventoId, navigation]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+         <ActivityIndicator size="large" color="#0F172A" />
+      </View>
+    );
+  }
 
   const handleChangeNota = (id: number, delta: number) => {
     setNotas(prev => {
@@ -47,7 +84,10 @@ export function AvaliacaoSessaoScreen({ route, navigation }: any): React.JSX.Ele
 
   const submitAvaliacao = async () => {
     try {
-      const arr = Object.keys(notas).map(k => ({ atletaId: Number(k), nota: notas[Number(k)] }));
+      const arr = Object.keys(notas)
+        .map(k => ({ atletaId: Number(k), nota: notas[Number(k)] }))
+        .filter(item => item.nota !== null);
+      
       await treinadorService.submeterAvaliacao(eventoId, arr);
       
       Alert.alert('Sucesso', 'Sessão submetida com sucesso');

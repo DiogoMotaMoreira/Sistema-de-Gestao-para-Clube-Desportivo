@@ -28,4 +28,23 @@ public class SessaoTreinoDTO {
             EstadoSessao estado,
             Integer totalAtletas
     ) {}
+
+    public record DetalheAtleta(
+            Long atletaId,
+            String atletaNome,
+            String estado,
+            java.math.BigDecimal nota
+    ) {}
+
+    public record DetalheResponse(
+            Long sessaoId,
+            Long equipaId,
+            String equipaNome,
+            LocalDate data,
+            LocalTime horaInicio,
+            LocalTime horaFim,
+            TipoSessao tipo,
+            EstadoSessao estado,
+            java.util.List<DetalheAtleta> detalhes
+    ) {}
 }

@@ -22,12 +22,19 @@ public class FichaJogoService {
 
     @Transactional
     public FichaJogoDTO.Response submeter(FichaJogoDTO.Request request, Long userId) {
+        if (request.golosMarcados() < 0) {
+            throw new IllegalArgumentException("Golos marcados não podem ser negativos");
+        }
+        if (request.golosSofridos() < 0) {
+            throw new IllegalArgumentException("Golos sofridos não podem ser negativos");
+        }
+
         EventoDesportivo evento = eventoRepo.findById(request.eventoId())
-                .orElseThrow(() -> new IllegalArgumentException("Evento não encontrado"));
+                .orElseThrow(() -> new com.sigd.core.exception.EventoNotFoundException(request.eventoId()));
 
         Optional<FichaJogo> existing = fichaJogoRepo.findByEventoId(request.eventoId());
         if (existing.isPresent()) {
-            throw new IllegalStateException("Já existe uma ficha de jogo submetida para este evento");
+            throw new com.sigd.core.exception.FichaJogoDuplicadaException(request.eventoId());
         }
 
         ResultadoJogo resultado;

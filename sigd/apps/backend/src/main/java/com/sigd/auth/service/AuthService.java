@@ -9,6 +9,7 @@ import com.sigd.audit.repository.AuditLogRepository;
 import java.time.LocalDateTime;
 
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,9 +27,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class AuthService {
-
-    private static final java.util.Map<String, Integer> tentativasFalhadas = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final java.util.Map<String, java.time.LocalDateTime> bloqueadoAte = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final UtilizadorRepository utilizadorRepository;
     private final JwtService jwtService;
@@ -56,41 +54,57 @@ public class AuthService {
      */
     public LoginResponse login(LoginRequest request) {
         String username = request.username();
+        String password = request.password();
 
-        // 0. Verificar se username está bloqueado
-        if (bloqueadoAte.containsKey(username)) {
-            java.time.LocalDateTime limit = bloqueadoAte.get(username);
-            if (java.time.LocalDateTime.now().isBefore(limit)) {
-                throw new IllegalStateException("Conta bloqueada por 15 minutos");
-            } else {
-                bloqueadoAte.remove(username);
-                tentativasFalhadas.remove(username);
-            }
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username não pode estar vazio");
+        }
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Password não pode estar vazia");
         }
 
         // 1. Buscar utilizador pelo username
         Utilizador user = utilizadorRepository.findByUsername(username)
                 .orElseThrow(() -> new BadCredentialsException("Credenciais inválidas"));
 
+        // 0. Verificar se username está bloqueado
+        if (user.getBloqueadoAte() != null && user.getBloqueadoAte().isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Conta bloqueada por 15 minutos");
+        }
+
         // 2. Verificar se a conta está ativa
         if (!user.getAtivo()) {
-            throw new RuntimeException("Conta bloqueada. Contacte o administrador.");
+            throw new DisabledException("Conta bloqueada. Contacte o administrador.");
         }
 
         // 3. Validar password com BCrypt
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            int attempts = tentativasFalhadas.getOrDefault(username, 0) + 1;
-            tentativasFalhadas.put(username, attempts);
-            if (attempts >= 5) {
-                bloqueadoAte.put(username, java.time.LocalDateTime.now().plusMinutes(15));
+            user.setTentativasFalhadas(user.getTentativasFalhadas() + 1);
+            if (user.getTentativasFalhadas() >= 5) {
+                user.setBloqueadoAte(LocalDateTime.now().plusMinutes(15));
+                
+                // Registar no audit log
+                AuditLog lockoutLog = new AuditLog();
+                lockoutLog.setAtor(username);
+                lockoutLog.setAcao("LOCKOUT");
+                lockoutLog.setEntidade("Utilizador");
+                lockoutLog.setEntidadeId(user.getId());
+                lockoutLog.setDetalhes("Conta bloqueada por 15 minutos após 5 tentativas falhadas");
+                lockoutLog.setTimestamp(LocalDateTime.now());
+                lockoutLog.setIpAddress("127.0.0.1");
+                auditLogRepository.save(lockoutLog);
+                
+                utilizadorRepository.save(user);
                 throw new BadCredentialsException("Credenciais inválidas (5/5 tentativas)");
             }
-            throw new BadCredentialsException("Credenciais inválidas (" + attempts + "/5 tentativas)");
+            utilizadorRepository.save(user);
+            throw new BadCredentialsException("Credenciais inválidas (" + user.getTentativasFalhadas() + "/5 tentativas)");
         }
 
         // Sucesso: limpar tentativas e bloqueios
-        tentativasFalhadas.remove(username);
-        bloqueadoAte.remove(username);
+        user.setTentativasFalhadas(0);
+        user.setBloqueadoAte(null);
+        utilizadorRepository.save(user);
 
         // Audit Log
         Utilizador utilizador = user;
@@ -145,7 +159,7 @@ public class AuthService {
 
         // 4. Verificar se a conta continua ativa
         if (!user.getAtivo()) {
-            throw new RuntimeException("Conta bloqueada. Contacte o administrador.");
+            throw new DisabledException("Conta bloqueada. Contacte o administrador.");
         }
 
         // 5. Gerar novo access token (manter o mesmo refresh token)

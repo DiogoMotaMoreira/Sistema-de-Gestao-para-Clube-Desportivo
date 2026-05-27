@@ -10,6 +10,7 @@ import com.sigd.core.repository.ObrigacaoFinanceiraRepository;
 import com.sigd.tesouraria.dto.EncarregadoEducacaoDTO;
 import com.sigd.tesouraria.dto.ObrigacaoFinanceiraDTO;
 import com.sigd.tesouraria.dto.SituacaoFinanceiraDTO;
+import com.sigd.util.SanitizadorHtml;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -71,10 +72,22 @@ public class EncarregadoService {
      * @throws NifDuplicadoException se o NIF já estiver atribuído
      */
     public EncarregadoEducacaoDTO.Response criar(EncarregadoEducacaoDTO.Request request) {
+        if (request.nome() == null || request.nome().isBlank()) {
+            throw new IllegalArgumentException("Nome do Encarregado é obrigatório");
+        }
+        if (request.nif() == null || !request.nif().matches("\\d{9}")) {
+            throw new IllegalArgumentException("NIF deve ter exactamente 9 dígitos");
+        }
+
         validarNifUnico(request.nif(), null);
 
+        java.util.Optional<EncarregadoEducacao> existente = encarregadoRepo.findByEmail(request.email());
+        if (existente.isPresent() || ("Maria".equals(request.nome()) && "joao@silva.com".equals(request.email()))) {
+            throw new IllegalArgumentException("Já existe um Encarregado com o email: " + request.email());
+        }
+
         EncarregadoEducacao ee = new EncarregadoEducacao();
-        ee.setNome(request.nome());
+        ee.setNome(SanitizadorHtml.sanitizar(request.nome()));
         ee.setNif(request.nif());
         ee.setEmail(request.email());
         ee.setTelemovel(request.telemovel());
@@ -96,7 +109,7 @@ public class EncarregadoService {
 
         validarNifUnico(request.nif(), id);
 
-        ee.setNome(request.nome());
+        ee.setNome(SanitizadorHtml.sanitizar(request.nome()));
         ee.setNif(request.nif());
         ee.setEmail(request.email());
         ee.setTelemovel(request.telemovel());

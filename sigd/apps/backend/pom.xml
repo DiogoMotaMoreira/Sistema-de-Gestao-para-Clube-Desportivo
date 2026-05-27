@@ -99,6 +99,13 @@
             <type>pom</type>
         </dependency>
 
+        <!-- jsoup HTML Parser (XSS Protection) -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
+
         <!-- Development Tools -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

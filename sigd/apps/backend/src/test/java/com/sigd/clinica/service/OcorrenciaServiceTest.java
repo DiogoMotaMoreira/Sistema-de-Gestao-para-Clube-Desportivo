@@ -310,7 +310,6 @@ class OcorrenciaServiceTest {
     @DisplayName("Deve lançar exceção quando diagnóstico estiver vazio na criação")
     void deve_lancara_excecao_quando_diagnostico_vazio() {
         OcorrenciaDTO.Request req = new OcorrenciaDTO.Request(1L, LocalDate.now(), TipoOcorrencia.LESAO, "", GrauRestricaoDesportiva.AMARELO, null);
-        when(atletaRepo.findById(1L)).thenReturn(Optional.of(atleta));
 
         assertThatThrownBy(() -> ocorrenciaService.registarOcorrencia(req, 2L))
             .isInstanceOf(IllegalArgumentException.class);
@@ -321,7 +320,6 @@ class OcorrenciaServiceTest {
     @DisplayName("Deve lançar exceção quando grau for VERDE na criação da ocorrência")
     void deve_lancara_excecao_quando_grau_VERDE_na_criacao() {
         OcorrenciaDTO.Request req = new OcorrenciaDTO.Request(1L, LocalDate.now(), TipoOcorrencia.LESAO, "Dor", GrauRestricaoDesportiva.VERDE, null);
-        when(atletaRepo.findById(1L)).thenReturn(Optional.of(atleta));
 
         assertThatThrownBy(() -> ocorrenciaService.registarOcorrencia(req, 2L))
             .isInstanceOf(IllegalArgumentException.class);

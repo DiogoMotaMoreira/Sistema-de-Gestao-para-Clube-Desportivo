@@ -48,4 +48,9 @@ public class SessaoTreinoController {
     public ResponseEntity<AvaliacaoPosSessionDTO.Response> registarAvaliacoes(@PathVariable Long id, @RequestBody @Valid AvaliacaoPosSessionDTO.Request request) {
         return ResponseEntity.ok(sessaoTreinoService.registarAvaliacoes(id, request));
     }
+
+    @GetMapping("/{id}/detalhe")
+    public ResponseEntity<SessaoTreinoDTO.DetalheResponse> obterDetalhe(@PathVariable Long id) {
+        return ResponseEntity.ok(sessaoTreinoService.obterDetalhe(id));
+    }
 }

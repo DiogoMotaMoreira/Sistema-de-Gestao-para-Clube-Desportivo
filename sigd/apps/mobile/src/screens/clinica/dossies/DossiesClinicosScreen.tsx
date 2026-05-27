@@ -70,7 +70,8 @@ export function DossiesClinicosScreen(): React.JSX.Element {
   const [altaModalVisible, setAltaModalVisible] = useState(false);
   const [altaOcorrenciaId, setAltaOcorrenciaId] = useState<number | null>(null);
   const [altaParecer, setAltaParecer] = useState('');
-  const [altaDataEncerramento, setAltaDataEncerramento] = useState('');
+  const hoje = new Date().toISOString().split('T')[0];
+  const [altaDataEncerramento, setAltaDataEncerramento] = useState(hoje);
   const [altaLoading, setAltaLoading] = useState(false);
   const [altaDateError, setAltaDateError] = useState('');
 
@@ -167,18 +168,20 @@ export function DossiesClinicosScreen(): React.JSX.Element {
   };
 
   const openAltaModal = (ocorrenciaId: number) => {
+    const hoje = new Date().toISOString().split('T')[0];
     setAltaOcorrenciaId(ocorrenciaId);
     setAltaParecer('');
-    setAltaDataEncerramento('');
+    setAltaDataEncerramento(hoje);
     setAltaDateError('');
     setAltaModalVisible(true);
   };
 
   const closeAltaModal = () => {
+    const hoje = new Date().toISOString().split('T')[0];
     setAltaModalVisible(false);
     setAltaOcorrenciaId(null);
     setAltaParecer('');
-    setAltaDataEncerramento('');
+    setAltaDataEncerramento(hoje);
     setAltaDateError('');
   };
 
@@ -258,7 +261,10 @@ export function DossiesClinicosScreen(): React.JSX.Element {
       fetchAtletas();
       Alert.alert('Ocorrência Registada', 'A ocorrência clínica foi registada com sucesso.');
     } catch (error: any) {
-      const mensagem = error.response?.data?.message || error.message || 'Erro desconhecido';
+      let mensagem = error.response?.data?.message || error.message || 'Erro desconhecido';
+      if (error.response?.status === 409 || error.response?.status === 422 || error.response?.data?.status === 409 || error.response?.data?.status === 422) {
+        mensagem = 'Este atleta já tem uma ocorrência clínica activa.\nRegiste uma evolução ou emita alta antes de criar nova.';
+      }
       Alert.alert('Não foi possível registar', mensagem);
     } finally {
       setNovaOcLoading(false);
@@ -374,7 +380,7 @@ export function DossiesClinicosScreen(): React.JSX.Element {
             <>
               {ocorrencias.filter(o => o.estado === 'ATIVA').map(oc => {
                 const grauAtual = getGrauAtual(oc);
-                const cardBorderColor = grauAtual === 'VERMELHO' ? '#991B1B' : grauAtual === 'AMARELO' ? '#B45309' : '#047857';
+                const cardBorderColor = oc.grauRestricao === 'VERMELHO' ? '#991B1B' : oc.grauRestricao === 'AMARELO' ? '#B45309' : '#047857';
 
                 const grauColor = oc.grauRestricao === 'VERMELHO' ? '#991B1B'
                   : oc.grauRestricao === 'AMARELO' ? '#B45309' : '#047857';

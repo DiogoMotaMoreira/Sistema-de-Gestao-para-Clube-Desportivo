@@ -4,7 +4,7 @@ import { User, Copy, CreditCard, CheckCircle, FileDown, LogOut } from 'lucide-re
 import { portalService, Dependente, ObrigacaoFinanceira, ResumoFinanceiro } from '@/services/portalService';
 import { useAuthStore } from '@/stores/authStore';
 import { PortalHeader } from './components/PortalHeader';
-import { BadgeElegibilidade, BadgeFinanceiro } from './components/PortalBadges';
+import { BadgeFinanceiro } from './components/PortalBadges';
 
 function formatarDataSegura(dataStr: string | undefined | null): string {
   if (!dataStr) return '';
@@ -33,6 +33,7 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
   const [perfil, setPerfil] = useState<any>(null);
   const [resumo, setResumo] = useState<ResumoFinanceiro | null>(null);
   const [filtro, setFiltro] = useState<'Todas' | 'Pendentes' | 'Pagas'>('Todas');
+  const [activeTab, setActiveTab] = useState<'conta' | 'historico'>('conta');
   const [showLogout, setShowLogout] = useState(false);
   const logout = useAuthStore(state => state.logout);
 
@@ -70,10 +71,35 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
     return true;
   });
 
+  const historico = obrigacoes
+    .filter(o => o.estado === 'PAGO')
+    .sort((a, b) => {
+      const da = a.dataPagamento ? new Date(a.dataPagamento).getTime() : 0;
+      const db = b.dataPagamento ? new Date(b.dataPagamento).getTime() : 0;
+      return db - da;
+    });
+
   return (
     <View style={styles.container}>
       <PortalHeader onDependenteChange={setDependente} />
 
+      {/* Tab Bar */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'conta' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('conta')}
+        >
+          <Text style={[styles.tabBtnText, activeTab === 'conta' && styles.tabBtnTextActive]}>Conta</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'historico' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('historico')}
+        >
+          <Text style={[styles.tabBtnText, activeTab === 'historico' && styles.tabBtnTextActive]}>Histórico</Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'conta' ? (
       <ScrollView style={styles.content} contentContainerStyle={{ padding: 16 }}>
         
         {/* KPI Cards */}
@@ -190,6 +216,38 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
         </TouchableOpacity>
 
       </ScrollView>
+      ) : (
+      /* ── Tab Histórico ─────────────────────────────────── */
+      <ScrollView style={styles.content} contentContainerStyle={{ padding: 16 }}>
+        <Text style={[styles.sectionLabel, { marginBottom: 12 }]}>PAGAMENTOS REALIZADOS</Text>
+        <View style={{ gap: 8, marginBottom: 24 }}>
+          {historico.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+              <CheckCircle size={56} color="#047857" style={{ opacity: 0.3, marginBottom: 12 }} />
+              <Text style={{ fontSize: 15, color: '#64748B', fontWeight: '600' }}>Sem pagamentos registados</Text>
+              <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>Os pagamentos efectuados aparecerão aqui.</Text>
+            </View>
+          ) : (
+            historico.map(o => (
+              <View key={o.id} style={[styles.cardObrigacao, { borderLeftColor: '#047857' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A', flex: 1 }}>{o.nome}</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#047857', marginLeft: 8 }}>{o.valor.toFixed(2).replace('.', ',')} €</Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>{o.entidade}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 12, color: '#047857' }}>✓ Pago a {formatarDataSegura(o.dataPagamento || '')}</Text>
+                  <TouchableOpacity style={styles.btnVerFatura}>
+                    <FileDown size={14} color="#1D4ED8" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 12, color: '#1D4ED8' }}>Fatura</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+      )}
 
       {/* Bottom Sheet Logout */}
       <Modal visible={showLogout} transparent animationType="slide">
@@ -221,6 +279,11 @@ export function ContaScreen({ navigation }: any): React.JSX.Element {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { flex: 1 },
+  tabBar: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabBtnActive: { borderBottomColor: '#0F172A' },
+  tabBtnText: { fontSize: 14, fontWeight: '600', color: '#94A3B8' },
+  tabBtnTextActive: { color: '#0F172A' },
   kpiRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   kpiCard: { flex: 1, borderRadius: 12, padding: 16, borderWidth: 1 },
   kpiLabel: { fontSize: 10, color: '#64748B', fontWeight: '700', marginBottom: 4 },

@@ -217,6 +217,11 @@ export const secretariaService = {
     return data;
   },
 
+  async validarDocumentos(atletaId: number): Promise<AtletaResponse> {
+    const { data } = await api.patch<AtletaResponse>(`/atletas/${atletaId}/validar-documentos`);
+    return data;
+  },
+
   // ── Equipas ─────────────────────────────────────────
 
   async getEquipas(): Promise<EquipaResponse[]> {

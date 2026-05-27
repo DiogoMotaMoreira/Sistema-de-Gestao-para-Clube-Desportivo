@@ -48,6 +48,12 @@ public class Utilizador implements UserDetails {
     @Column(nullable = false)
     private Boolean ativo = true;
 
+    @Column(name = "tentativas_falhadas", nullable = false)
+    private int tentativasFalhadas = 0;
+
+    @Column(name = "bloqueado_ate")
+    private LocalDateTime bloqueadoAte;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 

@@ -286,6 +286,11 @@ export const treinadorService = {
     return data;
   },
 
+  async getSessaoDetalhe(sessaoId: number): Promise<any> {
+    const { data } = await api.get(`/treinador/sessoes/${sessaoId}/detalhe`);
+    return data;
+  },
+
   async getSessoesDaEquipa(equipaId: number): Promise<any[]> {
     const { data } = await api.get(`/treinador/sessoes?equipaId=${equipaId}`);
     return data;
@@ -314,8 +319,12 @@ export const treinadorService = {
 
   async guardarConvocatoria(eventoId: number, atletaIds: number[], publicar: boolean, localConcentracao: string, horaConcentracao: string): Promise<boolean> {
     // publicar is not used directly in backend since all submitted are PUBLICADA
+    let formattedHora = horaConcentracao;
+    if (formattedHora && formattedHora.length === 5) {
+      formattedHora = `${formattedHora}:00`;
+    }
     await api.post('/treinador/convocatorias', {
-      eventoId, atletaIds, horaConcentracao, localConcentracao
+      eventoId, atletaIds, horaConcentracao: formattedHora, localConcentracao
     });
     return true;
   },

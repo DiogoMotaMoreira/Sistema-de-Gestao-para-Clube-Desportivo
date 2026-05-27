@@ -73,7 +73,11 @@ public class EventoDesportivoController {
         if (!eventoId.equals(request.eventoId())) {
             throw new IllegalArgumentException("O ID do evento no path e no body devem coincidir");
         }
-        FichaJogoDTO.Response response = fichaJogoService.submeter(request, treinador.getId());
+        Long submetidaPor = null;
+        if (treinador != null) {
+            submetidaPor = treinador.getId();
+        }
+        FichaJogoDTO.Response response = fichaJogoService.submeter(request, submetidaPor);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

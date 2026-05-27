@@ -101,4 +101,15 @@ public class AtletaController {
         return ResponseEntity.ok(atletaService.transferir(id, request.novaEquipaId()));
     }
 
+    /**
+     * PATCH /api/v1/tesouraria/atletas/{id}/validar-documentos
+     *
+     * Valida os documentos de um atleta, tornando-o elegível (APTO).
+     */
+    @PatchMapping("/{id}/validar-documentos")
+    public ResponseEntity<AtletaDTO.Response> validarDocumentos(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(atletaService.validarDocumentos(id));
+    }
+
 }

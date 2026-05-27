@@ -161,12 +161,16 @@ export const portalService = {
   },
 
   getAlertas: async (dependenteId: number): Promise<AlertaPortal[]> => {
-    const { data } = await api.get<AlertaPortal[]>('/portal/alertas');
+    const { data } = await api.get<AlertaPortal[]>('/portal/alertas', {
+      params: { atletaId: dependenteId }
+    });
     return data;
   },
 
   getEventos: async (dependenteId: number, passados: boolean): Promise<EventoPortal[]> => {
-    const { data } = await api.get<EventoPortal[]>('/portal/agenda');
+    const { data } = await api.get<EventoPortal[]>('/portal/agenda', {
+      params: { atletaId: dependenteId }
+    });
     const now = new Date();
     if (passados) {
       return data.filter(e => new Date(e.dataHora) < now);
@@ -224,18 +228,18 @@ export const portalService = {
     };
   },
 
-  getObrigacoes: async (dependenteId: number): Promise<ObrigacaoFinanceira[]> => {
-    const { data } = await api.get<any[]>('/portal/obrigacoes');
-    return data
-      .filter((ob: any) => ob.atletaId === dependenteId)
-      .map((ob: any) => ({
-        id: ob.id,
-        nome: ob.tipo || 'Obrigação',
-        entidade: ob.entidadeJuridica || 'SAD',
-        valor: ob.valor,
-        dataVencimento: ob.dataVencimento,
-        estado: ob.estado as 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'EM_ATRASO',
-        dataPagamento: ob.dataPagamento || undefined,
-      }));
+  getObrigacoes: async (dependenteId: number, estado?: string): Promise<ObrigacaoFinanceira[]> => {
+    const params: Record<string, any> = { atletaId: dependenteId };
+    if (estado) params.estado = estado;
+    const { data } = await api.get<any[]>('/portal/obrigacoes', { params });
+    return data.map((ob: any) => ({
+      id: ob.id,
+      nome: ob.tipo || 'Obrigação',
+      entidade: ob.entidadeJuridica || 'SAD',
+      valor: ob.valor,
+      dataVencimento: ob.dataVencimento,
+      estado: ob.estado as 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'EM_ATRASO',
+      dataPagamento: ob.dataPagamento || undefined,
+    }));
   }
 };

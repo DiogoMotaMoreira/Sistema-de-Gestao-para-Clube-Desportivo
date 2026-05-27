@@ -177,12 +177,11 @@ class AuthServiceTest {
             try { authService.login(wrongReq); } catch (Exception ignored) {}
         }
 
-        // Simulando que o admin vai à BD e faz ativo = true
+        // Simulando que o admin vai à BD e faz ativo = true e limpa bloqueios
         user.setAtivo(true);
+        user.setBloqueadoAte(null);
+        user.setTentativasFalhadas(0);
         when(passwordEncoder.matches("password123", "hashed_password")).thenReturn(true);
-        
-        // O utilizador com a conta ativa deveria conseguir entrar, MAS o mapa estático ainda tem o bloqueio.
-        // O teste deve ESPERAR sucesso, forçando assim a falha e expondo o bug da memória estática vs DB.
         
         when(jwtService.generateAccessToken(user)).thenReturn("token");
         when(jwtService.generateRefreshToken(user)).thenReturn("refresh");

@@ -7,6 +7,7 @@ import com.sigd.clinica.dto.FilaEMDDTO;
 import com.sigd.clinica.dto.FilaEMDStatsDTO;
 import com.sigd.clinica.dto.OcorrenciaDTO;
 import com.sigd.core.exception.AtletaComRestricaoException;
+import com.sigd.util.SanitizadorHtml;
 import com.sigd.core.exception.AtletaNotFoundException;
 import com.sigd.core.exception.DeliberacaoNaoAutorizadaException;
 import com.sigd.core.exception.OcorrenciaNotFoundException;
@@ -60,6 +61,13 @@ public class OcorrenciaService {
      * @throws AtletaComRestricaoException se o atleta já tiver restrição ativa
      */
     public OcorrenciaDTO.Response registarOcorrencia(OcorrenciaDTO.Request request, Long medicoCriadorId) {
+        if (request.diagnostico() == null || request.diagnostico().isBlank()) {
+            throw new IllegalArgumentException("Diagnóstico não pode estar vazio");
+        }
+        if (request.grauRestricao() == null || request.grauRestricao() == GrauRestricaoDesportiva.VERDE) {
+            throw new IllegalArgumentException("Grau VERDE não é permitido numa ocorrência clínica");
+        }
+
         Atleta atleta = atletaRepo.findById(request.atletaId())
                 .orElseThrow(() -> new AtletaNotFoundException(request.atletaId()));
 
@@ -81,7 +89,7 @@ public class OcorrenciaService {
         ocorrencia.setAtleta(atleta);
         ocorrencia.setDataOcorrencia(request.dataOcorrencia());
         ocorrencia.setTipo(request.tipo());
-        ocorrencia.setDiagnostico(request.diagnostico());
+        ocorrencia.setDiagnostico(SanitizadorHtml.sanitizar(request.diagnostico()));
         ocorrencia.setGrauRestricao(request.grauRestricao());
         ocorrencia.setDataReavaliacao(request.dataReavaliacao());
         ocorrencia.setEstadoEMD(EstadoEMD.EM_AVALIACAO);
@@ -185,7 +193,7 @@ public class OcorrenciaService {
         }
 
         ocorrencia.setGrauRestricao(deliberacao.grauFinal());
-        ocorrencia.setObsDeliberacao(deliberacao.obsDeliberacao());
+        ocorrencia.setObsDeliberacao(SanitizadorHtml.sanitizar(deliberacao.obsDeliberacao()));
         ocorrencia.setEstadoEMD(EstadoEMD.DELIBERADO);
         ocorrencia.setMedicoDeliberacao(medico);
         ocorrencia.setDataDeliberacao(LocalDate.now());
@@ -264,7 +272,7 @@ public class OcorrenciaService {
 
         // Encerrar a ocorrência
         ocorrencia.setEstado(EstadoOcorrencia.RESOLVIDA);
-        ocorrencia.setObsDeliberacao(altaDTO.parecer());
+        ocorrencia.setObsDeliberacao(SanitizadorHtml.sanitizar(altaDTO.parecer()));
         ocorrencia.setDataDeliberacao(LocalDate.now());
         ocorrencia.setMedicoDeliberacao(medico);
 
@@ -325,7 +333,7 @@ public class OcorrenciaService {
         OcorrenciaEvolucao evolucao = new OcorrenciaEvolucao();
         evolucao.setOcorrencia(ocorrencia);
         evolucao.setGrauRestricao(request.grauRestricao());
-        evolucao.setDescricao(request.descricao());
+        evolucao.setDescricao(SanitizadorHtml.sanitizar(request.descricao()));
         evolucao.setMedico(medico);
 
         evolucao = evolucaoRepo.save(evolucao);

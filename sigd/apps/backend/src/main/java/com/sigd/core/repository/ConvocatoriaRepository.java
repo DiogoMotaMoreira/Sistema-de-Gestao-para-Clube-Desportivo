@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ConvocatoriaRepository extends JpaRepository<Convocatoria, Long> {
     List<Convocatoria> findByEventoId(Long eventoId);
+    boolean existsByEventoIdAndAtletas_Id(Long eventoId, Long atletaId);
 }

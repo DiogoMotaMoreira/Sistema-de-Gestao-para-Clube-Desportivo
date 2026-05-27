@@ -19,6 +19,7 @@ import { AvaliacaoSessaoScreen } from '../screens/treinador/flows/AvaliacaoSessa
 import { DetalheJogoScreen } from '../screens/treinador/flows/DetalheJogoScreen';
 import { ConvocatoriaFlowScreen } from '../screens/treinador/flows/ConvocatoriaFlowScreen';
 import { FichaJogoFlowScreen } from '../screens/treinador/flows/FichaJogoFlowScreen';
+import { DetalheSessaoScreen } from '../screens/treinador/flows/DetalheSessaoScreen';
 
 // ── Tipos ──────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ export type TreinadorStackParamList = {
   DetalheJogo: { eventoId: number };
   ConvocatoriaFlow: { eventoId: number };
   FichaJogoFlow: { eventoId: number; adversario?: string };
+  DetalheSessao: { sessaoId: number };
 };
 
 const Tab = createBottomTabNavigator<TreinadorTabParamList>();
@@ -117,6 +119,7 @@ export function TreinadorNavigator(): React.JSX.Element {
       <Stack.Screen name="DetalheJogo" component={DetalheJogoScreen} />
       <Stack.Screen name="ConvocatoriaFlow" component={ConvocatoriaFlowScreen} />
       <Stack.Screen name="FichaJogoFlow" component={FichaJogoFlowScreen} />
+      <Stack.Screen name="DetalheSessao" component={DetalheSessaoScreen} />
     </Stack.Navigator>
   );
 }

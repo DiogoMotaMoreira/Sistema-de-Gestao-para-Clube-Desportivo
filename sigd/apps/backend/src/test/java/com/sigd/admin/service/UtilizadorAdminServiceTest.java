@@ -158,6 +158,7 @@ class UtilizadorAdminServiceTest {
     @DisplayName("Deve bloquear utilizador com sucesso")
     void deve_bloquear_utilizador_com_sucesso() {
         when(utilizadorRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(utilizadorRepository.countByRoleAndAtivo("ROLE_ADMIN", true)).thenReturn(2L);
         when(utilizadorRepository.save(any(Utilizador.class))).thenAnswer(i -> i.getArgument(0));
 
         // Setup mock security context
@@ -216,6 +217,7 @@ class UtilizadorAdminServiceTest {
     @DisplayName("Deve lançar exceção ao tentar bloquear único admin")
     void deve_lancara_excecao_ao_tentar_bloquear_unico_admin() {
         when(utilizadorRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(utilizadorRepository.countByRoleAndAtivo("ROLE_ADMIN", true)).thenReturn(1L);
         
         // Setup security context with a DIFFERENT admin, to avoid the "blocking self" exception
         SecurityContext securityContext = mock(SecurityContext.class);

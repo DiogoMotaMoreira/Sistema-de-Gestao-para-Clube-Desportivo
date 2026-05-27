@@ -1,24 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { treinadorService, EventoTreinador } from '@/services/treinadorService';
 import { Users, ClipboardList } from 'lucide-react-native';
 import { useAuthStore } from '@/stores/authStore';
 import { Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 export function DetalheJogoScreen({ route, navigation }: any): React.JSX.Element {
   const { eventoId } = route.params;
   const [jogo, setJogo] = useState<EventoTreinador | null>(null);
 
-  useEffect(() => {
-    navigation.setOptions({ title: 'Detalhe do Jogo' });
-    
-    // Mock get jogo
-    treinadorService.getJogos(1).then(jogos => {
-      const j = jogos.find(x => x.id === eventoId);
-      if (j) setJogo(j);
-    });
-  }, [eventoId, navigation]);
+  useFocusEffect(
+    React.useCallback(() => {
+      navigation.setOptions({ title: 'Detalhe do Jogo' });
+      
+      treinadorService.getEquipas().then(eq => {
+        const teamId = eq.length > 0 ? eq[0].id : 1;
+        return treinadorService.getJogos(teamId);
+      }).then(jogos => {
+        const j = jogos.find(x => x.id === eventoId);
+        if (j) setJogo(j);
+      }).catch(e => {
+        console.error('Erro ao obter jogo', e);
+      });
+    }, [eventoId, navigation])
+  );
 
   if (!jogo) return <View style={styles.container} />;
 

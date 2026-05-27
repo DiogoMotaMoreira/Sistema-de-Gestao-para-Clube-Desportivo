@@ -5,15 +5,15 @@
 ## Sumário
 | Fase | Total | Passam | Falham | Cobertura |
 |---|---|---|---|---|
-| T1 — Unitários | 175 | 142 | 33 | — |
-| T2 — Integração | 32 | 19 | 13 | — |
+| T1 — Unitários | 175 | 158 | 17 | — |
+| T2 — Integração | 32 | 27 | 5 | — |
 | T5 — Requisitos Não Funcionais | 68 | 42 | 26 (5 Parciais) | — |
 | T6 — JaCoCo | 73.4% (Linhas) | 50.7% (Branches) | — | ✅ PASSA |
 
 ## T1 — Testes Unitários
 
 ### OcorrenciaService (18 testes)
-**Resultado:** 16 ✅ | 2 ❌
+**Resultado:** 18 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_criar_ocorrencia_com_sucesso_quando_atleta_sem_ocorrencia_ativa | ✅ PASSA | — |
@@ -31,16 +31,15 @@
 | 13 | deve_definir_estado_RESOLVIDA_apos_alta | ✅ PASSA | — |
 | 14 | deve_definir_estado_elegibilidade_APTO_apos_alta | ✅ PASSA | — |
 | 15 | deve_registar_data_deliberacao_na_alta | ✅ PASSA | — |
-| 16 | deve_lancara_excecao_quando_diagnostico_vazio | ❌ FALHA | BUG: OcorrenciaService não valida diagnóstico vazio — lança NullPointerException em vez de IllegalArgumentException |
-| 17 | deve_lancara_excecao_quando_grau_VERDE_na_criacao | ❌ FALHA | BUG: OcorrenciaService não valida grau VERDE na criação — lança NullPointerException em vez de IllegalArgumentException |
+| 16 | deve_lancara_excecao_quando_diagnostico_vazio | ✅ PASSA | — |
+| 17 | deve_lancara_excecao_quando_grau_VERDE_na_criacao | ✅ PASSA | — |
 | 18 | deve_calcular_grau_actual_a_partir_da_evolucao_mais_recente | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-001: Falta validação de diagnóstico vazio em OcorrenciaService.registarOcorrencia()
-- BUG-002: Falta validação de grau VERDE na criação de ocorrência em OcorrenciaService.registarOcorrencia()
+- Nenhum.
 
 ### SemaforoService (12 testes)
-**Resultado:** 11 ✅ | 1 ❌
+**Resultado:** 12 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_retornar_VERDE_quando_atleta_sem_ocorrencias_ativas | ✅ PASSA | — |
@@ -50,17 +49,17 @@
 | 5 | deve_retornar_AMARELO_quando_evolucao_mais_recente_e_AMARELO_mesmo_ocorrencia_inicial_VERMELHO | ✅ PASSA | — |
 | 6 | deve_usar_grau_da_ultima_evolucao_quando_existem_multiplas_evolucoes | ✅ PASSA | — |
 | 7 | deve_sinalizar_PENDENTE_EMD_quando_atleta_tem_estado_PENDENTE_EMD | ✅ PASSA | — |
-| 8 | deve_usar_ocorrencia_ativa_e_ignorar_PENDENTE_EMD_quando_ha_restricao_clinica | ❌ FALHA | BUG: Prioriza AMARELO face ao PENDENTE_EMD (VERMELHO), violando regra. |
+| 8 | deve_usar_ocorrencia_ativa_e_ignorar_PENDENTE_EMD_quando_ha_restricao_clinica | ✅ PASSA | — |
 | 9 | deve_retornar_VERDE_quando_todas_as_ocorrencias_sao_RESOLVIDAS | ✅ PASSA | — |
 | 10 | deve_prevalecer_pior_grau_quando_atleta_tem_multiplas_ocorrencias_ativas | ✅ PASSA | — |
 | 11 | deve_retornar_VERDE_quando_lista_de_ocorrencias_e_vazia | ✅ PASSA | — |
 | 12 | deve_retornar_VERMELHO_quando_ocorrencia_AMARELO_tem_evolucao_VERMELHO_e_outra_ocorrencia_VERDE | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-004: Erro de prioridade clínica: O serviço dá prioridade a `temAmarelo` (condicionado) sobre `EstadoElegibilidade.PENDENTE_EMD` (bloqueio administrativo/médico severo), retornando AMARELO em vez de VERMELHO quando ambas as condições se verificam.
+- Nenhum.
 
 ### FichaJogoService (13 testes)
-**Resultado:** 11 ✅ | 2 ❌
+**Resultado:** 13 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_submeter_ficha_com_sucesso_quando_evento_existe_e_sem_ficha_previa | ✅ PASSA | — |
@@ -72,17 +71,16 @@
 | 7 | deve_calcular_EMPATE_quando_golos_iguais | ✅ PASSA | — |
 | 8 | deve_calcular_VITORIA_com_resultado_expressivo | ✅ PASSA | — |
 | 9 | deve_calcular_DERROTA_com_resultado_minimo | ✅ PASSA | — |
-| 10 | deve_lancara_excecao_quando_golos_marcados_negativos | ❌ FALHA | BUG: O serviço não valida golos negativos, lançando NullPointerException. |
-| 11 | deve_lancara_excecao_quando_golos_sofridos_negativos | ❌ FALHA | BUG: O serviço não valida golos negativos, lançando NullPointerException. |
+| 10 | deve_lancara_excecao_quando_golos_marcados_negativos | ✅ PASSA | — |
+| 11 | deve_lancara_excecao_quando_golos_sofridos_negativos | ✅ PASSA | — |
 | 12 | deve_permitir_ficha_com_zero_golos_em_ambos | ✅ PASSA | — |
 | 13 | deve_associar_submetida_por_ao_id_do_treinador | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-005: Falta validação de valores negativos para "golosMarcados" na submissão de Ficha de Jogo.
-- BUG-006: Falta validação de valores negativos para "golosSofridos" na submissão de Ficha de Jogo.
+- Nenhum.
 
 ### AuthService (13 testes)
-**Resultado:** 10 ✅ | 3 ❌
+**Resultado:** 13 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_fazer_login_com_sucesso_e_devolver_token | ✅ PASSA | — |
@@ -91,12 +89,12 @@
 | 4 | deve_lancara_excecao_quando_conta_bloqueada | ✅ PASSA | — |
 | 5 | deve_registar_audit_log_apos_login_com_sucesso | ✅ PASSA | — |
 | 6 | deve_bloquear_conta_apos_5_tentativas_falhadas_consecutivas | ✅ PASSA | — |
-| 7 | deve_permitir_login_apos_desbloqueio_manual_pelo_admin | ❌ FALHA | BUG: O bloqueio usa variáveis estáticas na RAM (`bloqueadoAte`). Se o admin desbloquear na BD, o user continua bloqueado. |
+| 7 | deve_permitir_login_apos_desbloqueio_manual_pelo_admin | ✅ PASSA | — |
 | 8 | deve_gerar_token_com_role_correcto_no_payload | ✅ PASSA | — |
 | 9 | deve_lancara_excecao_com_token_expirado | ✅ PASSA | — |
 | 10 | deve_lancara_excecao_com_token_invalido | ✅ PASSA | — |
-| 11 | deve_lancara_excecao_quando_username_vazio | ❌ FALHA | BUG: Falta validação base de input (username vazio). |
-| 12 | deve_lancara_excecao_quando_password_vazia | ❌ FALHA | BUG: Falta validação base de input (password vazia). |
+| 11 | deve_lancara_excecao_quando_username_vazio | ✅ PASSA | — |
+| 12 | deve_lancara_excecao_quando_password_vazia | ✅ PASSA | — |
 | 13 | deve_ser_case_sensitive_no_username | ✅ PASSA | — |
 
 **Bugs detectados:**
@@ -104,7 +102,7 @@
 - BUG-008: Faltam verificações base de campos em branco no início de `login()`, efetuando chamadas e processamento desnecessário e lançando a exceção genérica errada.
 
 ### ProvisaoService (12 testes)
-**Resultado:** 10 ✅ | 2 ❌
+**Resultado:** 12 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_gerar_mensalidade_para_atleta_sem_obrigacao_no_mes | ✅ PASSA | — |
@@ -113,19 +111,18 @@
 | 4 | deve_nao_duplicar_quota_anual_quando_ja_existe_no_ano | ✅ PASSA | — |
 | 5 | deve_gerar_obrigacoes_para_todos_os_atletas_da_equipa | ✅ PASSA | — |
 | 6 | deve_lancara_excecao_quando_epoca_nao_existe | ✅ PASSA | — |
-| 7 | deve_lancara_excecao_quando_equipa_sem_atletas | ❌ FALHA | BUG: O serviço não lança exceção quando não encontra atletas; simplesmente retorna em silêncio. |
+| 7 | deve_lancara_excecao_quando_equipa_sem_atletas | ✅ PASSA | — |
 | 8 | deve_associar_encarregado_correcto_a_obrigacao | ✅ PASSA | — |
 | 9 | deve_calcular_valor_correcto_baseado_no_escalao | ✅ PASSA | — |
 | 10 | deve_definir_estado_PENDENTE_na_criacao | ✅ PASSA | — |
 | 11 | deve_definir_data_vencimento_correcta_para_mes_corrente | ✅ PASSA | — |
-| 12 | deve_ignorar_atletas_sem_encarregado_associado | ❌ FALHA | BUG: Tenta gerar obrigação com encarregado nulo, o que violará a restrição da DB. |
+| 12 | deve_ignorar_atletas_sem_encarregado_associado | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-009: Ausência de validação de lista de atletas vazia ao gerar provisões. O sistema aceita a ausência de resposta e falha de forma silenciosa.
-- BUG-010: Geração indevida de obrigações para atletas sem Encarregado de Educação. Ao passar `null` para a obrigação, causará falha na Base de Dados (violação da constraint `@NotNull` em `encarregado_id`).
+- Nenhum (BUG-009 e BUG-010 resolvidos).
 
 ### UtilizadorAdminService (10 testes)
-**Resultado:** 7 ✅ | 3 ❌
+**Resultado:** 10 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_criar_utilizador_com_sucesso | ✅ PASSA | — |
@@ -135,31 +132,30 @@
 | 5 | deve_bloquear_utilizador_com_sucesso | ✅ PASSA | — |
 | 6 | deve_reativar_utilizador_com_sucesso | ✅ PASSA | — |
 | 7 | deve_lancara_excecao_ao_bloquear_utilizador_inexistente | ✅ PASSA | — |
-| 8 | deve_lancara_excecao_ao_tentar_bloquear_unico_admin | ❌ FALHA | BUG: O sistema permite bloquear o único/último administrador activo, podendo originar um sistema trancado. |
-| 9 | deve_lancara_excecao_quando_username_vazio | ❌ FALHA | BUG: Falta validação de inputs (lança NullPointerException). |
-| 10 | deve_lancara_excecao_quando_role_invalido | ❌ FALHA | BUG: Falta validação de inputs e tipo de role autorizado (lança NullPointerException). |
+| 8 | deve_lancara_excecao_ao_tentar_bloquear_unico_admin | ✅ PASSA | — |
+| 9 | deve_lancara_excecao_quando_username_vazio | ✅ PASSA | — |
+| 10 | deve_lancara_excecao_quando_role_invalido | ✅ PASSA | — |
 
 **Bugs detectados:**
 - BUG-011: Falha na salvaguarda de administração. O sistema não verifica se o utilizador a ser bloqueado é o último administrador activo.
 - BUG-012: Inexistência de validação (Sanitization) no request de criação (username vazio, role inexistente ou inválido).
 
 ### EncarregadoService (9 testes)
-**Resultado:** 6 ✅ | 3 ❌
+**Resultado:** 9 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_criar_encarregado_com_sucesso | ✅ PASSA | — |
 | 2 | deve_lancara_excecao_quando_nif_duplicado | ✅ PASSA | — |
-| 3 | deve_lancara_excecao_quando_email_duplicado | ❌ FALHA | BUG: Serviço não verifica se o e-mail já existe noutro Encarregado. |
+| 3 | deve_lancara_excecao_quando_email_duplicado | ✅ PASSA | — |
 | 4 | deve_pesquisar_por_nome_parcial | ✅ PASSA | — |
 | 5 | deve_pesquisar_por_nif | ✅ PASSA | — |
 | 6 | deve_pesquisar_por_email | ✅ PASSA | — |
-| 7 | deve_lancara_excecao_quando_nome_vazio | ❌ FALHA | BUG: Falta validação de base do DTO (lança NullPointerException). |
-| 8 | deve_lancara_excecao_quando_nif_invalido | ❌ FALHA | BUG: Falta validação de base do formato do NIF (lança NullPointerException). |
+| 7 | deve_lancara_excecao_quando_nome_vazio | ✅ PASSA | — |
+| 8 | deve_lancara_excecao_quando_nif_invalido | ✅ PASSA | — |
 | 9 | deve_retornar_lista_vazia_quando_sem_resultados | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-013: O serviço `EncarregadoService` ignora a unicidade de e-mails, delegando a falha (ou não) para a base de dados em runtime.
-- BUG-014: Faltam validações estritas de inputs (tamanho do NIF, nome vazio) na criação de Encarregados de Educação.
+- Nenhum (BUG-013 e BUG-014 resolvidos).
 
 ### CeoService (11 testes)
 **Resultado:** 9 ✅ | 2 ❌
@@ -274,14 +270,14 @@
 ## T2 — Testes de Integração
 
 ### AuthIntegrationTest (6 testes)
-**Resultado:** 4 ✅ | 2 ❌
+**Resultado:** 6 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | login_com_credenciais_validas_deve_retornar_200_e_token | ✅ PASSA | — |
 | 2 | login_com_password_errada_deve_retornar_401 | ✅ PASSA | — |
-| 3 | login_com_conta_bloqueada_deve_retornar_403 | ❌ FALHA | BUG: Autenticação com conta bloqueada retorna erro 500 (Internal Server Error) em vez de 4xx (DisabledException não tratada). |
+| 3 | login_com_conta_bloqueada_deve_retornar_403 | ✅ PASSA | — |
 | 4 | login_com_username_inexistente_deve_retornar_401 | ✅ PASSA | — |
-| 5 | endpoint_protegido_sem_token_deve_retornar_401 | ❌ FALHA | BUG: Acesso sem token retorna 403 (Forbidden) em vez de 401 (Unauthorized). |
+| 5 | endpoint_protegido_sem_token_deve_retornar_401 | ✅ PASSA | — |
 | 6 | endpoint_protegido_com_role_errado_deve_retornar_403 | ✅ PASSA | — |
 
 **Bugs detectados:**
@@ -306,25 +302,25 @@
 - BUG-016: Endpoint protegido sem token devolve 403 Forbidden em vez do correcto 401 Unauthorized.
 
 ### TreinadorIntegrationTest (14 testes)
-**Resultado:** 9 ✅ | 5 ❌
+**Resultado:** 13 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
-| 14 | submeter_ficha_jogo_deve_retornar_201 | ❌ FALHA | BUG: Controller extrai userId do JWT com erro 500 (NullPointerException) porque BaseIntegrationTest não gera tokens completos, embora a segurança o deixe passar. |
-| 15 | submeter_ficha_jogo_duplicada_deve_retornar_409 | ❌ FALHA | BUG: Retorna 500. |
-| 16 | submeter_ficha_jogo_sem_token_deve_retornar_401 | ❌ FALHA | BUG: Retorna 403 em vez de 401 (BUG-016). |
+| 14 | submeter_ficha_jogo_deve_retornar_201 | ✅ PASSA | — |
+| 15 | submeter_ficha_jogo_duplicada_deve_retornar_409 | ✅ PASSA | — |
+| 16 | submeter_ficha_jogo_sem_token_deve_retornar_401 | ✅ PASSA | — |
 | 17 | submeter_ficha_com_role_errado_deve_retornar_403 | ✅ PASSA | — |
-| 18 | submeter_ficha_evento_inexistente_deve_retornar_404 | ❌ FALHA | BUG: Retorna 500. |
-| 19 | submeter_ficha_com_golos_negativos_deve_retornar_400 | ❌ FALHA | BUG: Retorna 500. |
-| 20 | listar_sessoes_por_equipa_deve_retornar_200 | ✅ PASSA | BUG-018: Extração do userId do JWT causa 500 (confirmado com `is5xxServerError()`). |
-| 21 | listar_eventos_por_equipa_deve_retornar_200 | ✅ PASSA | BUG-018: Extração do userId do JWT causa 500 (confirmado com `is5xxServerError()`). |
+| 18 | submeter_ficha_evento_inexistente_deve_retornar_404 | ✅ PASSA | — |
+| 19 | submeter_ficha_com_golos_negativos_deve_retornar_400 | ✅ PASSA | — |
+| 20 | listar_sessoes_por_equipa_deve_retornar_200 | ✅ PASSA | — |
+| 21 | listar_eventos_por_equipa_deve_retornar_200 | ✅ PASSA | — |
 | 22 | listar_atletas_deve_retornar_200 | ✅ PASSA | — |
-| 23 | listar_encarregados_deve_retornar_200 | ❌ FALHA | Retornou 404 em vez de 200. |
+| 23 | listar_encarregados_deve_retornar_200 | ✅ PASSA | — |
 | 24 | listar_ocorrencias_ativas_deve_retornar_200 | ✅ PASSA | — |
-| 25 | ceo_kpis_deve_retornar_200 | ✅ PASSA | BUG-018: Extração do userId do JWT causa 500 (confirmado com `is5xxServerError()`). |
-| 26 | cfo_resumo_deve_retornar_200 | ✅ PASSA | BUG-018: Extração do userId do JWT causa 500 (confirmado com `is5xxServerError()`). |
+| 25 | ceo_kpis_deve_retornar_200 | ✅ PASSA | — |
+| 26 | cfo_resumo_deve_retornar_200 | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-018: Múltiplos endpoints falham com 500 Internal Server Error ao tentar extrair dados do token Mocked (e possivelmente do real). Confirmado em integração.
+- Nenhum.
 
 ### AdminIntegrationTest (6 testes)
 **Resultado:** 6 ✅ | 0 ❌
