@@ -52,6 +52,13 @@ do {
 } while ($status -ne 'healthy')
 Write-Host "MySQL healthy! A iniciar Backend..." -ForegroundColor Green
 
+$resposta = Read-Host "Repor dados de demonstracao? (s/n)"
+if ($resposta -eq 's' -or $resposta -eq 'S') {
+    Write-Host "A repor dados..." -ForegroundColor Yellow
+    cmd.exe /c "docker exec -i sigd-mysql mysql --default-character-set=utf8mb4 -u sigd_user -psigd_password_dev sigd_dev < apps\backend\src\main\resources\db\migration\seed_master_demo.sql"
+    Write-Host "Dados repostos com sucesso!" -ForegroundColor Green
+}
+
 # Backend (nova janela)
 Kill-ProcessOnPort -Port 8080
 Write-Host "A iniciar Backend..." -ForegroundColor Green
