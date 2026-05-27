@@ -18,6 +18,10 @@ import com.sigd.core.repository.EquipaRepository;
 import com.sigd.core.repository.EventoDesportivoRepository;
 import com.sigd.core.repository.ObrigacaoFinanceiraRepository;
 import com.sigd.core.repository.SessaoTreinoRepository;
+import com.sigd.core.repository.FichaJogoRepository;
+import com.sigd.core.model.FichaJogo;
+import com.sigd.core.model.ResultadoJogo;
+import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +58,8 @@ public class CeoServiceTest {
     private SessaoTreinoRepository sessaoTreinoRepo;
     @Mock
     private ConvocatoriaRepository convocatoriaRepo;
+    @Mock
+    private FichaJogoRepository fichaJogoRepo;
 
     @InjectMocks
     private CeoController ceoController;
@@ -88,7 +94,17 @@ public class CeoServiceTest {
 
     @Test
     void deve_calcular_racio_liquidez_correctamente() {
-        Assertions.fail("BUG: O rácio de liquidez não é calculado no backend (ausente no CeoKpisDTO)");
+        ObrigacaoFinanceira ob1 = new ObrigacaoFinanceira();
+        ob1.setValor(new BigDecimal("100.00"));
+        when(obrigacaoRepo.findByEstado(EstadoObrigacao.PAGO)).thenReturn(List.of(ob1));
+
+        ObrigacaoFinanceira ob2 = new ObrigacaoFinanceira();
+        ob2.setValor(new BigDecimal("100.00"));
+        when(obrigacaoRepo.findByEstado(EstadoObrigacao.EM_ATRASO)).thenReturn(List.of(ob2));
+        when(obrigacaoRepo.findByEstado(EstadoObrigacao.PENDENTE)).thenReturn(List.of());
+
+        ResponseEntity<CeoKpisDTO> response = ceoController.getKpis();
+        assertEquals(new BigDecimal("50.0"), response.getBody().racioLiquidez());
     }
 
     @Test
@@ -163,7 +179,37 @@ public class CeoServiceTest {
 
     @Test
     void deve_calcular_win_rate_por_escalao() {
-        Assertions.fail("BUG: Win rate por escalão não é calculado");
+        Escalao esc = new Escalao();
+        esc.setDesignacao("Sub-15");
+        Equipa equipa = new Equipa();
+        equipa.setEscalao(esc);
+        
+        EventoDesportivo jogo1 = new EventoDesportivo();
+        jogo1.setId(1L);
+        jogo1.setTipo(TipoEvento.JOGO_OFICIAL);
+        jogo1.setEstado(EstadoEvento.CONCLUIDO);
+        jogo1.setEquipa(equipa);
+
+        EventoDesportivo jogo2 = new EventoDesportivo();
+        jogo2.setId(2L);
+        jogo2.setTipo(TipoEvento.JOGO_OFICIAL);
+        jogo2.setEstado(EstadoEvento.CONCLUIDO);
+        jogo2.setEquipa(equipa);
+
+        when(eventoRepo.findAll()).thenReturn(List.of(jogo1, jogo2));
+
+        FichaJogo f1 = new FichaJogo();
+        f1.setResultado(ResultadoJogo.VITORIA);
+        when(fichaJogoRepo.findByEventoId(1L)).thenReturn(Optional.of(f1));
+
+        FichaJogo f2 = new FichaJogo();
+        f2.setResultado(ResultadoJogo.DERROTA);
+        when(fichaJogoRepo.findByEventoId(2L)).thenReturn(Optional.of(f2));
+
+        ResponseEntity<List<CeoController.PerformanceEscalaoDTO>> response = ceoController.getPerformanceEscaloes();
+        assertEquals(1, response.getBody().size());
+        assertEquals("Sub-15", response.getBody().get(0).escalao());
+        assertEquals(50.0, response.getBody().get(0).winRate());
     }
 
     @Test

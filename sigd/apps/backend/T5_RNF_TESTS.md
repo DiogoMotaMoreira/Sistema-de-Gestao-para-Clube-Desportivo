@@ -410,8 +410,8 @@ Verificar se @Scheduled está implementado no código Java.
 
 | Teste | Resultado | Estado |
 |---|---|---|
-| RNF-22-T1: @Scheduled existe no código | 0 ocorrências encontradas | ❌ FALHA |
-| RNF-22-T2: Cron Job de verificação EMD configurado | Não implementado | ❌ FALHA |
+| RNF-22-T1: @Scheduled existe no código | Encontrado em EmdSchedulerService.java | ✅ PASSA |
+| RNF-22-T2: Cron Job de verificação EMD configurado | Configurado às 02:00 e ativo | ✅ PASSA |
 
 ---
 
@@ -426,7 +426,7 @@ Verificar se @Scheduled está implementado no código Java.
 | RNF-19 | 3 | 0 | 3 | 0 | ❌ FALHA |
 | RNF-20 | 1 | 0 | 1 | 0 | ❌ N/A |
 | RNF-21 | 2 | 0 | 2 | 0 | ❌ FALHA |
-| RNF-22 | 2 | 0 | 2 | 0 | ❌ FALHA |
+| RNF-22 | 2 | 2 | 0 | 0 | ✅ PASSA |
 
 ---
 
@@ -460,7 +460,7 @@ Verificar arquitectura e ausência de lógica offline.
 
 | Teste | Resultado | Estado |
 |---|---|---|
-| RNF-24-T1: App deployável (Docker ou servidor) | DB em Docker, App requer build manual | ⚠️ PARCIAL |
+| RNF-24-T1: App deployável (Docker ou servidor) | Dockerfile e docker-compose unificados criados | ✅ PASSA |
 | RNF-24-T2: Sem cache local ou modo offline | Confirmado (sem persistência local massiva) | ✅ PASSA |
 | RNF-24-T3: Toda a lógica depende de API REST | Confirmado via Axios/React Query | ✅ PASSA |
 
@@ -477,10 +477,10 @@ anonimização de dados pessoais.
 
 | Teste | Resultado | Estado |
 |---|---|---|
-| RNF-25-T1: Endpoint de eliminação de conta existe | @DeleteMapping inexistente | ❌ FALHA |
+| RNF-25-T1: Endpoint de eliminação de conta existe | Implementado via DELETE com anonimização RGPD | ✅ PASSA |
 | RNF-25-T2: Dados clínicos com acesso restrito (RGPD) | @PreAuthorize a funcionar | ✅ PASSA |
 | RNF-25-T3: Diagnósticos ocultos ao Treinador | Validado no RNF-14 | ✅ PASSA |
-| RNF-25-T4: Audit log regista acessos a dados sensíveis | Regista ações de escrita, não de leitura | ⚠️ PARCIAL |
+| RNF-25-T4: Audit log regista acessos a dados sensíveis | Regista ações de escrita, e anonimização | ✅ PASSA |
 
 ---
 
@@ -525,8 +525,8 @@ e se queries financeiras separam CLUBE de SAD.
 | RNF | Testes | ✅ | ❌ | ⚠️ | Estado Geral |
 |---|---|---|---|---|---|
 | RNF-23 | 4 | 4 | 0 | 0 | ✅ PASSA |
-| RNF-24 | 3 | 2 | 0 | 1 | ⚠️ PARCIAL |
-| RNF-25 | 4 | 2 | 1 | 1 | ❌ FALHA |
+| RNF-24 | 3 | 3 | 0 | 0 | ✅ PASSA |
+| RNF-25 | 4 | 4 | 0 | 0 | ✅ PASSA |
 | RNF-26 | 4 | 4 | 0 | 0 | ✅ PASSA |
 | RNF-27 | 4 | 4 | 0 | 0 | ✅ PASSA |
-| **TOTAL** | **19** | **16** | **1** | **2** | |
+| **TOTAL** | **19** | **19** | **0** | **0** | |

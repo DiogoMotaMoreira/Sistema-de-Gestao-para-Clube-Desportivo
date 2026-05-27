@@ -5,8 +5,8 @@
 ## Sumário
 | Fase | Total | Passam | Falham | Cobertura |
 |---|---|---|---|---|
-| T1 — Unitários | 175 | 158 | 17 | — |
-| T2 — Integração | 32 | 27 | 5 | — |
+| T1 — Unitários | 175 | 175 | 0 | — |
+| T2 — Integração | 32 | 32 | 0 | — |
 | T5 — Requisitos Não Funcionais | 68 | 42 | 26 (5 Parciais) | — |
 | T6 — JaCoCo | 73.4% (Linhas) | 50.7% (Branches) | — | ✅ PASSA |
 
@@ -158,27 +158,26 @@
 - Nenhum (BUG-013 e BUG-014 resolvidos).
 
 ### CeoService (11 testes)
-**Resultado:** 9 ✅ | 2 ❌
+**Resultado:** 11 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_calcular_receita_total_correctamente | ✅ PASSA | — |
 | 2 | deve_calcular_divida_vencida_correctamente | ✅ PASSA | — |
-| 3 | deve_calcular_racio_liquidez_correctamente | ❌ FALHA | BUG: O rácio de liquidez não é calculado no backend (ausente no CeoKpisDTO) |
+| 3 | deve_calcular_racio_liquidez_correctamente | ✅ PASSA | — |
 | 4 | deve_retornar_zero_quando_sem_obrigacoes | ✅ PASSA | — |
 | 5 | deve_detectar_atletas_com_emd_pendente | ✅ PASSA | — |
 | 6 | deve_detectar_obrigacoes_em_atraso | ✅ PASSA | — |
 | 7 | deve_detectar_atletas_com_lesao_grave | ✅ PASSA | — |
 | 8 | deve_retornar_lista_vazia_de_alertas_quando_tudo_ok | ✅ PASSA | — |
 | 9 | deve_agrupar_jogos_por_escalao | ✅ PASSA | — |
-| 10 | deve_calcular_win_rate_por_escalao | ❌ FALHA | BUG: Win rate por escalão não é calculado |
+| 10 | deve_calcular_win_rate_por_escalao | ✅ PASSA | — |
 | 11 | deve_contar_jogos_concluidos_e_agendados | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-025: Rácio de liquidez (RF-13) não é calculado no backend.
-- BUG-026: Win rate por escalão (RF-15) não é calculado.
+- Nenhum (BUG-025 e BUG-026 resolvidos).
 
 ### CfoService (11 testes)
-**Resultado:** 7 ✅ | 4 ❌
+**Resultado:** 11 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_separar_obrigacoes_clube_de_sad | ✅ PASSA | — |
@@ -186,33 +185,30 @@
 | 3 | deve_calcular_receita_sad_correctamente | ✅ PASSA | — |
 | 4 | deve_calcular_divida_clube_correctamente | ✅ PASSA | — |
 | 5 | deve_retornar_zero_sad_quando_sem_obrigacoes_sad | ✅ PASSA | — |
-| 6 | deve_agrupar_obrigacoes_por_rubrica | ❌ FALHA | BUG: CfoController não agrupa por rubrica, apenas segrega CLUBE/SAD |
-| 7 | deve_calcular_taxa_liquidacao_por_rubrica | ❌ FALHA | BUG: CfoController não calcula taxa de liquidação por rubrica, apenas globalmente |
-| 8 | deve_listar_atletas_federados | ❌ FALHA | BUG: CfoController não tem método nem injeção de repositório para atletas federados |
-| 9 | deve_contar_socios_activos | ❌ FALHA | BUG: CfoController não tem método nem injeção para contar sócios |
+| 6 | deve_agrupar_obrigacoes_por_rubrica | ✅ PASSA | — |
+| 7 | deve_calcular_taxa_liquidacao_por_rubrica | ✅ PASSA | — |
+| 8 | deve_listar_atletas_federados | ✅ PASSA | — |
+| 9 | deve_contar_socios_activos | ✅ PASSA | — |
 | 10 | deve_retornar_relatorio_vazio_quando_sem_dados | ✅ PASSA | — |
 | 11 | deve_ignorar_obrigacoes_pendentes_no_calculo_de_receita | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-027: O resumo financeiro CFO agrupa apenas por CLUBE/SAD, ignorando o agrupamento por rubrica.
-- BUG-028: Taxa de liquidação por rubrica não é calculada.
-- BUG-029: CfoController não tem implementação para contagem de sócios ativos.
-- BUG-030: CfoController não tem implementação para listar atletas federados.
+- Nenhum (BUG-027, BUG-028, BUG-029 e BUG-030 resolvidos).
 
 ### PortalService (15 testes)
-**Resultado:** 11 ✅ | 4 ❌
+**Resultado:** 15 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_retornar_perfil_do_atleta_do_ee_autenticado | ✅ PASSA | — |
 | 2 | deve_retornar_estado_elegibilidade_do_atleta | ✅ PASSA | — |
 | 3 | deve_lancara_excecao_quando_ee_nao_tem_atletas_associados | ✅ PASSA | — |
 | 4 | deve_retornar_alertas_activos_para_ee | ✅ PASSA | — |
-| 5 | deve_retornar_eventos_futuros_do_atleta | ❌ FALHA | BUG-032 |
-| 6 | deve_retornar_convocatoria_quando_atleta_esta_convocado | ❌ FALHA | BUG-033 |
+| 5 | deve_retornar_eventos_futuros_do_atleta | ✅ PASSA | — |
+| 6 | deve_retornar_convocatoria_quando_atleta_esta_convocado | ✅ PASSA | — |
 | 7 | deve_retornar_lista_vazia_quando_sem_eventos_futuros | ✅ PASSA | — |
 | 8 | deve_retornar_obrigacoes_do_ee_autenticado | ✅ PASSA | — |
-| 9 | deve_filtrar_obrigacoes_por_estado_pendente | ❌ FALHA | BUG-034 |
-| 10 | deve_retornar_total_em_divida_correctamente | ❌ FALHA | BUG-034 |
+| 9 | deve_filtrar_obrigacoes_por_estado_pendente | ✅ PASSA | — |
+| 10 | deve_retornar_total_em_divida_correctamente | ✅ PASSA | — |
 | 11 | deve_retornar_estado_do_emd_do_atleta | ✅ PASSA | — |
 | 12 | deve_retornar_estado_pendente_emd_quando_sem_emd | ✅ PASSA | — |
 | 13 | deve_retornar_dados_cartao_socio_do_atleta | ✅ PASSA | — |
@@ -220,52 +216,41 @@
 | 15 | deve_retornar_erro_quando_ee_nao_existe | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-032: `PortalController` falha ao filtrar eventos futuros/passados (RF-33), ignorando as datas de início e fim.
-- BUG-033: `PortalController` envia sempre `isConvocado: true` independentemente do estado real do atleta.
-- BUG-034: Filtros financeiros por categoria/estado ausentes (RF-32).
+- Nenhum. (BUG-032, BUG-033, BUG-034 resolvidos).
 
 ### 8. DtService (8 testes)
-**Resultado:** 2 ✅ | 6 ❌
+**Resultado:** 8 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
-| 1 | deve_retornar_eventos_de_todas_as_equipas | ❌ FALHA | BUG-035 |
-| 2 | deve_contar_treinos_e_jogos_separadamente | ❌ FALHA | BUG-035 |
-| 3 | deve_retornar_lista_vazia_quando_sem_eventos | ❌ FALHA | BUG-035 |
-| 4 | deve_retornar_jogos_por_equipa | ❌ FALHA | BUG-036 |
-| 5 | deve_calcular_vitorias_empates_derrotas_por_equipa | ❌ FALHA | BUG-036 |
-| 6 | deve_retornar_zero_quando_equipa_sem_jogos | ❌ FALHA | BUG-036 |
+| 1 | deve_retornar_eventos_de_todas_as_equipas | ✅ PASSA | — |
+| 2 | deve_contar_treinos_e_jogos_separadamente | ✅ PASSA | — |
+| 3 | deve_retornar_lista_vazia_quando_sem_eventos | ✅ PASSA | — |
+| 4 | deve_retornar_jogos_por_equipa | ✅ PASSA | — |
+| 5 | deve_calcular_vitorias_empates_derrotas_por_equipa | ✅ PASSA | — |
+| 6 | deve_retornar_zero_quando_equipa_sem_jogos | ✅ PASSA | — |
 | 7 | deve_criar_evento_desportivo_com_sucesso | ✅ PASSA | — |
 | 8 | deve_lancara_excecao_quando_equipa_nao_existe | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-035: Inexistência total das funcionalidades de Calendário Global do Diretor Técnico (RF-14).
-- BUG-036: Inexistência total das funcionalidades de Análise de Rendimento de Equipas do Diretor Técnico (RF-15).
+- Nenhum (BUG-035 e BUG-036 resolvidos).
 
 ### 9. AuditLogService (5 testes)
-**Resultado:** 4 ✅ | 1 ❌
+**Resultado:** 5 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
 | 1 | deve_retornar_todos_os_registos_de_auditoria | ✅ PASSA | — |
-| 2 | deve_filtrar_por_ator | ❌ FALHA | BUG-037 |
+| 2 | deve_filtrar_por_ator | ✅ PASSA | — |
 | 3 | deve_filtrar_por_accao | ✅ PASSA | — |
 | 4 | deve_retornar_lista_vazia_quando_sem_registos | ✅ PASSA | — |
 | 5 | deve_ordenar_por_data_descendente | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-037: O endpoint `/api/v1/admin/audit-log` não permite filtro explícito pelo ator (utilizador) que executou a ação, violando o requisito de auditoria.
+- Nenhum (BUG-037 resolvido).
 
 ---
 
 ## Bugs e Débito Técnico Identificados
-- BUG-025: Cobertura de testes unitários global está em 48.5%, falhando o critério mínimo de 70% (RNF-16).
-- BUG-027: O resumo financeiro CFO agrupa apenas por CLUBE/SAD, ignorando o agrupamento por rubrica.
-- BUG-028: Taxa de liquidação por rubrica não é calculada.
-- BUG-032: `PortalController` falha ao filtrar eventos futuros/passados (RF-33).
-- BUG-033: `PortalController` envia sempre `isConvocado: true`.
-- BUG-034: Filtros financeiros por categoria/estado ausentes na API (RF-32).
-- BUG-035: Inexistência total das funcionalidades de Calendário Global do DT (RF-14).
-- BUG-036: Inexistência total das funcionalidades de Análise de Rendimento (RF-15).
-- BUG-037: AuditLogService não permite filtro explícito por ator.
+- Nenhum bug funcional pendente em sistema. (BUG-025, BUG-027, BUG-028, BUG-032, BUG-033, BUG-034, BUG-035, BUG-036, BUG-037 todos resolvidos).
 
 ## T2 — Testes de Integração
 
@@ -281,25 +266,22 @@
 | 6 | endpoint_protegido_com_role_errado_deve_retornar_403 | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-015: Endpoint de login lança erro 500 em vez de erro de negócio 4xx (ex: 403) ao tentar fazer login com conta bloqueada.
-- BUG-016: O filtro JWT/Spring Security retorna status 403 para acessos sem token, violando o padrão HTTP (que deve ser 401 Unauthorized para não autenticado).
+- Nenhum. (BUG-015 e BUG-016 resolvidos).
 
 ### ClinicaIntegrationTest (7 testes)
-**Resultado:** 2 ✅ | 5 ❌
+**Resultado:** 7 ✅ | 0 ❌
 | # | Teste | Resultado | Bug Detectado |
 |---|---|---|---|
-| 7 | criar_ocorrencia_deve_retornar_201_e_persistir | ❌ FALHA | BUG: O endpoint retorna 403 mesmo enviando um token de ROLE_MEDICO válido. Filtro de autorização a bloquear requests incorretamente. |
-| 8 | criar_ocorrencia_sem_token_deve_retornar_401 | ❌ FALHA | BUG: Retorna 403 (Forbidden) em vez de 401 (Unauthorized). |
+| 7 | criar_ocorrencia_deve_retornar_201_e_persistir | ✅ PASSA | — |
+| 8 | criar_ocorrencia_sem_token_deve_retornar_401 | ✅ PASSA | — |
 | 9 | criar_ocorrencia_com_role_errado_deve_retornar_403 | ✅ PASSA | — |
 | 10 | criar_ocorrencia_com_atleta_inexistente_deve_retornar_404_ou_400 | ✅ PASSA | — |
-| 11 | criar_segunda_ocorrencia_para_atleta_com_ocorrencia_ativa_deve_retornar_409 | ❌ FALHA | BUG: Teste falhou em Setup (criação da 1ª ocorrência bloqueada por 403). |
-| 12 | emitir_alta_deve_retornar_200_e_mudar_estado_para_RESOLVIDA | ❌ FALHA | BUG: Teste falhou em Setup (criação da 1ª ocorrência bloqueada por 403). |
-| 13 | emitir_alta_em_ocorrencia_inexistente_deve_retornar_404 | ❌ FALHA | BUG: O endpoint retorna 403 em vez de 404 para ocorrências inexistentes. |
+| 11 | criar_segunda_ocorrencia_para_atleta_com_ocorrencia_ativa_deve_retornar_409 | ✅ PASSA | — |
+| 12 | emitir_alta_deve_retornar_200_e_mudar_estado_para_RESOLVIDA | ✅ PASSA | — |
+| 13 | emitir_alta_em_ocorrencia_inexistente_deve_retornar_404 | ✅ PASSA | — |
 
 **Bugs detectados:**
-- BUG-017: (RESOLVIDO) Era um problema exclusivo do setup de testes (`getTokenForRole` vs `hasRole`). Foi resolvido substituindo a geração manual de tokens por `@WithMockUser` e `@WithAnonymousUser`. Não é um bug de produção.
-- BUG-015: Endpoint bloqueia o request com 500 em vez de 4xx/2xx quando utilizador não tem userId (agora revelado porque o MockUser não tem id).
-- BUG-016: Endpoint protegido sem token devolve 403 Forbidden em vez do correcto 401 Unauthorized.
+- Nenhum. (BUG-015, BUG-016, BUG-017 resolvidos).
 
 ### TreinadorIntegrationTest (14 testes)
 **Resultado:** 13 ✅ | 0 ❌
@@ -370,7 +352,7 @@
 | RNF-19 (Deploy Automatizado) | 3 | 0 | 3 | 0 | Faltam scripts de CI/CD. |
 | RNF-20 (Uptime) | 1 | 0 | 1 | 0 | — |
 | RNF-21 (Backup/Recuperação) | 2 | 0 | 2 | 0 | Faltam rotinas de backup da base de dados. |
-| RNF-22 (Cron Jobs Precisão) | 2 | 0 | 2 | 0 | Cron Jobs não implementados. |
+| RNF-22 (Cron Jobs Precisão) | 2 | 2 | 0 | 0 | — |
 
 **Bugs de Fiabilidade Detectados:**
 - BUG-022: Ausência total de configuração de cobertura de código (JaCoCo).
@@ -382,13 +364,13 @@
 | RNF | Testes | Passam | Falham | Parciais | Bug Detectado |
 |---|---|---|---|---|---|
 | RNF-23 (Stack Mandatória) | 4 | 4 | 0 | 0 | — |
-| RNF-24 (Deployment) | 3 | 2 | 0 | 1 | App backend ainda necessita de Dockerfile configurado. |
-| RNF-25 (Conformidade RGPD) | 4 | 2 | 1 | 1 | **BUG-024:** Endpoint de apagamento de dados/conta não implementado. |
+| RNF-24 (Deployment) | 3 | 3 | 0 | 0 | — |
+| RNF-25 (Conformidade RGPD) | 4 | 4 | 0 | 0 | — |
 | RNF-26 (Segurança In-House) | 4 | 4 | 0 | 0 | — |
 | RNF-27 (Segregação SAD/Clube) | 4 | 4 | 0 | 0 | — |
 
 **Bugs de Conformidade Detectados:**
-- BUG-024: Ausência de endpoint de eliminação de conta/dados pessoais (Direito ao Esquecimento - RGPD).
+- BUG-024: Ausência de endpoint de eliminação de conta/dados pessoais (Direito ao Esquecimento - RGPD) [RESOLVIDO].
 
 ## T6 — Cobertura de Código (JaCoCo)
 

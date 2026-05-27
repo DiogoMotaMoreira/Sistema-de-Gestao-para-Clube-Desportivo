@@ -8,6 +8,7 @@ import com.sigd.clinica.dto.FilaEMDStatsDTO;
 import com.sigd.clinica.dto.OcorrenciaDTO;
 import com.sigd.clinica.service.OcorrenciaService;
 import com.sigd.core.model.Utilizador;
+import com.sigd.core.repository.UtilizadorRepository;
 
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -31,9 +32,25 @@ import java.util.List;
 public class OcorrenciaController {
 
     private final OcorrenciaService ocorrenciaService;
+    private final UtilizadorRepository utilizadorRepository;
 
-    public OcorrenciaController(OcorrenciaService ocorrenciaService) {
+    public OcorrenciaController(OcorrenciaService ocorrenciaService, UtilizadorRepository utilizadorRepository) {
         this.ocorrenciaService = ocorrenciaService;
+        this.utilizadorRepository = utilizadorRepository;
+    }
+
+    private Long getMedicoId(Utilizador medico) {
+        if (medico != null) {
+            return medico.getId();
+        }
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            String username = auth.getName();
+            return utilizadorRepository.findByUsername(username)
+                    .map(Utilizador::getId)
+                    .orElse(null);
+        }
+        return null;
     }
 
     /**
@@ -46,7 +63,7 @@ public class OcorrenciaController {
     public ResponseEntity<OcorrenciaDTO.Response> registarOcorrencia(
             @Valid @RequestBody OcorrenciaDTO.Request request,
             @AuthenticationPrincipal Utilizador medico) {
-        OcorrenciaDTO.Response response = ocorrenciaService.registarOcorrencia(request, medico.getId());
+        OcorrenciaDTO.Response response = ocorrenciaService.registarOcorrencia(request, getMedicoId(medico));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -118,7 +135,7 @@ public class OcorrenciaController {
             @PathVariable Long id,
             @Valid @RequestBody DeliberacaoDTO deliberacao,
             @AuthenticationPrincipal Utilizador medico) {
-        OcorrenciaDTO.Response response = ocorrenciaService.deliberar(id, deliberacao, medico.getId());
+        OcorrenciaDTO.Response response = ocorrenciaService.deliberar(id, deliberacao, getMedicoId(medico));
         return ResponseEntity.ok(response);
     }
 
@@ -133,7 +150,7 @@ public class OcorrenciaController {
             @PathVariable Long id,
             @Valid @RequestBody AltaMedicaDTO altaDTO,
             @AuthenticationPrincipal Utilizador medico) {
-        OcorrenciaDTO.Response response = ocorrenciaService.emitirAlta(id, altaDTO, medico.getId());
+        OcorrenciaDTO.Response response = ocorrenciaService.emitirAlta(id, altaDTO, getMedicoId(medico));
         return ResponseEntity.ok(response);
     }
 
@@ -149,7 +166,7 @@ public class OcorrenciaController {
             @Valid @RequestBody EvolucaoDTO.Request request,
             @AuthenticationPrincipal Utilizador medico) {
         EvolucaoDTO.Request updatedReq = new EvolucaoDTO.Request(id, request.grauRestricao(), request.descricao());
-        EvolucaoDTO.Response response = ocorrenciaService.registarEvolucao(updatedReq, medico.getId());
+        EvolucaoDTO.Response response = ocorrenciaService.registarEvolucao(updatedReq, getMedicoId(medico));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

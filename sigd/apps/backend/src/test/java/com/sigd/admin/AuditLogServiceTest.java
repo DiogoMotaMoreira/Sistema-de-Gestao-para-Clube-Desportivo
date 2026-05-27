@@ -63,26 +63,32 @@ public class AuditLogServiceTest {
     @Test
     void deve_retornar_todos_os_registos_de_auditoria() {
         Page<AuditLog> page = new PageImpl<>(List.of(log1, log2));
-        when(auditLogRepository.filterLogs(isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
+        when(auditLogRepository.filterLogs(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(page);
 
-        Page<AuditLog> result = auditLogController.getAuditLogs(null, null, null, null, null, "timestamp", "desc", defaultPageable);
+        Page<AuditLog> result = auditLogController.getAuditLogs(null, null, null, null, null, null, "timestamp", "desc", defaultPageable);
         assertEquals(2, result.getTotalElements());
     }
 
     @Test
     void deve_filtrar_por_ator() {
-        Assertions.fail("BUG: O endpoint getAuditLogs não tem parâmetro dedicado para filtrar por ator (apenas 'search' genérico).");
+        Page<AuditLog> page = new PageImpl<>(List.of(log1)); // log1 has ator = "medico"
+        when(auditLogRepository.filterLogs(eq("medico"), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
+                .thenReturn(page);
+
+        Page<AuditLog> result = auditLogController.getAuditLogs("medico", null, null, null, null, null, "timestamp", "desc", defaultPageable);
+        assertEquals(1, result.getTotalElements());
+        assertEquals("medico", result.getContent().get(0).getAtor());
     }
 
     @Test
     void deve_filtrar_por_accao() {
         Page<AuditLog> page = new PageImpl<>(List.of(log1));
         // O parâmetro 'tipo' mapeia para a 'accao'
-        when(auditLogRepository.filterLogs(isNull(), eq("CRIAR"), isNull(), isNull(), isNull(), any(Pageable.class)))
+        when(auditLogRepository.filterLogs(isNull(), isNull(), eq("CRIAR"), isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(page);
 
-        Page<AuditLog> result = auditLogController.getAuditLogs(null, "CRIAR", null, null, null, "timestamp", "desc", defaultPageable);
+        Page<AuditLog> result = auditLogController.getAuditLogs(null, null, "CRIAR", null, null, null, "timestamp", "desc", defaultPageable);
         assertEquals(1, result.getTotalElements());
         assertEquals("CRIAR", result.getContent().get(0).getAcao());
     }
@@ -90,19 +96,19 @@ public class AuditLogServiceTest {
     @Test
     void deve_retornar_lista_vazia_quando_sem_registos() {
         Page<AuditLog> page = new PageImpl<>(List.of());
-        when(auditLogRepository.filterLogs(isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
+        when(auditLogRepository.filterLogs(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(page);
 
-        Page<AuditLog> result = auditLogController.getAuditLogs(null, null, null, null, null, "timestamp", "desc", defaultPageable);
+        Page<AuditLog> result = auditLogController.getAuditLogs(null, null, null, null, null, null, "timestamp", "desc", defaultPageable);
         assertTrue(result.isEmpty());
     }
 
     @Test
     void deve_ordenar_por_data_descendente() {
         Page<AuditLog> page = new PageImpl<>(List.of(log2, log1)); // log2 is more recent
-        when(auditLogRepository.filterLogs(isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
+        when(auditLogRepository.filterLogs(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenAnswer(invocation -> {
-                    Pageable p = invocation.getArgument(5);
+                    Pageable p = invocation.getArgument(6);
                     Sort.Order order = p.getSort().getOrderFor("timestamp");
                     if (order != null && order.getDirection() == Sort.Direction.DESC) {
                         return page;
@@ -110,7 +116,7 @@ public class AuditLogServiceTest {
                     return new PageImpl<>(List.of(log1, log2)); // wrong order if not desc
                 });
 
-        Page<AuditLog> result = auditLogController.getAuditLogs(null, null, null, null, null, "timestamp", "desc", defaultPageable);
+        Page<AuditLog> result = auditLogController.getAuditLogs(null, null, null, null, null, null, "timestamp", "desc", defaultPageable);
         assertEquals(2, result.getTotalElements());
         assertEquals(log2.getId(), result.getContent().get(0).getId());
     }

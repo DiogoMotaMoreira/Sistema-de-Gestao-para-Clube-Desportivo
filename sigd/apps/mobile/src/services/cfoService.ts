@@ -56,10 +56,21 @@ export interface RubricaFinanceiraCFO {
   taxaLiq: number;
 }
 
+export interface DetalheRubricaCFO {
+  rubrica: string;
+  entidade: string;
+  totalGerado: number;
+  totalDivida: number;
+  taxaLiquidacao: number;
+}
+
 export interface CfoResumoFinanceiro {
   clube: { receita: number; divida: number; totalObrigacoes: number };
   sad: { receita: number; divida: number; totalObrigacoes: number };
   global: { receita: number; divida: number; taxaLiquidacao: number };
+  detalhesPorRubrica: DetalheRubricaCFO[];
+  sociosAtivos: number;
+  atletasFederados: number;
 }
 
 export interface CfoObrigacao {

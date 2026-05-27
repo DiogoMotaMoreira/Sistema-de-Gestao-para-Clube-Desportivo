@@ -5,6 +5,10 @@ import com.sigd.core.model.EntidadeJuridica;
 import com.sigd.core.model.EstadoObrigacao;
 import com.sigd.core.model.ObrigacaoFinanceira;
 import com.sigd.core.repository.ObrigacaoFinanceiraRepository;
+import com.sigd.core.repository.UtilizadorRepository;
+import com.sigd.core.repository.AtletaRepository;
+import java.util.Map;
+import java.util.stream.Collectors;
 import com.sigd.tesouraria.dto.ObrigacaoFinanceiraDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,9 +30,15 @@ import java.util.List;
 public class CfoController {
 
     private final ObrigacaoFinanceiraRepository obrigacaoRepo;
+    private final UtilizadorRepository utilizadorRepo;
+    private final AtletaRepository atletaRepo;
 
-    public CfoController(ObrigacaoFinanceiraRepository obrigacaoRepo) {
+    public CfoController(ObrigacaoFinanceiraRepository obrigacaoRepo,
+                         UtilizadorRepository utilizadorRepo,
+                         AtletaRepository atletaRepo) {
         this.obrigacaoRepo = obrigacaoRepo;
+        this.utilizadorRepo = utilizadorRepo;
+        this.atletaRepo = atletaRepo;
     }
 
     @GetMapping("/resumo-financeiro")
@@ -72,7 +82,43 @@ public class CfoController {
         CfoResumoDTO.EntidadeResumo sad = new CfoResumoDTO.EntidadeResumo(sadReceita, sadDivida, sadTotal);
         CfoResumoDTO.GlobalResumo global = new CfoResumoDTO.GlobalResumo(globalReceita, globalDivida, taxaLiquidacao);
 
-        return ResponseEntity.ok(new CfoResumoDTO(clube, sad, global));
+        Map<String, List<ObrigacaoFinanceira>> porRubrica = todas.stream()
+                .collect(Collectors.groupingBy(o -> (o.getTipo() != null ? o.getTipo().name() : "OUTROS") + "#" + (o.getEntidadeJuridica() != null ? o.getEntidadeJuridica().name() : "CLUBE")));
+
+        List<CfoResumoDTO.DetalheRubricaDTO> detalhesPorRubrica = porRubrica.entrySet().stream()
+                .map(entry -> {
+                    String[] parts = entry.getKey().split("#");
+                    String rubrica = parts[0];
+                    String entidade = parts[1];
+                    List<ObrigacaoFinanceira> obs = entry.getValue();
+
+                    BigDecimal totalGerado = obs.stream()
+                            .map(ObrigacaoFinanceira::getValor)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    BigDecimal totalDivida = obs.stream()
+                            .filter(o -> o.getEstado() == EstadoObrigacao.EM_ATRASO)
+                            .map(ObrigacaoFinanceira::getValor)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    BigDecimal totalPagos = obs.stream()
+                            .filter(o -> o.getEstado() == EstadoObrigacao.PAGO)
+                            .map(ObrigacaoFinanceira::getValor)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    double taxaLiquidacaoRubrica = 0.0;
+                    if (totalGerado.compareTo(BigDecimal.ZERO) > 0) {
+                        taxaLiquidacaoRubrica = totalPagos.divide(totalGerado, 4, RoundingMode.HALF_UP).doubleValue() * 100.0;
+                    }
+
+                    return new CfoResumoDTO.DetalheRubricaDTO(rubrica, entidade, totalGerado, totalDivida, taxaLiquidacaoRubrica);
+                })
+                .collect(Collectors.toList());
+
+        long sociosAtivos = utilizadorRepo.countByRoleAndAtivo("ROLE_EE", true);
+        long atletasFederados = atletaRepo.countByFederado(true);
+
+        return ResponseEntity.ok(new CfoResumoDTO(clube, sad, global, detalhesPorRubrica, sociosAtivos, atletasFederados));
     }
 
     @GetMapping("/obrigacoes")

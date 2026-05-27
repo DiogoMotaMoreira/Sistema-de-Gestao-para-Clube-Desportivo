@@ -30,6 +30,7 @@ public class AuditLogController {
 
     @GetMapping
     public Page<AuditLog> getAuditLogs(
+            @RequestParam(required = false) String ator,
             @RequestParam(required = false) String modulo,
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
@@ -49,6 +50,6 @@ public class AuditLogController {
         LocalDateTime start = dataInicio != null ? dataInicio.atStartOfDay() : null;
         LocalDateTime end = dataFim != null ? dataFim.atTime(LocalTime.MAX) : null;
 
-        return auditLogRepository.filterLogs(modulo, tipo, start, end, search, sortedPageable);
+        return auditLogRepository.filterLogs(ator, modulo, tipo, start, end, search, sortedPageable);
     }
 }

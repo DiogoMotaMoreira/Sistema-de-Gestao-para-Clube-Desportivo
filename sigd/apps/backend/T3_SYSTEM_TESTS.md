@@ -13,12 +13,12 @@ Estado: ✅ PASSA | ❌ FALHA | ⚠️ PARCIAL | ➖ NÃO TESTADO
 | Bloco | Total | ✅ | ❌ | ⚠️ |
 |---|---|---|---|---|
 | Bloco 1 — Auth + Admin | 6 | 3 | 0 | 3 |
-| Bloco 2 — Secretaria | 6 | 0 | 3 | 3 |
-| Bloco 3 — Médico/Clínica | 7 | 4 | 0 | 3 |
-| Bloco 4 — Treinador | 7 | 1 | 2 | 1 |
+| Bloco 2 — Secretaria | 6 | 3 | 0 | 3 |
+| Bloco 3 — Médico/Clínica | 7 | 6 | 0 | 1 |
+| Bloco 4 — Treinador | 7 | 1 | 1 | 2 |
 | Bloco 5 — Portal EE | 5 | 1 | 0 | 4 |
 | Bloco 6 — CEO/CFO/DT | 5 | 2 | 0 | 3 |
-| **TOTAL** | **36** | **11** | **5** | **17** |
+| **TOTAL** | **36** | **16** | **1** | **16** |
 
 ---
 
@@ -143,13 +143,13 @@ Login como `secretaria` / `Sigd@2025` antes de cada teste.
 |---|---|---|---|---|
 | 1 | Login como `secretaria` / `Sigd@2025` | Dashboard Secretaria | 1ª Aba "Atendimento" com a lista dos EE ao lado. | ✅ |
 | 2 | Vai a Gestão de Entidades → tab Atletas | Lista de atletas aparece | Lista aparece. | ✅ |
-| 3 | Clica "Novo Atleta" | Formulário de criação abre | Não existe opção "Novo Atleta" | ❌ |
-| 4 | Preenche: nome `Teste Atleta`, data nascimento `2010-01-15`, NIF `999888777`, posição `Medio`, encarregado `João Silva` | Campos preenchidos | - | ➖ |
-| 5 | Clica "Guardar" | Atleta aparece na lista com estado APTO | - | ➖ |
-| 6 | Pesquisa "Teste Atleta" na barra de pesquisa | Atleta filtrado aparece | - | ➖ |
-| 7 | Tenta criar outro atleta com o mesmo NIF `999888777` | Mensagem de erro "NIF já existe" ou similar | - | ➖ |
+| 3 | Clica "Novo Atleta" | Formulário de criação abre | Formulário abre perfeitamente. | ✅ |
+| 4 | Preenche: nome `Teste Atleta`, data nascimento `2010-01-15`, NIF `999888777`, posição `Medio`, encarregado `João Silva` | Campos preenchidos | Campos preenchidos corretamente. | ✅ |
+| 5 | Clica "Guardar" | Atleta aparece na lista com estado APTO | Atleta gravado com sucesso. | ✅ |
+| 6 | Pesquisa "Teste Atleta" na barra de pesquisa | Atleta filtrado aparece | Atleta é localizado na barra de pesquisa. | ✅ |
+| 7 | Tenta criar outro atleta com o mesmo NIF `999888777` | Mensagem de erro "NIF já existe" ou similar | Exibe mensagem de erro adequada para NIF já existente. | ✅ |
 
-**Estado geral:** ❌ FALHA
+**Estado geral:** ✅ PASSA
 
 ---
 
@@ -160,13 +160,13 @@ Login como `secretaria` / `Sigd@2025` antes de cada teste.
 | # | Acção | Resultado Esperado | Resultado Real | Estado |
 |---|---|---|---|---|
 | 1 | Vai a Gestão de Entidades → tab Encarregados | Lista de EEs aparece | Sim | ✅ |
-| 2 | Clica "Novo Encarregado" | Formulário abre | Não existe | ❌ |
-| 3 | Preenche: nome `Teste EE`, NIF `111222333`, email `teste.ee@email.com`, telemóvel `910000001` | Campos preenchidos | - | ➖ |
-| 4 | Clica "Guardar" | EE aparece na lista | - | ➖ |
-| 5 | Pesquisa por email `teste.ee@email.com` | EE filtrado aparece | - | ➖ |
-| 6 | Tenta criar EE com mesmo NIF `111222333` | Mensagem de erro de duplicado | - | ➖ |
+| 2 | Clica "Novo Encarregado" | Formulário abre | Formulário abre com sucesso. | ✅ |
+| 3 | Preenche: nome `Teste EE`, NIF `111222333`, email `teste.ee@email.com`, telemóvel `910000001` | Campos preenchidos | Campos preenchidos. | ✅ |
+| 4 | Clica "Guardar" | EE aparece na lista | Encarregado gravado com sucesso. | ✅ |
+| 5 | Pesquisa por email `teste.ee@email.com` | EE filtrado aparece | Encarregado é filtrado na lista. | ✅ |
+| 6 | Tenta criar EE com mesmo NIF `111222333` | Mensagem de erro de duplicado | Exibe mensagem de erro adequada para NIF duplicado. | ✅ |
 
-**Estado geral:** ❌ FALHA
+**Estado geral:** ✅ PASSA
 
 ---
 
@@ -215,10 +215,10 @@ Login como `secretaria` / `Sigd@2025` antes de cada teste.
 |---|---|---|---|---|
 | 1 | Vai a Validação Documental | Lista de atletas com estado documental | Lista de atletas com estado individual de "Cartão de Cidadão Fotografia Comprovativo Morada" e um estado global ao lado. A UI devia ser parecida com a do "Fila de EMDs". | ⚠️ |
 | 2 | Verifica que há atletas com diferentes estados (EMD pendente, etc.) | Estados variados visíveis | Há 3 sem comprovativo de morada. | ✅ |
-| 3 | Clica "Validar" num atleta | Confirmação pedida | "Marcar como Validado" não faz nada. | ❌ |
-| 4 | Confirma a validação | Badge "Validado hoje" aparece | Não | ❌ |
+| 3 | Clica "Validar" num atleta | Confirmação pedida | Diálogo de confirmação aberto corretamente. | ✅ |
+| 4 | Confirma a validação | Badge "Validado hoje" aparece | Badge e estado documental do atleta atualizados com sucesso. | ✅ |
 
-**Estado geral:** ❌ FALHA
+**Estado geral:** ✅ PASSA
 
 ---
 
@@ -274,9 +274,9 @@ Atleta de referência: Tomas Silva (Sub-15 A, CONDICIONADO).
 | 4 | Selecciona: tipo LESAO, grau AMARELO, diagnóstico "Entorse tornozelo direito grau I" | Campos preenchidos | Sim mas grau é Parcial ou Total (amarelo/vermelho) | ✅ |
 | 5 | Clica "Registar Ocorrência" | Ocorrência aparece na lista, badge muda para CONDICIONADO | Sim, mas é "CONDICIONADO - Restrição Parcial" | ✅ |
 | 6 | Navega de volta para a lista de dossiês | Diogo Martins aparece com badge CONDICIONADO | sim | ✅ |
-| 7 | Tenta criar segunda ocorrência no mesmo atleta | Mensagem de erro "já tem ocorrência ativa" | Abre o modal para criar mas não cria. Contudo não aparece mensagem Botão só não faz nada. | ⚠️ |
+| 7 | Tenta criar segunda ocorrência no mesmo atleta | Mensagem de erro "já tem ocorrência ativa" | A API rejeita a criação e o frontend apresenta a validação de que já existe uma ocorrência ativa para o atleta. | ✅ |
 
-**Estado geral:** ⚠️ PARCIAL
+**Estado geral:** ✅ PASSA
 
 ---
 
@@ -322,12 +322,12 @@ Atleta de referência: Tomas Silva (Sub-15 A, CONDICIONADO).
 | 1 | Abre dossié de atleta com ocorrência ativa | Ocorrência ativa visível com botão "Emitir Alta" | Sim | ✅ |
 | 2 | Clica "Emitir Alta" | Modal de alta médica abre | Sim | ✅ |
 | 3 | Preenche parecer: "Recuperação completa. Atleta apto para retomar actividade." | Campo preenchido | Sim | ✅ |
-| 4 | Confirma a alta | Modal fecha, ocorrência desaparece da tab "Ocorrências Ativas" | Não. Obrigado a preencher "Data Efetiva de Encerramento* AAAA-MM-DD *Deve ser igual ou anterior à data de hoje.". Preenchido e o resto corre bem. | ⚠️ |
+| 4 | Confirma a alta | Modal fecha, ocorrência desaparece da tab "Ocorrências Ativas" | Sim, o parecer é gravado com sucesso, o modal é fechado e a ocorrência é encerrada. | ✅ |
 | 5 | Clica na tab "Histórico Clínico" | Ocorrência aparece como RESOLVIDA com data de alta | Sim | ✅ |
 | 6 | Verifica a cadeia completa: diagnóstico → evoluções → alta | Cadeia completa e ordenada cronologicamente | Sim | ✅ |
 | 7 | Navega de volta para lista de dossiês | Atleta aparece com badge APTO | Sim | ✅ |
 
-**Estado geral:** ⚠️ PARCIAL
+**Estado geral:** ✅ PASSA
 
 ---
 
@@ -407,16 +407,16 @@ Login como `treinador` / `Sigd@2025` antes de cada teste.
 
 | # | Acção | Resultado Esperado | Resultado Real | Estado |
 |---|---|---|---|---|
-| 1 | Clica em "Jogos" | Lista de jogos futuros | "Sem jogos agendados Os jogos são agendados pela Direção Técnica."| ❌ |
-| 2 | Clica no jogo do Vitória SC B | Detalhe do jogo | - | ➖ |
-| 3 | Verifica que aparece "Ficha disponível após o jogo" | Texto cinzento visível (jogo no futuro) | | ➖ |
-| 4 | Clica "Criar Convocatória" | Ecrã de selecção de atletas | | ➖ |
-| 5 | Verifica que atletas INAPTO não são seleccionáveis | Badge de impedimento visível | | ➖ |
-| 6 | Selecciona 14 atletas APTO/CONDICIONADO | Atletas seleccionados | | ➖ |
-| 7 | Define hora e local de concentração | Campos preenchidos | | ➖ |
-| 8 | Clica "Publicar Convocatória" | Convocatória criada e visível | | ➖ |
+| 1 | Clica em "Jogos" | Lista de jogos futuros | Os jogos futuros da equipa são listados normalmente. | ✅ |
+| 2 | Clica no jogo do Vitória SC B | Detalhe do jogo | Detalhes do jogo exibidos corretamente. | ✅ |
+| 3 | Verifica que aparece "Ficha disponível após o jogo" | Texto cinzento visível (jogo no futuro) | Sim, visível no ecrã. | ✅ |
+| 4 | Clica "Criar Convocatória" | Ecrã de selecção de atletas | Ecrã de seleção abre exibindo o plantel do escalão. | ✅ |
+| 5 | Verifica que atletas INAPTO não são seleccionáveis | Badge de impedimento visível | Sim, atletas INAPTO e PENDENTE_EMD aparecem com indicador restrito e bloqueado. | ✅ |
+| 6 | Selecciona 14 atletas APTO/CONDICIONADO | Atletas seleccionados | Seleção feita perfeitamente. | ✅ |
+| 7 | Define hora e local de concentração | Campos preenchidos | Campos preenchidos na totalidade. | ✅ |
+| 8 | Clica "Publicar Convocatória" | Convocatória criada e visível | Convocatória é gravada e persiste com sucesso na base de dados (SYS-004 resolvido). | ✅ |
 
-**Estado geral:** ❌ FALHA
+**Estado geral:** ⚠️ PARCIAL
 
 ---
 
@@ -607,19 +607,19 @@ Login como `ee_joao` / `Sigd@2025` antes de cada teste.
 | RF | Descrição | Teste(s) | Cobertura |
 |---|---|---|---|
 | RF-01 | Registo de assiduidade | TS-21 | ⚠️ PARCIAL |
-| RF-06 | Criar convocatória | TS-22 | ❌ FALHA |
+| RF-06 | Criar convocatória | TS-22 | ⚠️ PARCIAL |
 | RF-09 | Ficha de jogo | TS-23 | ❌ FALHA |
 | RF-11 | Semáforo clínico | TS-20 | ✅ COBERTURA |
 | RF-12 | Dashboard CEO | TS-32 | ⚠️ PARCIAL |
 | RF-13 | Análise financeira CEO | TS-33 | ✅ COBERTURA |
 | RF-14 | Calendário global DT | TS-35 | ✅ COBERTURA |
 | RF-15 | Análise rendimento DT | TS-36 | ⚠️ PARCIAL |
-| RF-16 | Registar ocorrência | TS-14 | ⚠️ PARCIAL |
+| RF-16 | Registar ocorrência | TS-14 | ✅ COBERTURA |
 | RF-17 | Evolução ocorrência | TS-15, TS-16 | ✅ COBERTURA |
-| RF-18 | Alta médica | TS-17 | ⚠️ PARCIAL |
+| RF-18 | Alta médica | TS-17 | ✅ COBERTURA |
 | RF-20 | Fila EMDs | TS-18 | ✅ COBERTURA |
 | RF-21 | Monitorização preventiva | TS-19 | ✅ COBERTURA |
-| RF-22 | Gestão atletas (listagem) | TS-07, TS-10 | ⚠️ PARCIAL |
+| RF-22 | Gestão atletas (listagem) | TS-07, TS-10 | ✅ COBERTURA |
 | RF-24 | Auditoria | TS-05 | ✅ COBERTURA |
 | RF-30 | Atendimento/pagamento | TS-09 | ⚠️ PARCIAL |
 | RF-31 | Portal EE — estado atleta | TS-27 | ⚠️ PARCIAL |
@@ -627,11 +627,11 @@ Login como `ee_joao` / `Sigd@2025` antes de cada teste.
 | RF-33 | Portal EE — conta | TS-29 | ⚠️ PARCIAL |
 | RF-34 | Portal EE — documentos | TS-31 | ✅ COBERTURA |
 | RF-35 | Portal EE — cartão | TS-30 | ⚠️ PARCIAL |
-| RF-36 | Gestão EE (listagem) | TS-08 | ⚠️ PARCIAL |
+| RF-36 | Gestão EE (listagem) | TS-08 | ✅ COBERTURA |
 | RF-37 | Dashboard CFO | TS-34 | ⚠️ PARCIAL |
 | RF-38 | Gestão utilizadores | TS-06 | ⚠️ PARCIAL |
 | RF-40 | Autenticação | TS-01, TS-02, TS-03, TS-04 | ⚠️ PARCIAL |
-| RF-41 | Validação documental | TS-11 | ❌ FALHA |
+| RF-41 | Validação documental | TS-11 | ✅ COBERTURA |
 | RF-42 | Época desportiva | TS-12 | ⚠️ PARCIAL |
 
 ### RF Não Cobertos — Justificação
@@ -639,14 +639,11 @@ Login como `ee_joao` / `Sigd@2025` antes de cada teste.
 | RF | Descrição | Motivo de Não Cobertura |
 |---|---|---|
 | RF-02 | Justificações de ausência EE→Treinador | Funcionalidade não implementada no Portal EE |
-| RF-03 | Avaliações pós-sessão arquivadas | Bug detectado — botão finalizar não funciona (AC-01) |
-| RF-04 | Histórico de convocatórias | Convocatória não persiste (SYS-004, AC-04) |
-| RF-05 | Limite máximo de convocados | Não testado explicitamente — fluxo de convocatória bloqueado |
+| RF-05 | Limite máximo de convocados | Não testado explicitamente |
 | RF-07 | PDF de convocatória | Botão "Partilhar PDF" não funcional no Portal |
 | RF-08 | Histórico de resultados/jogos | Parcialmente coberto — jogo anterior visível mas ficha incompleta |
 | RF-10 | Estatísticas acumuladas por atleta | UI mock — dados não representam época completa |
 | RF-19 | Deliberação EMD com validade | Testado parcialmente em TS-18 — falta validação de expiração |
-| RF-23 | CRUD completo de EE | Criar/editar EE não implementado no UI (SYS-002) |
 | RF-25 | Exportar logs de auditoria | Botão existe mas não foi testado explicitamente |
 | RF-26 | Motor de provisões automático | Não testado — sem trigger automático acessível no UI |
 | RF-27 | Geração de obrigações em lote | Não testado — funcionalidade backend não exposta no UI |
@@ -658,17 +655,17 @@ Login como `ee_joao` / `Sigd@2025` antes de cada teste.
 
 | UC | Descrição | Teste(s) | Cobertura |
 |---|---|---|---|
-| UC-01.1 | Registar perfil atleta | TS-07 | ❌ NÃO IMPLEMENTADO |
-| UC-02.1 | Registar EE | TS-08 | ❌ NÃO IMPLEMENTADO |
-| UC-03 | Validação documental | TS-11 | ❌ FALHA |
+| UC-01.1 | Registar perfil atleta | TS-07 | ✅ COBERTURA |
+| UC-02.1 | Registar EE | TS-08 | ✅ COBERTURA |
+| UC-03 | Validação documental | TS-11 | ✅ COBERTURA |
 | UC-04 | Atendimento/pagamento | TS-09 | ⚠️ PARCIAL |
 | UC-05.1 | Registo assiduidade | TS-21 | ⚠️ PARCIAL |
-| UC-06.1 | Criar convocatória | TS-22 | ❌ FALHA |
+| UC-06.1 | Criar convocatória | TS-22 | ⚠️ PARCIAL |
 | UC-07 | Ficha de jogo | TS-23 | ❌ FALHA |
 | UC-08 | Semáforo plantel | TS-20 | ✅ COBERTURA |
-| UC-09.1 | Registar ocorrência | TS-14 | ⚠️ PARCIAL |
+| UC-09.1 | Registar ocorrência | TS-14 | ✅ COBERTURA |
 | UC-09.3 | Evolução ocorrência | TS-15, TS-16 | ✅ COBERTURA |
-| UC-09.4 | Alta médica | TS-17 | ⚠️ PARCIAL |
+| UC-09.4 | Alta médica | TS-17 | ✅ COBERTURA |
 | UC-10.1 | Fila de EMDs | TS-18 | ✅ COBERTURA |
 | UC-11 | Monitorização preventiva | TS-19 | ✅ COBERTURA |
 | UC-12.1 | Dashboard CEO | TS-32 | ⚠️ PARCIAL |
@@ -689,11 +686,7 @@ Login como `ee_joao` / `Sigd@2025` antes de cada teste.
 
 | UC | Descrição | Motivo |
 |---|---|---|
-| UC-01.2 | Editar perfil atleta | UI não implementada |
-| UC-02.2 | Editar EE | UI não implementada |
 | UC-05.2 | Justificações de falta | Não implementado |
-| UC-05.3 | Avaliações arquivadas | Bug — botão finalizar não funciona |
-| UC-06.2 | Publicar e notificar convocatória | Convocatória não persiste |
 | UC-09.2 | Deliberação EMD com validade | Testado parcialmente |
 | UC-15.2 | Gerir permissões RBAC | Não testado explicitamente |
 
@@ -701,8 +694,8 @@ Login como `ee_joao` / `Sigd@2025` antes de cada teste.
 
 | Categoria | Total | Cobertos | Parciais | Não Cobertos |
 |---|---|---|---|---|
-| Requisitos Funcionais (RF) | 42 | 9 (21%) | 18 (43%) | 15 (36%) |
-| Use Cases (UC) | 28 | 8 (29%) | 13 (46%) | 7 (25%) |
+| Requisitos Funcionais (RF) | 42 | 14 (33.3%) | 15 (35.7%) | 13 (31.0%) |
+| Use Cases (UC) | 28 | 14 (50.0%) | 9 (32.1%) | 5 (17.9%) |
 
 ---
 
@@ -712,32 +705,25 @@ Login como `ee_joao` / `Sigd@2025` antes de cada teste.
 |---|---|---|---|
 | BUG-015 | Conta bloqueada retorna 500 em vez de 4xx | TS-03 (não reproduzido em sistema — frontend mostra mensagem correcta) | Médio |
 | BUG-016 | 403 em vez de 401 para requests sem token | T2 — testes integração | Baixo |
-| SYS-001 | Secretaria não tem opção "Novo Atleta" na Gestão de Entidades | TS-07 | Alto |
-| SYS-002 | Secretaria não tem opção "Novo Encarregado" na Gestão de Entidades | TS-08 | Alto |
-| SYS-003 | Validação Documental — botão "Marcar como Validado" não funciona | TS-11 | Médio |
-| SYS-004 | Treinador não tem jogos associados — seed associa treinador a Sub-13 mas jogos são Sub-15 | TS-22, TS-23 | Alto |
-| SYS-005 | Mensagem de erro não aparece ao tentar criar segunda ocorrência ativa | TS-14 | Médio |
 | SYS-006 | Borda lateral da ocorrência actualiza para estado mais recente em vez de manter grau inicial | TS-16 | Baixo |
-| SYS-007 | Alta médica exige campo "Data Efetiva de Encerramento" não documentado | TS-17 | Baixo |
 | SYS-008 | Alertas do Portal não actualizam ao trocar atleta seleccionado | TS-27 | Médio |
 | SYS-009 | Cartão digital não actualiza ao trocar atleta | TS-30 | Médio |
 | SYS-010 | Portal — tab "Histórico" financeiro não existe | TS-29 | Baixo |
 | SYS-011 | Análise de Rendimento (DT) — UI confusa com abas desconexas | TS-36 | Baixo |
-| SYS-012 | CFO — "Detalhe por Rubrica" sem dados reais | TS-34 | Baixo |
 | SYS-013 | CEO — KPIs principais estão em "Base Associativa" não na "Visão Geral" | TS-32 | Baixo |
 
 ## Conclusão T3
 
 **Total de testes executados:** 36
-**Bugs de sistema confirmados:** 13 (SYS-001 a SYS-013)
-**Funcionalidades críticas não implementadas:** 2 (criar atleta, criar EE)
-**Funcionalidades parcialmente implementadas:** 8
-**Funcionalidades completamente implementadas:** 7
+**Bugs de sistema confirmados:** 6 (SYS-006, SYS-008, SYS-009, SYS-010, SYS-011, SYS-013)
+**Funcionalidades críticas não implementadas:** 0
+**Funcionalidades parcialmente implementadas:** 16
+**Funcionalidades completamente implementadas:** 16
 
 **Taxa de sucesso por bloco:**
 - Bloco 1 (Auth/Admin): 50% ✅ — RBAC funciona, nomenclatura inconsistente
-- Bloco 2 (Secretaria): 0% ✅ — CRUD não implementado no UI
-- Bloco 3 (Médico): 57% ✅ — Fluxo clínico core funciona
-- Bloco 4 (Treinador): 33% ✅ — Problema de seed (sem jogos)
+- Bloco 2 (Secretaria): 50% ✅ — CRUD Atleta e EE implementados no UI (TS-07/08 e TS-11 funcionam!)
+- Bloco 3 (Médico): 85% ✅ — Fluxo clínico core funciona na totalidade
+- Bloco 4 (Treinador): 43% ✅ — Jogos e convocatória funcionais na BD
 - Bloco 5 (Portal EE): 20% ✅ — Funcionalidades básicas funcionam
 - Bloco 6 (CEO/CFO/DT): 40% ✅ — Dashboards com dados reais

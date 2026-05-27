@@ -23,6 +23,8 @@ public interface AtletaRepository extends JpaRepository<Atleta, Long> {
 
     List<Atleta> findByEstadoElegibilidade(EstadoElegibilidade estadoElegibilidade);
 
+    List<Atleta> findByEstadoElegibilidadeNot(EstadoElegibilidade estadoElegibilidade);
+
     List<Atleta> findByNomeCompletoContainingIgnoreCase(String nomeCompleto);
 
     /**
@@ -37,4 +39,5 @@ public interface AtletaRepository extends JpaRepository<Atleta, Long> {
             @Param("equipaId") Long equipaId,
             Pageable pageable);
 
+    long countByFederado(boolean federado);
 }

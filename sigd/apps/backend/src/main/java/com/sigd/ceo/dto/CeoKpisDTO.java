@@ -10,5 +10,6 @@ public record CeoKpisDTO(
     BigDecimal dividaTotal,
     long atletasAptos,
     long atletasCondicionados,
-    long atletasInaptos
+    long atletasInaptos,
+    BigDecimal racioLiquidez
 ) {}

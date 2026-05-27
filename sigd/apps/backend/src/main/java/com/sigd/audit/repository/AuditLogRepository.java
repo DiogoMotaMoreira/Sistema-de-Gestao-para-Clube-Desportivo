@@ -14,6 +14,8 @@ import java.util.List;
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
+    List<AuditLog> findByAtorContainingIgnoreCase(String ator);
+
     List<AuditLog> findByEntidade(String entidade);
 
     List<AuditLog> findByUsuarioId(Long usuarioId);
@@ -21,12 +23,14 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findByTimestampBetween(LocalDateTime start, LocalDateTime end);
 
     @Query("SELECT a FROM AuditLog a WHERE " +
+           "(:ator IS NULL OR :ator = '' OR LOWER(a.ator) LIKE LOWER(CONCAT('%', :ator, '%'))) AND " +
            "(:modulo IS NULL OR :modulo = '' OR a.entidade = :modulo) AND " +
            "(:tipo IS NULL OR :tipo = '' OR a.acao = :tipo) AND " +
            "(:dataInicio IS NULL OR a.timestamp >= :dataInicio) AND " +
            "(:dataFim IS NULL OR a.timestamp <= :dataFim) AND " +
            "(:search IS NULL OR :search = '' OR LOWER(a.ator) LIKE LOWER(CONCAT('%', :search, '%')) OR CAST(a.usuarioId AS string) LIKE CONCAT('%', :search, '%'))")
     Page<AuditLog> filterLogs(
+        @Param("ator") String ator,
         @Param("modulo") String modulo, 
         @Param("tipo") String tipo, 
         @Param("dataInicio") LocalDateTime dataInicio, 

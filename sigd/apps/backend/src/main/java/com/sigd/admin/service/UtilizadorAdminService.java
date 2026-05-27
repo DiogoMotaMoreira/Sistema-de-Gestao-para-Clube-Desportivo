@@ -15,19 +15,26 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
+import com.sigd.audit.repository.AuditLogRepository;
+import com.sigd.audit.model.AuditLog;
+import java.time.LocalDateTime;
+
 @Service
 public class UtilizadorAdminService {
 
     private final UtilizadorRepository utilizadorRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.sigd.auth.service.PasswordValidator passwordValidator;
+    private final AuditLogRepository auditLogRepository;
 
     public UtilizadorAdminService(UtilizadorRepository utilizadorRepository, 
                                   PasswordEncoder passwordEncoder,
-                                  com.sigd.auth.service.PasswordValidator passwordValidator) {
+                                  com.sigd.auth.service.PasswordValidator passwordValidator,
+                                  AuditLogRepository auditLogRepository) {
         this.utilizadorRepository = utilizadorRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordValidator = passwordValidator;
+        this.auditLogRepository = auditLogRepository;
     }
 
     @Transactional(readOnly = true)
@@ -107,6 +114,31 @@ public class UtilizadorAdminService {
         utilizador.setAtivo(true);
         utilizador = utilizadorRepository.save(utilizador);
         return toResponse(utilizador);
+    }
+
+    @Transactional
+    public void anonimizarUtilizador(Long id) {
+        Utilizador u = utilizadorRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Utilizador não encontrado"));
+        u.setUsername("eliminado_" + id);
+        u.setEmail("eliminado_" + id + "@sigd.eliminado");
+        u.setPasswordHash("[ELIMINADO]");
+        u.setAtivo(false);
+        utilizadorRepository.save(u);
+
+        // Registar no audit log
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String operador = (auth != null) ? auth.getName() : "ADMIN";
+
+        AuditLog audit = new AuditLog();
+        audit.setAtor(operador);
+        audit.setAcao("ANONIMIZAR");
+        audit.setEntidade("Utilizador");
+        audit.setEntidadeId(id);
+        audit.setDetalhes("Utilizador anonimizado por motivos de RGPD");
+        audit.setTimestamp(LocalDateTime.now());
+        audit.setIpAddress("127.0.0.1");
+        auditLogRepository.save(audit);
     }
 
     private UtilizadorAdminDTO.Response toResponse(Utilizador u) {

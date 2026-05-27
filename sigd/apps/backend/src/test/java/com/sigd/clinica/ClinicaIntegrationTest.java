@@ -45,6 +45,14 @@ class ClinicaIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setup() {
+        seedUserIfNotExists("medico1", "ROLE_MEDICO");
+        seedUserIfNotExists("medico2", "ROLE_MEDICO");
+        seedUserIfNotExists("medico3", "ROLE_MEDICO");
+        seedUserIfNotExists("medico4", "ROLE_MEDICO");
+        seedUserIfNotExists("medico5", "ROLE_MEDICO");
+        seedUserIfNotExists("medico", "ROLE_MEDICO");
+        seedUserIfNotExists("treinador1", "ROLE_TREINADOR");
+
         if (atletaRepository.count() == 0) {
             EncarregadoEducacao ee = new EncarregadoEducacao();
             ee.setNome("Pai Teste");
@@ -78,6 +86,21 @@ class ClinicaIntegrationTest extends BaseIntegrationTest {
             atletaId = atleta.getId();
         } else {
             atletaId = atletaRepository.findAll().get(0).getId();
+        }
+    }
+
+    private void seedUserIfNotExists(String username, String role) {
+        if (!utilizadorRepository.findByUsername(username).isPresent()) {
+            Utilizador u = new Utilizador();
+            u.setUsername(username);
+            u.setEmail(username + "@teste.com");
+            u.setPasswordHash("hashed_password");
+            u.setRole(role);
+            u.setAtivo(true);
+            u.setTentativasFalhadas(0);
+            u.setCriadoEm(java.time.LocalDateTime.now());
+            u.setAtualizadoEm(java.time.LocalDateTime.now());
+            utilizadorRepository.save(u);
         }
     }
 

@@ -1,26 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { FileText, Sheet, LineChart, Table } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { LineChart } from 'lucide-react-native';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { CeoFilters, PresetPeriodo } from '../ceo/components/CeoFilters';
-import { cfoService, RubricaFinanceiraCFO } from '@/services/cfoService';
+import { cfoService } from '@/services/cfoService';
 import { Colors } from '@/constants/colors';
 
 export function RelatoriosFinanceirosCFOScreen(): React.JSX.Element {
   const [periodo, setPeriodo] = useState<PresetPeriodo>('Época Ativa');
-  
-  const [rubricasClube, setRubricasClube] = useState<RubricaFinanceiraCFO[]>([]);
-  const [rubricasSad, setRubricasSad] = useState<RubricaFinanceiraCFO[]>([]);
   const [resumo, setResumo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      cfoService.getRubricas('Clube').then(setRubricasClube),
-      cfoService.getRubricas('SAD').then(setRubricasSad),
-      cfoService.getResumoFinanceiro().then(setResumo)
-    ]).finally(() => setLoading(false));
+    cfoService.getResumoFinanceiro()
+      .then(setResumo)
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -79,13 +74,13 @@ export function RelatoriosFinanceirosCFOScreen(): React.JSX.Element {
                     <Text style={[styles.th, { flex: 1.5 }]}>EM DÍVIDA</Text>
                     <Text style={[styles.th, { flex: 1 }]}>TAXA LIQ.</Text>
                  </View>
-                 {rubricasClube.map(r => (
-                    <View key={r.id} style={styles.tableRow}>
-                       <Text style={[styles.td, { flex: 2, fontWeight: '500' }]}>{r.nome}</Text>
-                       <View style={{ flex: 1.5 }}><View style={[styles.badgePill, { backgroundColor: '#F1F5F9' }]}><Text style={{ fontSize: 10, color: '#64748B' }}>{r.escalao}</Text></View></View>
-                       <Text style={[styles.td, { flex: 1.5 }]}>{r.valorTotal.toFixed(2)} €</Text>
-                       <Text style={[styles.td, { flex: 1.5, color: Colors.ERRO_TEXT }]}>{r.valorEmDivida.toFixed(2)} €</Text>
-                       <Text style={[styles.td, { flex: 1, color: Colors.SUCESSO_TEXT, fontWeight: '700' }]}>{r.taxaLiq}%</Text>
+                 {(resumo?.detalhesPorRubrica || []).filter((r: any) => r.entidade === 'CLUBE').map((r: any, idx: number) => (
+                    <View key={idx} style={styles.tableRow}>
+                       <Text style={[styles.td, { flex: 2, fontWeight: '500' }]}>{r.rubrica}</Text>
+                       <View style={{ flex: 1.5 }}><View style={[styles.badgePill, { backgroundColor: '#F1F5F9' }]}><Text style={{ fontSize: 10, color: '#64748B' }}>Global</Text></View></View>
+                       <Text style={[styles.td, { flex: 1.5 }]}>{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(r.totalGerado)}</Text>
+                       <Text style={[styles.td, { flex: 1.5, color: Colors.ERRO_TEXT }]}>{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(r.totalDivida)}</Text>
+                       <Text style={[styles.td, { flex: 1, color: Colors.SUCESSO_TEXT, fontWeight: '700' }]}>{r.taxaLiquidacao.toFixed(1)}%</Text>
                     </View>
                  ))}
                  <View style={styles.tableFooter}><Text style={{ fontSize: 11, color: Colors.INFO_TEXT }}>← Anterior</Text><Text style={{ fontSize: 11, color: Colors.INFO_TEXT }}>Próxima →</Text></View>
@@ -116,13 +111,13 @@ export function RelatoriosFinanceirosCFOScreen(): React.JSX.Element {
                     <Text style={[styles.th, { flex: 1.5 }]}>EM DÍVIDA</Text>
                     <Text style={[styles.th, { flex: 1 }]}>TAXA LIQ.</Text>
                  </View>
-                 {rubricasSad.map(r => (
-                    <View key={r.id} style={styles.tableRow}>
-                       <Text style={[styles.td, { flex: 2, fontWeight: '500' }]}>{r.nome}</Text>
-                       <View style={{ flex: 1.5 }}><View style={[styles.badgePill, { backgroundColor: '#F1F5F9' }]}><Text style={{ fontSize: 10, color: '#64748B' }}>{r.escalao}</Text></View></View>
-                       <Text style={[styles.td, { flex: 1.5 }]}>{r.valorTotal.toFixed(2)} €</Text>
-                       <Text style={[styles.td, { flex: 1.5, color: Colors.ERRO_TEXT }]}>{r.valorEmDivida.toFixed(2)} €</Text>
-                       <Text style={[styles.td, { flex: 1, color: r.taxaLiq >= 85 ? Colors.SUCESSO_TEXT : r.taxaLiq >= 70 ? Colors.AVISO_TEXT : Colors.ERRO_TEXT, fontWeight: '700' }]}>{r.taxaLiq}%</Text>
+                 {(resumo?.detalhesPorRubrica || []).filter((r: any) => r.entidade === 'SAD').map((r: any, idx: number) => (
+                    <View key={idx} style={styles.tableRow}>
+                       <Text style={[styles.td, { flex: 2, fontWeight: '500' }]}>{r.rubrica}</Text>
+                       <View style={{ flex: 1.5 }}><View style={[styles.badgePill, { backgroundColor: '#F1F5F9' }]}><Text style={{ fontSize: 10, color: '#64748B' }}>Global</Text></View></View>
+                       <Text style={[styles.td, { flex: 1.5 }]}>{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(r.totalGerado)}</Text>
+                       <Text style={[styles.td, { flex: 1.5, color: Colors.ERRO_TEXT }]}>{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(r.totalDivida)}</Text>
+                       <Text style={[styles.td, { flex: 1, color: r.taxaLiquidacao >= 85 ? Colors.SUCESSO_TEXT : r.taxaLiquidacao >= 70 ? Colors.AVISO_TEXT : Colors.ERRO_TEXT, fontWeight: '700' }]}>{r.taxaLiquidacao.toFixed(1)}%</Text>
                     </View>
                  ))}
                  <View style={styles.tableFooter}><Text style={{ fontSize: 11, color: Colors.INFO_TEXT }}>← Anterior</Text><Text style={{ fontSize: 11, color: Colors.INFO_TEXT }}>Próxima →</Text></View>

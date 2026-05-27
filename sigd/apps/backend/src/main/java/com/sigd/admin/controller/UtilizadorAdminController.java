@@ -46,4 +46,10 @@ public class UtilizadorAdminController {
     public UtilizadorAdminDTO.Response reativar(@PathVariable Long id) {
         return service.reativar(id);
     }
+
+    @DeleteMapping("/utilizadores/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletar(@PathVariable Long id) {
+        service.anonimizarUtilizador(id);
+    }
 }

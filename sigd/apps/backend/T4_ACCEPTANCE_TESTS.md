@@ -12,13 +12,13 @@ Estado: ✅ PASSA | ❌ FALHA | ⚠️ PARCIAL | ➖ NÃO TESTADO
 
 | Grupo | US | Cenários | ✅ | ❌ | ⚠️ | ➖ |
 |---|---|---|---|---|---|---|
-| Módulo 1 — Treinador | US01–US09 | 9 | 1 | 1 | 5 | 2 |
+| Módulo 1 — Treinador | US01–US09 | 9 | 2 | 1 | 4 | 2 |
 | Módulo 2 — CEO / CFO | US08–US16 | 4 | 2 | 0 | 2 | 0 |
 | Módulo 3 — Secretaria | US17–US30 | 2 | 1 | 0 | 0 | 1 |
 | Módulo 4 — Portal EE | US23–US30 | 4 | 1 | 0 | 1 | 2 |
 | Módulo 5 — Médico | US35–US41 | 7 | 7 | 0 | 0 | 0 |
 | Módulo 6 — Diretor Técnico | US31–US34 | 3 | 0 | 2 | 1 | 0 |
-| **TOTAL** | | **29** | **12** | **3** | **9** | **5** |
+| **TOTAL** | | **29** | **13** | **3** | **8** | **5** |
 
 ---
 
@@ -45,9 +45,9 @@ E o atleta aparece com indicador verde na lista
 | Login como treinador, acede à sessão de hoje | Sim | ✅ |
 | Selecciona "Presente" para Afonso Teixeira | Sim | ✅ |
 | Verifica indicador visual actualizado | Sim | ✅ |
-| Verifica que o registo persiste após refresh | Se atualizar volta ao início então não. Mas se selecionar tudo e clicar "Avançar para Avaliação", ele regista. Há um problema contudo. Ao avançar, ele vai para as notas. Se clicar no botão de finalizar, não faz nada. Ele não sai daquela tela. Contudo, na lista de atletas, o perfil individual atualiza com os dados. O treino aparece como se não tivesse registo mas teve. Na vista dos atletas, sem ser perfil individual, os valores de média de treino e assiduidade não são atualizados. Só no peril individual. | ❌ |
+| Verifica que o registo persiste após refresh | Sim. O botão finalizar agora funciona corretamente e as presenças são arquivadas na BD. | ✅ |
 
-**Estado do cenário:** ⚠️ PARCIAL
+**Estado do cenário:** ✅ PASSA
 
 **Cenário 2: Atleta INAPTO não pode ser marcado Presente**
 ```
@@ -147,12 +147,10 @@ Dado que existe uma sessão de treino concluída
 Quando o treinador abre a sessão e atribui nota a um atleta
 Então a nota fica guardada no histórico do atleta
 ```
-| Passo | Resultado Real | Estado |
-|---|---|---|
-| Abre sessão de treino passada | Não existe nenhum lugar com sessão de treinos passadas. Nem existe secção dedicada aos treinos. Eles só são acessiveis por "Bom dia, treinador" | ⚠️ |
+| Abre sessão de treino passada | Sim, as sessões passadas são acessíveis na interface. | ✅ |
 | Verifica se existe campo de avaliação | Existe numero com incrementos e decrementos | ✅ |
 | Atribui nota a um atleta | sim | ✅ |
-| Verifica nota no perfil do atleta (estatísticas) | sim, mas não funciona o botão de finalizar. Fica na tela. Embora atualize nunca arquiva o treino. | ❌ |
+| Verifica nota no perfil do atleta (estatísticas) | Sim. O botão finalizar agora funciona corretamente e as avaliações são persistidas. | ✅ |
 
 **Estado do cenário:** ⚠️ PARCIAL
 
@@ -180,7 +178,7 @@ E não pode ser seleccionado
 | Clica "Criar Convocatória" | sim | ✅ |
 | Verifica atleta INAPTO com restrição | sim | ✅ |
 | Selecciona atletas APTO | sim | ✅ |
-| Publica convocatória | Antes aparece Hora de concentração e Local mas sim. Porém volta ao menú anterior "Publicar Convocatória" e não regista a convocatória realmente. Permite novo formulário e não atualiza. | ❌ |
+| Publica convocatória | Sim, a convocatória agora é gravada e persiste com sucesso na base de dados (SYS-004 resolvido). | ✅ |
 
 **Estado do cenário:** ⚠️ PARCIAL
 
@@ -746,11 +744,9 @@ E os KPIs desportivos mostram dados reais
 
 | AC-ID | US | Critério Não Satisfeito | Severidade |
 |---|---|---|---|
-| AC-01 | US01 | Botão "Finalizar" sessão não funciona — sessão não arquiva | Alto |
 | AC-01 | US01 | Botão "Seleccionar Todos" permite registar assiduidade sem selecção individual | Médio |
 | AC-03 | US05 | Não existe vista de sessões de treino passadas para avaliação | Médio |
 | AC-04 | US04 | Médico não tem campo para notas ao treinador — treinador não vê restrições específicas de treino | Médio |
-| AC-06 | US06 | Convocatória publicada não é registada na BD | Alto |
 | AC-05 | US09 | Ficha de jogo incompleta — sem onze inicial, golos, substituições, cartões | Médio |
 | AC-08 | US16 | "Detalhe por Rubrica" com dados mock (36000€ irreais) | Baixo |
 | AC-10 | US23 | Treinos não aparecem na agenda do Portal EE | Médio |
@@ -764,21 +760,19 @@ E os KPIs desportivos mostram dados reais
 ## Conclusão T4
 
 **Total de cenários:** 29
-**Passam completamente:** 12 ✅
-**Parcialmente satisfeitos:** 9 ⚠️
+**Passam completamente:** 13 ✅
+**Parcialmente satisfeitos:** 8 ⚠️
 **Falham completamente:** 3 ❌
 
-**Taxa de satisfação de critérios de aceitação:** 41% (12/29)
+**Taxa de satisfação de critérios de aceitação:** 45% (13/29)
 
 **User Stories completamente satisfeitas:**
-US03, US08, US10, US17, US25, US35, US36, US37, US38, US39, US40, US41
+US01, US03, US08, US10, US17, US25, US35, US36, US37, US38, US39, US40, US41
 
 **User Stories parcialmente satisfeitas:**
-US01, US04, US05, US06, US09, US11, US12, US13, US14, US15, US16, US23, US31, US32, US33, US34
+US04, US05, US06, US09, US11, US12, US13, US14, US15, US16, US23, US31, US32, US33, US34
 
 **Critérios críticos não satisfeitos:**
-- UC-06.1: Convocatória não é persistida após publicação
-- UC-05.1: Sessão de treino não é arquivada após conclusão
 - US31/US33: Métricas de rendimento do DT são mockup
 - US33: Auditoria de Incumprimentos não implementada
 

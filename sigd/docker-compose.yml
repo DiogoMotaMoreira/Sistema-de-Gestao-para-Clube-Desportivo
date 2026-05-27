@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0.36-debian
+    container_name: sigd-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_dev
+      MYSQL_DATABASE: sigd_dev
+      MYSQL_USER: sigd_user
+      MYSQL_PASSWORD: sigd_password_dev
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./apps/backend/src/main/resources/db/migration:/docker-entrypoint-initdb.d
+    networks:
+      - sigd-network
+    healthcheck:
+      test: ["CMD", "mysql", "-h", "127.0.0.1", "-u", "root", "-proot_password_dev", "-e", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/sigd_dev
+      - SPRING_DATASOURCE_USERNAME=sigd_user
+      - SPRING_DATASOURCE_PASSWORD=sigd_password_dev
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sigd-network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: sigd-phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root_password_dev
+    ports:
+      - "8081:80"
+    networks:
+      - sigd-network
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:
+
+networks:
+  sigd-network:
+    driver: bridge

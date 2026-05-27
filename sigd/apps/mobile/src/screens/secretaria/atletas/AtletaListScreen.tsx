@@ -5,7 +5,7 @@
  * botão CTA para criar, navegação para detalhe.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -42,11 +42,19 @@ interface AtletaListScreenProps {
 export function AtletaListScreen({
   onSelectAtleta,
 }: AtletaListScreenProps): React.JSX.Element {
-  const [pesquisa, setPesquisa] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string>('Todos');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchText);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   const handleSort = useCallback((field: string) => {
     setSortConfig(prev => {
@@ -58,12 +66,12 @@ export function AtletaListScreen({
   }, []);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['atletas', pesquisa, page],
-    queryFn: () => secretariaService.getAtletas(pesquisa || undefined, undefined, page, 10),
+    queryKey: ['atletas', debouncedSearch, page],
+    queryFn: () => secretariaService.getAtletas(debouncedSearch || undefined, undefined, page, 10),
   });
 
   const handleSearch = useCallback((query: string) => {
-    setPesquisa(query);
+    setSearchText(query);
     setPage(0);
   }, []);
 
@@ -171,7 +179,7 @@ export function AtletaListScreen({
               <Text style={[styles.toggleText, estadoFilter === estado && styles.toggleTextActive]}>{estado}</Text>
             </TouchableOpacity>
           ))}
-          {(pesquisa || estadoFilter !== 'Todos') && (
+          {(searchText || estadoFilter !== 'Todos') && (
             <TouchableOpacity 
               onPress={() => {
                 handleSearch('');

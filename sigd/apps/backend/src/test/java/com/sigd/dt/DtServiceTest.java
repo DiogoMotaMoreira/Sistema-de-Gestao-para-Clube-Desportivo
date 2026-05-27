@@ -1,5 +1,6 @@
 package com.sigd.dt;
 
+import com.sigd.dt.controller.DtController;
 import com.sigd.treinador.controller.AtletaEstatisticasController;
 import com.sigd.treinador.controller.EventoDesportivoController;
 import com.sigd.treinador.dto.EventoDesportivoDTO;
@@ -8,6 +9,17 @@ import com.sigd.treinador.service.FichaJogoService;
 import com.sigd.treinador.service.PdfConvocatoriaService;
 import com.sigd.core.repository.RegistoAssiduidadeRepository;
 import com.sigd.core.repository.AvaliacaoRendimentoRepository;
+import com.sigd.core.repository.EquipaRepository;
+import com.sigd.core.repository.EventoDesportivoRepository;
+import com.sigd.core.repository.SessaoTreinoRepository;
+import com.sigd.core.repository.FichaJogoRepository;
+import com.sigd.core.model.Equipa;
+import com.sigd.core.model.EventoDesportivo;
+import com.sigd.core.model.SessaoTreino;
+import com.sigd.core.model.FichaJogo;
+import com.sigd.core.model.ResultadoJogo;
+import com.sigd.core.model.EstadoEvento;
+import com.sigd.core.model.TipoEvento;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +32,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -39,13 +52,25 @@ public class DtServiceTest {
     @Mock
     private RegistoAssiduidadeRepository registoAssiduidadeRepository;
     @Mock
-    private AvaliacaoRendimentoRepository avaliacaoRendimentoRepository;
+    private AvaliacaoRendimentoRepository java_avaliacaoRendimentoRepository;
+
+    @Mock
+    private EquipaRepository equipaRepo;
+    @Mock
+    private EventoDesportivoRepository eventoRepo;
+    @Mock
+    private SessaoTreinoRepository sessaoTreinoRepo;
+    @Mock
+    private FichaJogoRepository fichaJogoRepo;
 
     @InjectMocks
     private EventoDesportivoController eventoController;
 
     @InjectMocks
     private AtletaEstatisticasController estatisticasController;
+
+    @InjectMocks
+    private DtController dtController;
 
     @BeforeEach
     void setUp() {
@@ -54,33 +79,99 @@ public class DtServiceTest {
     // GRUPO 1 — Calendário Global
     @Test
     void deve_retornar_eventos_de_todas_as_equipas() {
-        Assertions.fail("BUG: Não existe endpoint nem implementação para listar o calendário global de todas as equipas (RF-14).");
+        Equipa eq = new Equipa();
+        eq.setId(1L);
+        eq.setNome("Sub-15");
+        when(equipaRepo.findAll()).thenReturn(List.of(eq));
+        when(eventoRepo.findAll()).thenReturn(List.of());
+        when(sessaoTreinoRepo.findAll()).thenReturn(List.of());
+
+        ResponseEntity<List<DtController.CalendarioGlobalDTO>> response = dtController.getCalendarioGlobal();
+        assertEquals(1, response.getBody().size());
+        assertEquals("Sub-15", response.getBody().get(0).equipaNome());
     }
 
     @Test
     void deve_contar_treinos_e_jogos_separadamente() {
-        Assertions.fail("BUG: Não existe endpoint nem implementação para o Calendário Global separar contagens de treinos e jogos.");
+        Equipa eq = new Equipa();
+        eq.setId(1L);
+        eq.setNome("Sub-15");
+        when(equipaRepo.findAll()).thenReturn(List.of(eq));
+
+        EventoDesportivo ev = new EventoDesportivo();
+        ev.setEquipa(eq);
+        ev.setData(java.time.LocalDate.now());
+        when(eventoRepo.findAll()).thenReturn(List.of(ev));
+
+        SessaoTreino tr = new SessaoTreino();
+        tr.setEquipa(eq);
+        tr.setData(java.time.LocalDate.now());
+        when(sessaoTreinoRepo.findAll()).thenReturn(List.of(tr));
+
+        ResponseEntity<List<DtController.CalendarioGlobalDTO>> response = dtController.getCalendarioGlobal();
+        assertEquals(1, response.getBody().get(0).totalTreinos());
+        assertEquals(1, response.getBody().get(0).totalJogos());
     }
 
     @Test
     void deve_retornar_lista_vazia_quando_sem_eventos() {
-        Assertions.fail("BUG: Não existe endpoint nem implementação para o Calendário Global.");
+        when(equipaRepo.findAll()).thenReturn(List.of());
+        ResponseEntity<List<DtController.CalendarioGlobalDTO>> response = dtController.getCalendarioGlobal();
+        assertEquals(0, response.getBody().size());
     }
 
     // GRUPO 2 — Análise de Rendimento
     @Test
     void deve_retornar_jogos_por_equipa() {
-        Assertions.fail("BUG: Análise de Rendimento global do DT (UC-12.4) não está implementada em nenhum Controller/Service.");
+        Equipa eq = new Equipa();
+        eq.setId(1L);
+        eq.setNome("Sub-15");
+        when(equipaRepo.findById(1L)).thenReturn(Optional.of(eq));
+
+        EventoDesportivo ev = new EventoDesportivo();
+        ev.setEquipa(eq);
+        ev.setEstado(EstadoEvento.CONCLUIDO);
+        when(eventoRepo.findAll()).thenReturn(List.of(ev));
+
+        ResponseEntity<DtController.RendimentoEquipaDTO> response = dtController.getRendimento(1L);
+        assertEquals(1, response.getBody().totalJogosConcluidos());
     }
 
     @Test
     void deve_calcular_vitorias_empates_derrotas_por_equipa() {
-        Assertions.fail("BUG: Cálculo de V/E/D por equipa para o DT não está implementado.");
+        Equipa eq = new Equipa();
+        eq.setId(1L);
+        eq.setNome("Sub-15");
+        when(equipaRepo.findById(1L)).thenReturn(Optional.of(eq));
+
+        EventoDesportivo ev = new EventoDesportivo();
+        ev.setId(1L);
+        ev.setEquipa(eq);
+        ev.setEstado(EstadoEvento.CONCLUIDO);
+        when(eventoRepo.findAll()).thenReturn(List.of(ev));
+
+        FichaJogo f = new FichaJogo();
+        f.setResultado(ResultadoJogo.VITORIA);
+        f.setGolosMarcados(3);
+        when(fichaJogoRepo.findByEventoId(1L)).thenReturn(Optional.of(f));
+
+        ResponseEntity<DtController.RendimentoEquipaDTO> response = dtController.getRendimento(1L);
+        assertEquals(1, response.getBody().vitorias());
+        assertEquals(100.0, response.getBody().winRate());
+        assertEquals(3.0, response.getBody().mediaGolosPorJogo());
     }
 
     @Test
     void deve_retornar_zero_quando_equipa_sem_jogos() {
-        Assertions.fail("BUG: Análise de Rendimento global do DT (UC-12.4) não está implementada em nenhum Controller/Service.");
+        Equipa eq = new Equipa();
+        eq.setId(1L);
+        eq.setNome("Sub-15");
+        when(equipaRepo.findById(1L)).thenReturn(Optional.of(eq));
+        when(eventoRepo.findAll()).thenReturn(List.of());
+
+        ResponseEntity<DtController.RendimentoEquipaDTO> response = dtController.getRendimento(1L);
+        assertEquals(0, response.getBody().totalJogosConcluidos());
+        assertEquals(0.0, response.getBody().winRate());
     }
 
     // GRUPO 3 — Gestão de Eventos

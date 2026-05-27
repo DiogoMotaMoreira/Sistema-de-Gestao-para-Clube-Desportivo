@@ -6,6 +6,7 @@ import com.sigd.admin.exception.UtilizadorNotFoundException;
 import com.sigd.auth.service.PasswordValidator;
 import com.sigd.core.model.Utilizador;
 import com.sigd.core.repository.UtilizadorRepository;
+import com.sigd.audit.repository.AuditLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class UtilizadorAdminServiceTest {
 
     @Mock
     private PasswordValidator passwordValidator;
+
+    @Mock
+    private AuditLogRepository auditLogRepository;
 
     @InjectMocks
     private UtilizadorAdminService utilizadorAdminService;
@@ -264,5 +268,28 @@ class UtilizadorAdminServiceTest {
         // Também não tem validação de role no momento de criação
         assertThatThrownBy(() -> utilizadorAdminService.criar(req))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("Deve anonimizar utilizador com sucesso")
+    void deve_anonimizar_utilizador_com_sucesso() {
+        when(utilizadorRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(utilizadorRepository.save(any(Utilizador.class))).thenAnswer(i -> i.getArgument(0));
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("admin_operator");
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        utilizadorAdminService.anonimizarUtilizador(1L);
+
+        assertThat(user.getUsername()).isEqualTo("eliminado_1");
+        assertThat(user.getEmail()).isEqualTo("eliminado_1@sigd.eliminado");
+        assertThat(user.getPasswordHash()).isEqualTo("[ELIMINADO]");
+        assertThat(user.getAtivo()).isFalse();
+
+        verify(auditLogRepository, times(1)).save(any());
+        SecurityContextHolder.clearContext();
     }
 }

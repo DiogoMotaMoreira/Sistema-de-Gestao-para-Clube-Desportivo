@@ -6,6 +6,9 @@ import com.sigd.core.model.EntidadeJuridica;
 import com.sigd.core.model.EstadoObrigacao;
 import com.sigd.core.model.ObrigacaoFinanceira;
 import com.sigd.core.repository.ObrigacaoFinanceiraRepository;
+import com.sigd.core.repository.UtilizadorRepository;
+import com.sigd.core.repository.AtletaRepository;
+import com.sigd.core.model.TipoObrigacao;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +29,10 @@ public class CfoServiceTest {
 
     @Mock
     private ObrigacaoFinanceiraRepository obrigacaoRepo;
+    @Mock
+    private UtilizadorRepository utilizadorRepo;
+    @Mock
+    private AtletaRepository atletaRepo;
 
     @InjectMocks
     private CfoController cfoController;
@@ -106,22 +113,53 @@ public class CfoServiceTest {
     // GRUPO 2 — Relatórios financeiros
     @Test
     void deve_agrupar_obrigacoes_por_rubrica() {
-        Assertions.fail("BUG: CfoController não agrupa por rubrica, apenas segrega CLUBE/SAD");
+        ObrigacaoFinanceira ob = new ObrigacaoFinanceira();
+        ob.setEntidadeJuridica(EntidadeJuridica.CLUBE);
+        ob.setTipo(TipoObrigacao.MENSALIDADE);
+        ob.setEstado(EstadoObrigacao.PAGO);
+        ob.setValor(new BigDecimal("100.00"));
+
+        when(obrigacaoRepo.findAll()).thenReturn(List.of(ob));
+
+        ResponseEntity<CfoResumoDTO> response = cfoController.getResumoFinanceiro();
+        assertEquals(1, response.getBody().detalhesPorRubrica().size());
+        assertEquals("MENSALIDADE", response.getBody().detalhesPorRubrica().get(0).rubrica());
+        assertEquals("CLUBE", response.getBody().detalhesPorRubrica().get(0).entidade());
+        assertEquals(new BigDecimal("100.00"), response.getBody().detalhesPorRubrica().get(0).totalGerado());
     }
 
     @Test
     void deve_calcular_taxa_liquidacao_por_rubrica() {
-        Assertions.fail("BUG: CfoController não calcula taxa de liquidação por rubrica, apenas globalmente");
+        ObrigacaoFinanceira ob1 = new ObrigacaoFinanceira();
+        ob1.setEntidadeJuridica(EntidadeJuridica.CLUBE);
+        ob1.setTipo(TipoObrigacao.MENSALIDADE);
+        ob1.setEstado(EstadoObrigacao.PAGO);
+        ob1.setValor(new BigDecimal("100.00"));
+
+        ObrigacaoFinanceira ob2 = new ObrigacaoFinanceira();
+        ob2.setEntidadeJuridica(EntidadeJuridica.CLUBE);
+        ob2.setTipo(TipoObrigacao.MENSALIDADE);
+        ob2.setEstado(EstadoObrigacao.EM_ATRASO);
+        ob2.setValor(new BigDecimal("100.00"));
+
+        when(obrigacaoRepo.findAll()).thenReturn(List.of(ob1, ob2));
+
+        ResponseEntity<CfoResumoDTO> response = cfoController.getResumoFinanceiro();
+        assertEquals(50.0, response.getBody().detalhesPorRubrica().get(0).taxaLiquidacao());
     }
 
     @Test
     void deve_listar_atletas_federados() {
-        Assertions.fail("BUG: CfoController não tem método nem injeção de repositório para atletas federados");
+        when(atletaRepo.countByFederado(true)).thenReturn(42L);
+        ResponseEntity<CfoResumoDTO> response = cfoController.getResumoFinanceiro();
+        assertEquals(42L, response.getBody().atletasFederados());
     }
 
     @Test
     void deve_contar_socios_activos() {
-        Assertions.fail("BUG: CfoController não tem método nem injeção para contar sócios");
+        when(utilizadorRepo.countByRoleAndAtivo("ROLE_EE", true)).thenReturn(100L);
+        ResponseEntity<CfoResumoDTO> response = cfoController.getResumoFinanceiro();
+        assertEquals(100L, response.getBody().sociosAtivos());
     }
 
     // GRUPO 3 — Edge cases

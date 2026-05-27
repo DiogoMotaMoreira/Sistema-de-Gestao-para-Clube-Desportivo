@@ -54,6 +54,13 @@ public class Atleta {
     @JoinColumn(name = "encarregado_id", nullable = false)
     private EncarregadoEducacao encarregado;
 
+    @NotNull
+    @Column(name = "federado", nullable = false)
+    private boolean federado = false;
+
+    @Column(name = "data_validade_emd")
+    private LocalDate dataValidadeEmd;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 

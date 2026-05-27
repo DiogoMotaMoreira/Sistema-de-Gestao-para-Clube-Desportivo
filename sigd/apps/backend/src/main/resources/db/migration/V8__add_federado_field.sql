@@ -1,0 +1,1 @@
+ALTER TABLE atleta ADD COLUMN federado BOOLEAN NOT NULL DEFAULT false;

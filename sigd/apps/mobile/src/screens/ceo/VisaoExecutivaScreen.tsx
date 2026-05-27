@@ -62,6 +62,25 @@ export function VisaoExecutivaScreen(): React.JSX.Element {
           onExportPDF={() => setShowModalPdf(true)}
         />
 
+        {/* Mini-Dashboard de Topo (Base Associativa KPIs) */}
+        <View style={styles.topDashboard}>
+           <View style={styles.topDashItem}>
+              <Text style={styles.topDashLabel}>ATLETAS INSCRITOS</Text>
+              <Text style={styles.topDashValue}>{kpisGerais?.totalAtletas ?? "0"}</Text>
+              <Text style={styles.topDashSub}>Em {kpisGerais?.totalEquipas ?? "0"} equipas</Text>
+           </View>
+           <View style={styles.topDashItem}>
+              <Text style={styles.topDashLabel}>ATLETAS APTOS (EMD)</Text>
+              <Text style={[styles.topDashValue, { color: Colors.SUCESSO_TEXT }]}>{kpisGerais?.atletasAptos ?? "0"}</Text>
+              <Text style={styles.topDashSub}>Aptidão desportiva válida</Text>
+           </View>
+           <View style={[styles.topDashItem, { borderRightWidth: 0 }]}>
+              <Text style={styles.topDashLabel}>ATLETAS CONDICIONADOS</Text>
+              <Text style={[styles.topDashValue, { color: Colors.AVISO_TEXT }]}>{kpisGerais?.atletasCondicionados ?? "0"}</Text>
+              <Text style={styles.topDashSub}>Requer atenção médica</Text>
+           </View>
+        </View>
+
         {/* Alertas Estratégicos */}
         <View style={[styles.alertBlock, alertas.length > 0 ? styles.alertBlockActive : styles.alertBlockOk]}>
            <View style={styles.alertHeader}>
@@ -229,6 +248,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.GRAY_50_FUNDO },
   content: { flex: 1 },
   scrollContent: { padding: 32, gap: 24 },
+  topDashboard: { flexDirection: 'row', backgroundColor: Colors.BRANCO, borderWidth: 1, borderColor: Colors.GRAY_200_BORDAS, borderRadius: 12, paddingVertical: 16, width: '100%' },
+  topDashItem: { flex: 1, alignItems: 'center', borderRightWidth: 1, borderRightColor: Colors.GRAY_200_BORDAS },
+  topDashLabel: { fontSize: 10, fontWeight: '700', color: Colors.GRAY_500_TEXTO2, marginBottom: 4 },
+  topDashValue: { fontSize: 24, fontWeight: '700', color: Colors.GRAY_900_TEXTO1 },
+  topDashSub: { fontSize: 12, color: Colors.GRAY_500_TEXTO2, marginTop: 4 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: Colors.GRAY_900_TEXTO1, marginBottom: -8, marginTop: 8 },
   grid4: { flexDirection: 'row', gap: 16 },
   grid3: { flexDirection: 'row', gap: 16 },

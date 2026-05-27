@@ -15,6 +15,7 @@ import com.sigd.core.repository.ObrigacaoFinanceiraRepository;
 import com.sigd.core.repository.EventoDesportivoRepository;
 import com.sigd.core.repository.SessaoTreinoRepository;
 import com.sigd.core.repository.ConvocatoriaRepository;
+import com.sigd.core.repository.FichaJogoRepository;
 import java.util.ArrayList;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,6 +41,7 @@ public class CeoController {
     private final EventoDesportivoRepository eventoRepo;
     private final SessaoTreinoRepository sessaoTreinoRepo;
     private final ConvocatoriaRepository convocatoriaRepo;
+    private final FichaJogoRepository fichaJogoRepo;
 
     public CeoController(AtletaRepository atletaRepo,
                          EquipaRepository equipaRepo,
@@ -46,7 +49,8 @@ public class CeoController {
                          ObrigacaoFinanceiraRepository obrigacaoRepo,
                          EventoDesportivoRepository eventoRepo,
                          SessaoTreinoRepository sessaoTreinoRepo,
-                         ConvocatoriaRepository convocatoriaRepo) {
+                         ConvocatoriaRepository convocatoriaRepo,
+                         FichaJogoRepository fichaJogoRepo) {
         this.atletaRepo = atletaRepo;
         this.equipaRepo = equipaRepo;
         this.encarregadoRepo = encarregadoRepo;
@@ -54,6 +58,7 @@ public class CeoController {
         this.eventoRepo = eventoRepo;
         this.sessaoTreinoRepo = sessaoTreinoRepo;
         this.convocatoriaRepo = convocatoriaRepo;
+        this.fichaJogoRepo = fichaJogoRepo;
     }
 
     @GetMapping("/kpis")
@@ -74,6 +79,14 @@ public class CeoController {
         // Inaptos = total - aptos - condicionados
         long atletasInaptos = totalAtletas - atletasAptos - atletasCondicionados;
 
+        BigDecimal racioLiquidez = BigDecimal.ZERO;
+        if (receitaTotal.add(dividaTotal).compareTo(BigDecimal.ZERO) > 0) {
+            racioLiquidez = receitaTotal
+                .divide(receitaTotal.add(dividaTotal), 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(1, RoundingMode.HALF_UP);
+        }
+
         CeoKpisDTO dto = new CeoKpisDTO(
                 totalAtletas,
                 totalEquipas,
@@ -82,7 +95,8 @@ public class CeoController {
                 dividaTotal,
                 atletasAptos,
                 atletasCondicionados,
-                atletasInaptos
+                atletasInaptos,
+                racioLiquidez
         );
 
         return ResponseEntity.ok(dto);
@@ -109,7 +123,8 @@ public class CeoController {
             String escalao,
             long totalJogos,
             long jogosConcluidos,
-            long jogosAgendados
+            long jogosAgendados,
+            double winRate
     ) {}
 
     @GetMapping("/performance-escaloes")
@@ -127,7 +142,23 @@ public class CeoController {
                     long total = evs.size();
                     long concluidos = evs.stream().filter(e -> e.getEstado() == EstadoEvento.CONCLUIDO).count();
                     long agendados = evs.stream().filter(e -> e.getEstado() == EstadoEvento.AGENDADO).count();
-                    return new PerformanceEscalaoDTO(escalao, total, concluidos, agendados);
+                    
+                    long vitorias = 0;
+                    for (EventoDesportivo e : evs) {
+                        if (e.getEstado() == EstadoEvento.CONCLUIDO) {
+                            var fichaOpt = fichaJogoRepo.findByEventoId(e.getId());
+                            if (fichaOpt.isPresent() && fichaOpt.get().getResultado() == com.sigd.core.model.ResultadoJogo.VITORIA) {
+                                vitorias++;
+                            }
+                        }
+                    }
+                    
+                    double winRate = 0.0;
+                    if (concluidos > 0) {
+                        winRate = ((double) vitorias / concluidos) * 100.0;
+                    }
+                    
+                    return new PerformanceEscalaoDTO(escalao, total, concluidos, agendados, winRate);
                 })
                 .collect(Collectors.toList());
 
