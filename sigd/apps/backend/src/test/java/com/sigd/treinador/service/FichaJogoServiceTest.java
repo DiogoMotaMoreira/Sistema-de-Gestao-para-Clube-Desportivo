@@ -237,4 +237,30 @@ class FichaJogoServiceTest {
 
         verify(fichaJogoRepo).save(argThat(f -> f.getSubmetidaPor().equals(55L)));
     }
+
+    @Test
+    @DisplayName("Deve obter ficha de jogo por evento com sucesso")
+    void deve_obter_ficha_de_jogo_por_evento_com_sucesso() {
+        FichaJogo ficha = new FichaJogo();
+        ficha.setId(100L);
+        ficha.setEventoId(10L);
+        ficha.setGolosMarcados(2);
+        ficha.setGolosSofridos(1);
+        ficha.setResultado(ResultadoJogo.VITORIA);
+        ficha.setEstadoSubmissao(EstadoSubmissaoFicha.SUBMETIDA);
+
+        when(fichaJogoRepo.findByEventoId(10L)).thenReturn(Optional.of(ficha));
+
+        FichaJogoDTO.Response res = fichaJogoService.obterPorEvento(10L);
+        assertThat(res.id()).isEqualTo(100L);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando ficha não é encontrada por evento")
+    void deve_lancara_excecao_quando_ficha_nao_encontrada() {
+        when(fichaJogoRepo.findByEventoId(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> fichaJogoService.obterPorEvento(99L))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

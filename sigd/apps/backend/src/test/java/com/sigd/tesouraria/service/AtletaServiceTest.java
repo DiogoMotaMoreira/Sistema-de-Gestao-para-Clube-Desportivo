@@ -1,136 +1,181 @@
 package com.sigd.tesouraria.service;
 
+import com.sigd.core.exception.AtletaNotFoundException;
 import com.sigd.core.exception.EncarregadoNotFoundException;
 import com.sigd.core.exception.NifDuplicadoException;
-import com.sigd.core.model.Atleta;
-import com.sigd.core.model.EncarregadoEducacao;
-import com.sigd.core.model.Equipa;
-import com.sigd.core.model.EstadoElegibilidade;
+import com.sigd.core.model.*;
 import com.sigd.core.repository.AtletaRepository;
 import com.sigd.core.repository.EncarregadoEducacaoRepository;
 import com.sigd.core.repository.EquipaRepository;
+import com.sigd.core.repository.OcorrenciaRepository;
 import com.sigd.tesouraria.dto.AtletaDTO;
-
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-/**
- * AtletaServiceTest — Testes unitários para AtletaService.
- *
- * Usa JUnit 5 + Mockito (sem TestContainers, conforme convenção AGENTS.md).
- */
 @ExtendWith(MockitoExtension.class)
 class AtletaServiceTest {
 
     @Mock
     private AtletaRepository atletaRepo;
-
     @Mock
     private EncarregadoEducacaoRepository encarregadoRepo;
-
     @Mock
     private EquipaRepository equipaRepo;
+    @Mock
+    private OcorrenciaRepository ocorrenciaRepo;
 
     @InjectMocks
     private AtletaService atletaService;
 
-    private EncarregadoEducacao encarregado;
-    private AtletaDTO.Request request;
+    private Atleta atleta;
+    private EncarregadoEducacao ee;
+    private Equipa equipa;
 
     @BeforeEach
     void setUp() {
-        encarregado = new EncarregadoEducacao();
-        encarregado.setId(1L);
-        encarregado.setNome("João Silva");
-        encarregado.setNif("123456789");
-        encarregado.setCriadoEm(LocalDateTime.now());
+        ee = new EncarregadoEducacao();
+        ee.setId(10L);
+        ee.setNome("João EE");
 
-        request = new AtletaDTO.Request(
-                "Pedro Silva",
-                LocalDate.of(2010, 5, 15),
-                "987654321",
-                null,
-                "Avançado",
-                1L,  // encarregadoId
-                null // equipaId
-        );
+        equipa = new Equipa();
+        equipa.setId(20L);
+        equipa.setNome("Sub-15");
+
+        atleta = new Atleta();
+        atleta.setId(100L);
+        atleta.setNomeCompleto("João Atleta");
+        atleta.setEncarregado(ee);
+        atleta.setEquipa(equipa);
+        atleta.setEstadoElegibilidade(EstadoElegibilidade.APTO);
     }
 
     @Test
-    @DisplayName("Criar atleta com sucesso retorna DTO com dados correctos")
-    void criarAtleta_comSucesso() {
-        // Arrange
-        when(atletaRepo.findByNif(anyString())).thenReturn(Optional.empty());
-        when(encarregadoRepo.findById(1L)).thenReturn(Optional.of(encarregado));
-        when(atletaRepo.save(any(Atleta.class))).thenAnswer(invocation -> {
-            Atleta saved = invocation.getArgument(0);
-            saved.setId(10L);
-            saved.setCriadoEm(LocalDateTime.now());
-            saved.setAtualizadoEm(LocalDateTime.now());
-            return saved;
+    void deve_listar_atletas() {
+        when(atletaRepo.pesquisar(eq("João"), eq(20L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(atleta)));
+        Page<AtletaDTO.Response> res = atletaService.listar("João", 20L, Pageable.unpaged());
+        assertThat(res).hasSize(1);
+    }
+
+    @Test
+    void deve_obter_atleta() {
+        when(atletaRepo.findById(100L)).thenReturn(Optional.of(atleta));
+        AtletaDTO.Response res = atletaService.obter(100L);
+        assertThat(res.id()).isEqualTo(100L);
+    }
+
+    @Test
+    void deve_lancara_excecao_se_obter_atleta_nao_encontrado() {
+        when(atletaRepo.findById(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> atletaService.obter(99L)).isInstanceOf(AtletaNotFoundException.class);
+    }
+
+    @Test
+    void deve_criar_atleta() {
+        AtletaDTO.Request req = new AtletaDTO.Request("Novo Atleta", LocalDate.now(), "123456789", "1234", "Avançado", 10L, 20L);
+        when(atletaRepo.findByNif("123456789")).thenReturn(Optional.empty());
+        when(encarregadoRepo.findById(10L)).thenReturn(Optional.of(ee));
+        when(equipaRepo.findById(20L)).thenReturn(Optional.of(equipa));
+        when(atletaRepo.save(any(Atleta.class))).thenAnswer(i -> {
+            Atleta a = i.getArgument(0);
+            a.setId(101L);
+            return a;
         });
 
-        // Act
-        AtletaDTO.Response response = atletaService.criar(request);
-
-        // Assert
-        assertThat(response).isNotNull();
-        assertThat(response.id()).isEqualTo(10L);
-        assertThat(response.nomeCompleto()).isEqualTo("Pedro Silva");
-        assertThat(response.nif()).isEqualTo("987654321");
-        assertThat(response.estadoElegibilidade()).isEqualTo("APTO");
-        assertThat(response.encarregadoId()).isEqualTo(1L);
-        assertThat(response.encarregadoNome()).isEqualTo("João Silva");
-
-        verify(atletaRepo).save(any(Atleta.class));
-        verify(atletaRepo).findByNif("987654321");
+        AtletaDTO.Response res = atletaService.criar(req);
+        assertThat(res.id()).isEqualTo(101L);
     }
 
     @Test
-    @DisplayName("Criar atleta com NIF duplicado lança NifDuplicadoException")
-    void criarAtleta_nifDuplicado_lancaExcecao() {
-        // Arrange
-        Atleta existente = new Atleta();
-        existente.setId(99L);
-        existente.setNif("987654321");
+    void deve_lancara_excecao_se_nif_duplicado_ao_criar() {
+        AtletaDTO.Request req = new AtletaDTO.Request("Novo Atleta", LocalDate.now(), "123456789", "1234", "Avançado", 10L, 20L);
+        Atleta outro = new Atleta();
+        outro.setId(99L);
+        when(atletaRepo.findByNif("123456789")).thenReturn(Optional.of(outro));
 
-        when(atletaRepo.findByNif("987654321")).thenReturn(Optional.of(existente));
-
-        // Act & Assert
-        assertThatThrownBy(() -> atletaService.criar(request))
-                .isInstanceOf(NifDuplicadoException.class)
-                .hasMessageContaining("987654321");
-
-        verify(atletaRepo, never()).save(any());
+        assertThatThrownBy(() -> atletaService.criar(req)).isInstanceOf(NifDuplicadoException.class);
     }
 
     @Test
-    @DisplayName("Criar atleta com encarregado inexistente lança EncarregadoNotFoundException")
-    void criarAtleta_encarregadoInexistente_lancaExcecao() {
-        // Arrange
-        when(atletaRepo.findByNif(anyString())).thenReturn(Optional.empty());
-        when(encarregadoRepo.findById(1L)).thenReturn(Optional.empty());
+    void deve_lancara_excecao_se_encarregado_nao_encontrado_ao_criar() {
+        AtletaDTO.Request req = new AtletaDTO.Request("Novo Atleta", LocalDate.now(), "123456789", "1234", "Avançado", 99L, 20L);
+        when(atletaRepo.findByNif("123456789")).thenReturn(Optional.empty());
+        when(encarregadoRepo.findById(99L)).thenReturn(Optional.empty());
 
-        // Act & Assert
-        assertThatThrownBy(() -> atletaService.criar(request))
-                .isInstanceOf(EncarregadoNotFoundException.class);
-
-        verify(atletaRepo, never()).save(any());
+        assertThatThrownBy(() -> atletaService.criar(req)).isInstanceOf(EncarregadoNotFoundException.class);
     }
 
+    @Test
+    void deve_lancara_excecao_se_equipa_nao_encontrada_ao_criar() {
+        AtletaDTO.Request req = new AtletaDTO.Request("Novo Atleta", LocalDate.now(), "123456789", "1234", "Avançado", 10L, 99L);
+        when(atletaRepo.findByNif("123456789")).thenReturn(Optional.empty());
+        when(encarregadoRepo.findById(10L)).thenReturn(Optional.of(ee));
+        when(equipaRepo.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> atletaService.criar(req)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void deve_atualizar_atleta() {
+        AtletaDTO.Request req = new AtletaDTO.Request("Atleta Atualizado", LocalDate.now(), "123456789", "1234", "Avançado", 10L, 20L);
+        when(atletaRepo.findById(100L)).thenReturn(Optional.of(atleta));
+        when(atletaRepo.findByNif("123456789")).thenReturn(Optional.of(atleta)); // Mesmo ID
+        when(encarregadoRepo.findById(10L)).thenReturn(Optional.of(ee));
+        when(equipaRepo.findById(20L)).thenReturn(Optional.of(equipa));
+        when(atletaRepo.save(any(Atleta.class))).thenAnswer(i -> i.getArgument(0));
+
+        AtletaDTO.Response res = atletaService.atualizar(100L, req);
+        assertThat(res.nomeCompleto()).isEqualTo("Atleta Atualizado");
+    }
+
+    @Test
+    void deve_lancara_excecao_ao_atualizar_se_nao_encontrado() {
+        AtletaDTO.Request req = new AtletaDTO.Request("Atleta Atualizado", LocalDate.now(), "123456789", "1234", "Avançado", 10L, 20L);
+        when(atletaRepo.findById(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> atletaService.atualizar(99L, req)).isInstanceOf(AtletaNotFoundException.class);
+    }
+
+    @Test
+    void deve_transferir_atleta() {
+        Equipa novaEquipa = new Equipa();
+        novaEquipa.setId(30L);
+        when(atletaRepo.findById(100L)).thenReturn(Optional.of(atleta));
+        when(equipaRepo.findById(30L)).thenReturn(Optional.of(novaEquipa));
+        when(atletaRepo.save(any(Atleta.class))).thenAnswer(i -> i.getArgument(0));
+
+        AtletaDTO.Response res = atletaService.transferir(100L, 30L);
+        assertThat(res.equipaId()).isEqualTo(30L);
+    }
+
+    @Test
+    void deve_lancara_excecao_ao_transferir_equipa_nao_encontrada() {
+        when(atletaRepo.findById(100L)).thenReturn(Optional.of(atleta));
+        when(equipaRepo.findById(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> atletaService.transferir(100L, 99L)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void deve_obter_elegibilidade() {
+        when(atletaRepo.findById(100L)).thenReturn(Optional.of(atleta));
+        when(ocorrenciaRepo.findByAtletaId(100L)).thenReturn(List.of());
+
+        AtletaDTO.Elegibilidade el = atletaService.obterElegibilidade(100L);
+        assertThat(el.apto()).isTrue();
+    }
 }

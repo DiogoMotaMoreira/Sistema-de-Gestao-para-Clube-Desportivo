@@ -140,6 +140,54 @@ class EncarregadoServiceTest {
         assertThat(res.getTotalElements()).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("Deve listar todos sem pesquisa")
+    void deve_listar_todos_sem_pesquisa() {
+        when(encarregadoRepo.findAll(PageRequest.of(0, 10)))
+                .thenReturn(new PageImpl<>(List.of(ee)));
+
+        Page<EncarregadoEducacaoDTO.Response> res = encarregadoService.listar(null, PageRequest.of(0, 10));
+
+        assertThat(res.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Deve obter encarregado por ID")
+    void deve_obter_encarregado_por_id() {
+        when(encarregadoRepo.findById(1L)).thenReturn(Optional.of(ee));
+        EncarregadoEducacaoDTO.Response res = encarregadoService.obter(1L);
+        assertThat(res.id()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao obter encarregado inexistente")
+    void deve_lancara_excecao_ao_obter_encarregado_inexistente() {
+        when(encarregadoRepo.findById(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> encarregadoService.obter(99L))
+                .isInstanceOf(EncarregadoNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("Deve atualizar encarregado com sucesso")
+    void deve_atualizar_encarregado_com_sucesso() {
+        EncarregadoEducacaoDTO.Request req = new EncarregadoEducacaoDTO.Request("João Silva", "123456789", "novo@silva.com", "912345678", "Rua B");
+        when(encarregadoRepo.findById(1L)).thenReturn(Optional.of(ee));
+        when(encarregadoRepo.findByNif("123456789")).thenReturn(Optional.of(ee)); // is the same ID
+        when(encarregadoRepo.save(any(EncarregadoEducacao.class))).thenAnswer(i -> i.getArgument(0));
+
+        EncarregadoEducacaoDTO.Response res = encarregadoService.atualizar(1L, req);
+        assertThat(res.email()).isEqualTo("novo@silva.com");
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao atualizar encarregado inexistente")
+    void deve_lancara_excecao_ao_atualizar_inexistente() {
+        EncarregadoEducacaoDTO.Request req = new EncarregadoEducacaoDTO.Request("João Silva", "123456789", "novo@silva.com", "912345678", "Rua B");
+        when(encarregadoRepo.findById(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> encarregadoService.atualizar(99L, req))
+                .isInstanceOf(EncarregadoNotFoundException.class);
+    }
+
     // ==========================================
     // GRUPO 2 — Edge cases
     // ==========================================
@@ -171,5 +219,28 @@ class EncarregadoServiceTest {
         Page<EncarregadoEducacaoDTO.Response> res = encarregadoService.listar("NaoExiste", PageRequest.of(0, 10));
 
         assertThat(res.getTotalElements()).isZero();
+    }
+
+    @Test
+    @DisplayName("Deve obter situação financeira com sucesso")
+    void deve_obter_situacao_financeira() {
+        when(encarregadoRepo.existsById(1L)).thenReturn(true);
+        com.sigd.core.model.ObrigacaoFinanceira obr = new com.sigd.core.model.ObrigacaoFinanceira();
+        obr.setValor(new java.math.BigDecimal("50.00"));
+        obr.setEstado(com.sigd.core.model.EstadoObrigacao.PENDENTE);
+        obr.setEncarregado(ee);
+        when(obrigacaoRepo.findByEncarregadoId(1L)).thenReturn(List.of(obr));
+
+        com.sigd.tesouraria.dto.SituacaoFinanceiraDTO res = encarregadoService.obterSituacaoFinanceira(1L);
+        assertThat(res.totalDivida()).isEqualTo(new java.math.BigDecimal("50.00"));
+        assertThat(res.totalPago()).isEqualTo(java.math.BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao obter situação financeira de encarregado inexistente")
+    void deve_lancara_excecao_situacao_financeira_inexistente() {
+        when(encarregadoRepo.existsById(99L)).thenReturn(false);
+        assertThatThrownBy(() -> encarregadoService.obterSituacaoFinanceira(99L))
+                .isInstanceOf(EncarregadoNotFoundException.class);
     }
 }

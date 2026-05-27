@@ -59,6 +59,24 @@ class UtilizadorAdminServiceTest {
     // ==========================================
 
     @Test
+    @DisplayName("Deve listar todos sem pesquisa")
+    void deve_listar_todos_sem_pesquisa() {
+        when(utilizadorRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
+            .thenReturn(org.springframework.data.domain.Page.empty());
+        org.springframework.data.domain.Page<UtilizadorAdminDTO.Response> res = utilizadorAdminService.listar(null, org.springframework.data.domain.Pageable.unpaged());
+        assertThat(res).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Deve listar todos com pesquisa")
+    void deve_listar_todos_com_pesquisa() {
+        when(utilizadorRepository.findByPesquisa(eq("admin"), any(org.springframework.data.domain.Pageable.class)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(user)));
+        org.springframework.data.domain.Page<UtilizadorAdminDTO.Response> res = utilizadorAdminService.listar("admin", org.springframework.data.domain.Pageable.unpaged());
+        assertThat(res).hasSize(1);
+    }
+
+    @Test
     @DisplayName("Deve criar utilizador com sucesso")
     void deve_criar_utilizador_com_sucesso() {
         UtilizadorAdminDTO.Request req = new UtilizadorAdminDTO.Request("newuser", "new@test.com", "ROLE_MEDICO", "Pass123!");
@@ -76,6 +94,23 @@ class UtilizadorAdminServiceTest {
         
         assertThat(res.id()).isEqualTo(2L);
         assertThat(res.username()).isEqualTo("newuser");
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao criar utilizador com username duplicado")
+    void deve_lancara_excecao_criar_utilizador_username_duplicado() {
+        UtilizadorAdminDTO.Request req = new UtilizadorAdminDTO.Request("admin", "new@test.com", "ROLE_MEDICO", "Pass123!");
+        when(utilizadorRepository.existsByUsername("admin")).thenReturn(true);
+        assertThatThrownBy(() -> utilizadorAdminService.criar(req)).isInstanceOf(com.sigd.admin.exception.UtilizadorJaExisteException.class);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao criar utilizador com email duplicado")
+    void deve_lancara_excecao_criar_utilizador_email_duplicado() {
+        UtilizadorAdminDTO.Request req = new UtilizadorAdminDTO.Request("newuser", "admin@test.com", "ROLE_MEDICO", "Pass123!");
+        when(utilizadorRepository.existsByUsername("newuser")).thenReturn(false);
+        when(utilizadorRepository.existsByEmail("admin@test.com")).thenReturn(true);
+        assertThatThrownBy(() -> utilizadorAdminService.criar(req)).isInstanceOf(com.sigd.admin.exception.UtilizadorJaExisteException.class);
     }
 
     @Test
@@ -136,6 +171,24 @@ class UtilizadorAdminServiceTest {
 
         assertThat(res.ativo()).isFalse();
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao tentar bloquear a própria conta")
+    void deve_lancara_excecao_bloquear_propria_conta() {
+        when(utilizadorRepository.findById(1L)).thenReturn(Optional.of(user));
+        
+        org.springframework.security.core.Authentication auth = mock(org.springframework.security.core.Authentication.class);
+        when(auth.getName()).thenReturn("admin1");
+        org.springframework.security.core.context.SecurityContext context = mock(org.springframework.security.core.context.SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(auth);
+        org.springframework.security.core.context.SecurityContextHolder.setContext(context);
+
+        assertThatThrownBy(() -> utilizadorAdminService.bloquear(1L))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("Não é permitido bloquear a própria conta.");
+        
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
     }
 
     @Test

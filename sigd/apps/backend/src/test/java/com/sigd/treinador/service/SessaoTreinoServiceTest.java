@@ -33,6 +33,8 @@ class SessaoTreinoServiceTest {
     private RegistoAssiduidadeRepository registoAssiduidadeRepo;
     @Mock
     private AvaliacaoRendimentoRepository avaliacaoRendimentoRepo;
+    @Mock
+    private com.sigd.tesouraria.service.AtletaService atletaService;
 
     @InjectMocks
     private SessaoTreinoService sessaoTreinoService;
@@ -87,6 +89,10 @@ class SessaoTreinoServiceTest {
         when(atletaRepo.findById(10L)).thenReturn(Optional.of(atleta));
         when(registoAssiduidadeRepo.findBySessaoIdAndAtletaId(100L, 10L)).thenReturn(Optional.empty());
         
+        com.sigd.tesouraria.dto.AtletaDTO.Elegibilidade eleg = new com.sigd.tesouraria.dto.AtletaDTO.Elegibilidade(
+                10L, "João Silva", "APTO", false, false, false, true);
+        when(atletaService.obterElegibilidade(10L)).thenReturn(eleg);
+
         RegistoAssiduidade registoSalvo = new RegistoAssiduidade();
         registoSalvo.setEstado(EstadoAssiduidade.PRESENTE);
         when(registoAssiduidadeRepo.save(any(RegistoAssiduidade.class))).thenReturn(registoSalvo);
@@ -98,6 +104,38 @@ class SessaoTreinoServiceTest {
         assertEquals(0, response.totalAusentes());
         assertEquals(EstadoSessao.EM_CURSO, sessao.getEstado());
         verify(sessaoTreinoRepo, times(1)).save(sessao);
+    }
+
+    @Test
+    void testRegistarChamada_AtletaBloqueadoEmd() {
+        RegistoAssiduidadeDTO.Request regReq = new RegistoAssiduidadeDTO.Request(10L, EstadoAssiduidade.PRESENTE);
+        ChamadaDTO.Request request = new ChamadaDTO.Request(List.of(regReq));
+
+        when(sessaoTreinoRepo.findById(100L)).thenReturn(Optional.of(sessao));
+        when(atletaRepo.findById(10L)).thenReturn(Optional.of(atleta));
+        when(registoAssiduidadeRepo.findBySessaoIdAndAtletaId(100L, 10L)).thenReturn(Optional.empty());
+
+        com.sigd.tesouraria.dto.AtletaDTO.Elegibilidade eleg = new com.sigd.tesouraria.dto.AtletaDTO.Elegibilidade(
+                10L, "João", "PENDENTE_EMD", true, false, false, false);
+        when(atletaService.obterElegibilidade(10L)).thenReturn(eleg);
+
+        assertThrows(IllegalStateException.class, () -> sessaoTreinoService.registarChamada(100L, request));
+    }
+
+    @Test
+    void testRegistarChamada_AtletaBloqueadoLesao() {
+        RegistoAssiduidadeDTO.Request regReq = new RegistoAssiduidadeDTO.Request(10L, EstadoAssiduidade.PRESENTE);
+        ChamadaDTO.Request request = new ChamadaDTO.Request(List.of(regReq));
+
+        when(sessaoTreinoRepo.findById(100L)).thenReturn(Optional.of(sessao));
+        when(atletaRepo.findById(10L)).thenReturn(Optional.of(atleta));
+        when(registoAssiduidadeRepo.findBySessaoIdAndAtletaId(100L, 10L)).thenReturn(Optional.empty());
+
+        com.sigd.tesouraria.dto.AtletaDTO.Elegibilidade eleg = new com.sigd.tesouraria.dto.AtletaDTO.Elegibilidade(
+                10L, "João", "INAPTO", false, true, false, false);
+        when(atletaService.obterElegibilidade(10L)).thenReturn(eleg);
+
+        assertThrows(IllegalStateException.class, () -> sessaoTreinoService.registarChamada(100L, request));
     }
 
     @Test
@@ -117,5 +155,63 @@ class SessaoTreinoServiceTest {
 
         assertTrue(exception.getMessage().contains("O período de 24 horas para submeter avaliações já expirou"));
         verify(avaliacaoRendimentoRepo, never()).save(any());
+    }
+
+    @Test
+    void testRegistarAvaliacoes_AtletaAusente() {
+        AvaliacaoDTO.Request avalReq = new AvaliacaoDTO.Request(10L, new BigDecimal("4.5"));
+        AvaliacaoPosSessionDTO.Request request = new AvaliacaoPosSessionDTO.Request(List.of(avalReq));
+
+        when(sessaoTreinoRepo.findById(100L)).thenReturn(Optional.of(sessao));
+        when(atletaRepo.findById(10L)).thenReturn(Optional.of(atleta));
+
+        RegistoAssiduidade reg = new RegistoAssiduidade();
+        reg.setEstado(EstadoAssiduidade.AUSENTE);
+        when(registoAssiduidadeRepo.findBySessaoIdAndAtletaId(100L, 10L)).thenReturn(Optional.of(reg));
+
+        assertThrows(IllegalArgumentException.class, () -> sessaoTreinoService.registarAvaliacoes(100L, request));
+    }
+
+    @Test
+    void testRegistarAvaliacoes_ComSucesso() {
+        AvaliacaoDTO.Request avalReq = new AvaliacaoDTO.Request(10L, new BigDecimal("4.5"));
+        AvaliacaoPosSessionDTO.Request request = new AvaliacaoPosSessionDTO.Request(List.of(avalReq));
+
+        when(sessaoTreinoRepo.findById(100L)).thenReturn(Optional.of(sessao));
+        when(atletaRepo.findById(10L)).thenReturn(Optional.of(atleta));
+
+        RegistoAssiduidade reg = new RegistoAssiduidade();
+        reg.setEstado(EstadoAssiduidade.PRESENTE);
+        when(registoAssiduidadeRepo.findBySessaoIdAndAtletaId(100L, 10L)).thenReturn(Optional.of(reg));
+
+        AvaliacaoRendimento avMock = new AvaliacaoRendimento();
+        avMock.setNota(new BigDecimal("4.5"));
+        avMock.setRegistadoEm(LocalDate.now().atStartOfDay());
+        when(avaliacaoRendimentoRepo.save(any(AvaliacaoRendimento.class))).thenReturn(avMock);
+
+        AvaliacaoPosSessionDTO.Response resp = sessaoTreinoService.registarAvaliacoes(100L, request);
+        assertEquals(1, resp.totalAvaliados());
+        assertEquals(EstadoSessao.CONCLUIDA, sessao.getEstado());
+    }
+
+    @Test
+    void testListarPorEquipa() {
+        when(sessaoTreinoRepo.findByEquipaId(1L)).thenReturn(List.of(sessao));
+        List<SessaoTreinoDTO.Response> resp = sessaoTreinoService.listarPorEquipa(1L);
+        assertEquals(1, resp.size());
+    }
+
+    @Test
+    void testObterComSucesso() {
+        when(sessaoTreinoRepo.findById(100L)).thenReturn(Optional.of(sessao));
+        SessaoTreinoDTO.Response resp = sessaoTreinoService.obter(100L);
+        assertNotNull(resp);
+        assertEquals(100L, resp.id());
+    }
+
+    @Test
+    void testObterSessaoNaoEncontrada_lancaExcecao() {
+        when(sessaoTreinoRepo.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> sessaoTreinoService.obter(99L));
     }
 }

@@ -354,4 +354,106 @@ class OcorrenciaServiceTest {
         assertThat(atleta.getEstadoElegibilidade()).isEqualTo(EstadoElegibilidade.INAPTO);
     }
 
+    @Test
+    @DisplayName("Deve listar fila EMD")
+    void deve_listar_fila_emd() {
+        when(ocorrenciaRepo.findByEstadoEMD(eq(EstadoEMD.EM_AVALIACAO), any())).thenReturn(org.springframework.data.domain.Page.empty());
+        org.springframework.data.domain.Page<com.sigd.clinica.dto.FilaEMDDTO> res = ocorrenciaService.listarFilaEMD(org.springframework.data.domain.Pageable.unpaged());
+        assertThat(res).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Deve obter stats fila EMD")
+    void deve_obter_stats_fila_emd() {
+        when(ocorrenciaRepo.findAll()).thenReturn(List.of(ocorrencia));
+        com.sigd.clinica.dto.FilaEMDStatsDTO res = ocorrenciaService.obterFilaEMDStats();
+        assertThat(res.pendentes()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Deve listar ocorrencias por atleta")
+    void deve_listar_por_atleta() {
+        when(atletaRepo.existsById(1L)).thenReturn(true);
+        when(ocorrenciaRepo.findByAtletaId(1L)).thenReturn(List.of(ocorrencia));
+        List<OcorrenciaDTO.Response> res = ocorrenciaService.listarPorAtleta(1L);
+        assertThat(res).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Deve listar ocorrencias ativas")
+    void deve_listar_ocorrencias_ativas() {
+        when(ocorrenciaRepo.findByEstado(EstadoOcorrencia.ATIVA)).thenReturn(List.of(ocorrencia));
+        List<OcorrenciaDTO.Response> res = ocorrenciaService.listarOcorrenciasAtivas();
+        assertThat(res).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Deve obter ocorrencia por ID")
+    void deve_obter_ocorrencia() {
+        when(ocorrenciaRepo.findById(10L)).thenReturn(Optional.of(ocorrencia));
+        OcorrenciaDTO.Response res = ocorrenciaService.obter(10L);
+        assertThat(res.id()).isEqualTo(10L);
+    }
+
+    @Test
+    @DisplayName("Deve listar evolucoes")
+    void deve_listar_evolucoes() {
+        OcorrenciaEvolucao ev = new OcorrenciaEvolucao();
+        ev.setOcorrencia(ocorrencia);
+        when(evolucaoRepo.findByOcorrenciaIdOrderByRegistadoEmAsc(10L)).thenReturn(List.of(ev));
+        List<EvolucaoDTO.Response> res = ocorrenciaService.getEvolucoes(10L);
+        assertThat(res).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Deve deliberar com sucesso para VERDE e resolver ocorrência")
+    void deve_deliberar_para_VERDE_e_resolver() {
+        DeliberacaoDTO del = new DeliberacaoDTO(GrauRestricaoDesportiva.VERDE, "Apto para jogar");
+        when(ocorrenciaRepo.findById(10L)).thenReturn(Optional.of(ocorrencia));
+        when(utilizadorRepo.findById(2L)).thenReturn(Optional.of(medico));
+        when(ocorrenciaRepo.save(any(Ocorrencia.class))).thenAnswer(i -> i.getArgument(0));
+        when(ocorrenciaRepo.findByAtletaId(1L)).thenReturn(List.of(ocorrencia));
+
+        OcorrenciaDTO.Response res = ocorrenciaService.deliberar(10L, del, 2L);
+        assertThat(res.estado()).isEqualTo(EstadoOcorrencia.RESOLVIDA);
+        assertThat(atleta.getEstadoElegibilidade()).isEqualTo(EstadoElegibilidade.APTO);
+    }
+
+    @Test
+    @DisplayName("Deve deliberar com sucesso para VERMELHO e manter ATIVA")
+    void deve_deliberar_para_VERMELHO_e_manter_ATIVA() {
+        DeliberacaoDTO del = new DeliberacaoDTO(GrauRestricaoDesportiva.VERMELHO, "Inapto");
+        when(ocorrenciaRepo.findById(10L)).thenReturn(Optional.of(ocorrencia));
+        when(utilizadorRepo.findById(2L)).thenReturn(Optional.of(medico));
+        when(ocorrenciaRepo.save(any(Ocorrencia.class))).thenAnswer(i -> i.getArgument(0));
+
+        OcorrenciaDTO.Response res = ocorrenciaService.deliberar(10L, del, 2L);
+        assertThat(res.estado()).isEqualTo(EstadoOcorrencia.ATIVA);
+        assertThat(atleta.getEstadoElegibilidade()).isEqualTo(EstadoElegibilidade.INAPTO);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao deliberar com utilizador sem role MEDICO")
+    void deve_lancara_excecao_deliberar_sem_permissao() {
+        DeliberacaoDTO del = new DeliberacaoDTO(GrauRestricaoDesportiva.VERMELHO, "Inapto");
+        Utilizador admin = new Utilizador();
+        admin.setRole("ROLE_ADMIN");
+        
+        when(ocorrenciaRepo.findById(10L)).thenReturn(Optional.of(ocorrencia));
+        when(utilizadorRepo.findById(3L)).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> ocorrenciaService.deliberar(10L, del, 3L))
+                .isInstanceOf(DeliberacaoNaoAutorizadaException.class);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao deliberar ocorrência inexistente")
+    void deve_lancara_excecao_deliberar_ocorrencia_inexistente() {
+        DeliberacaoDTO del = new DeliberacaoDTO(GrauRestricaoDesportiva.VERMELHO, "Inapto");
+        when(ocorrenciaRepo.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> ocorrenciaService.deliberar(99L, del, 2L))
+                .isInstanceOf(com.sigd.core.exception.OcorrenciaNotFoundException.class);
+    }
+
 }
